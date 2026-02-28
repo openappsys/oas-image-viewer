@@ -55,6 +55,9 @@ jobs:
       with:
         shared-key: "clippy"
     
+    - name: Fetch dependencies
+      run: cargo fetch
+    
     - name: Run clippy (all features)
       run: cargo clippy --all-features --all-targets -- -D warnings -W clippy::all
 
@@ -93,6 +96,9 @@ jobs:
       uses: Swatinem/rust-cache@v2
       with:
         shared-key: "test-${{ matrix.os }}"
+    
+    - name: Fetch dependencies
+      run: cargo fetch
     
     - name: Build debug
       run: cargo build --target ${{ matrix.target }}

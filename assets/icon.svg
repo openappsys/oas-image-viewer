@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- 渐变背景 -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 文字阴影 -->
+    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆角矩形 -->
+  <rect x="64" y="64" width="896" height="896" rx="192" ry="192" fill="url(#bgGradient)"/>
+  
+  <!-- 装饰性几何元素 - 左上角 -->
+  <circle cx="180" cy="180" r="80" fill="rgba(255,255,255,0.15)"/>
+  
+  <!-- 装饰性几何元素 - 右下角 -->
+  <circle cx="844" cy="844" r="120" fill="rgba(255,255,255,0.1)"/>
+  
+  <!-- 图片浏览暗示 - 中央框架 -->
+  <rect x="280" y="320" width="464" height="384" rx="24" ry="24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="8"/>
+  <rect x="300" y="340" width="424" height="344" rx="16" ry="16" fill="rgba(255,255,255,0.1)"/>
+  
+  <!-- 图片浏览暗示 - 缩略图网格 -->
+  <rect x="320" y="360" width="100" height="100" rx="8" fill="rgba(255,255,255,0.25)"/>
+  <rect x="440" y="360" width="100" height="100" rx="8" fill="rgba(255,255,255,0.25)"/>
+  <rect x="560" y="360" width="100" height="100" rx="8" fill="rgba(255,255,255,0.25)"/>
+  <rect x="320" y="480" width="100" height="100" rx="8" fill="rgba(255,255,255,0.25)"/>
+  <rect x="440" y="480" width="100" height="100" rx="8" fill="rgba(255,255,255,0.25)"/>
+  <rect x="560" y="480" width="100" height="100" rx="8" fill="rgba(255,255,255,0.25)"/>
+  
+  <!-- OAS 文字 -->
+  <text x="512" y="840" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="140" font-weight="700" fill="#ffffff" text-anchor="middle" filter="url(#textShadow)">OAS</text>
+</svg>

@@ -19,7 +19,7 @@ A modern, fast image viewer built with Rust and egui.
 
 ### Prerequisites
 
-- [Rust](https://rust-lang.org/) 1.70 or higher
+- [Rust 1.90 or higher
 - System dependencies (Linux only):
   ```bash
   # Ubuntu/Debian

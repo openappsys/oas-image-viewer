@@ -445,5 +445,5 @@ cargo tarpaulin --out Html --output-dir coverage/
 ---
 
 *文档版本：1.0*  
-*最后更新：2024-XX-XX*  
+*最后更新：2026-02-28*  
 *维护者：QA Team*

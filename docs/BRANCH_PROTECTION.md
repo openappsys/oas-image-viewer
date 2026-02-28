@@ -1,116 +1,68 @@
-# Branch Protection Rules
+# 分支保护规则
 
-This document describes the branch protection rules configured for this repository.
+本文档描述本仓库配置的分支保护规则。
 
-## Protected Branches
+## 受保护的分支
 
-### `main` (Production)
+### `main` (生产环境)
 
-The main branch contains production-ready code.
+主分支包含生产就绪的代码。
 
-**Protection Rules:**
+**保护规则：**
 
-| Rule | Setting | Description |
-|------|---------|-------------|
-| Require pull request reviews | ✅ 1 approval | All changes must be reviewed |
-| Dismiss stale reviews | ✅ Enabled | Reviews dismissed on new commits |
-| Require status checks | ✅ Enabled | CI must pass before merge |
-| Require branches to be up to date | ✅ Enabled | Must rebase before merge |
-| Required status checks | `fmt`, `clippy`, `test`, `coverage` | All CI checks must pass |
-| Include administrators | ✅ Enabled | Rules apply to admins |
-| Restrict pushes | ✅ Enabled | No direct pushes allowed |
-| Require linear history | ✅ Enabled | Squash merge only |
+| 规则 | 设置 | 描述 |
+|------|------|------|
+| 要求拉取请求审查 | ✅ 1 个批准 | 所有变更必须经过审查 |
+| 取消过时审查 | ✅ 已启用 | 新提交后取消审查 |
+| 要求状态检查 | ✅ 已启用 | 合并前 CI 必须通过 |
+| 要求分支保持最新 | ✅ 已启用 | 合并前必须变基 |
+| 必需状态检查 | `fmt`, `clippy`, `test`, `coverage` | 所有 CI 检查必须通过 |
+| 包含管理员 | ✅ 已启用 | 规则适用于管理员 |
 
-### `develop` (Development)
+**允许的操作：**
+- ✅ 合并拉取请求（通过合并按钮）
+- ✅ 强制推送（仅限管理员紧急情况）
+- ❌ 直接推送（必须通过 PR）
+- ❌ 删除分支
 
-The develop branch contains the latest development changes.
+### `develop` (开发集成)
 
-**Protection Rules:**
+开发分支用于集成新功能。
 
-| Rule | Setting | Description |
-|------|---------|-------------|
-| Require pull request reviews | ✅ 1 approval | Recommended, can be disabled for hotfixes |
-| Require status checks | ✅ Enabled | CI must pass |
-| Required status checks | `fmt`, `clippy`, `test` | Basic checks must pass |
-| Allow force pushes | ❌ Disabled | Prevent history rewriting |
-| Allow deletions | ❌ Disabled | Prevent branch deletion |
+**保护规则：**
 
-## Required CI Checks
+| 规则 | 设置 | 描述 |
+|------|------|------|
+| 要求拉取请求审查 | ✅ 1 个批准 | 所有变更必须经过审查 |
+| 取消过时审查 | ✅ 已启用 | 新提交后取消审查 |
+| 要求状态检查 | ✅ 已启用 | CI 必须通过 |
+| 必需状态检查 | `fmt`, `clippy`, `test` | 核心检查必须通过 |
 
-### For `main` branch:
+## 分支命名规范
 
-```yaml
-required_status_checks:
-  strict: true
-  contexts:
-    - Format           # cargo fmt --check
-    - Clippy           # cargo clippy -- -D warnings
-    - Test (ubuntu-latest)
-    - Test (windows-latest)
-    - Test (macos-latest)
-    - Code Coverage    # ≥85% threshold
+### 功能分支
+```
+feature/<功能描述>
 ```
 
-### For `develop` branch:
-
-```yaml
-required_status_checks:
-  strict: true
-  contexts:
-    - Format
-    - Clippy
-    - Test (ubuntu-latest)
+### 修复分支
+```
+fix/<问题描述>
 ```
 
-## Coverage Requirements
+### 发布分支
+```
+release/<版本号>
+```
 
-- **Minimum line coverage**: 85%
-- **Patch coverage**: 85% (for PRs)
-- **Coverage gate**: PRs will be blocked if coverage drops below threshold
+### 热修复分支
+```
+hotfix/<问题描述>
+```
 
-## GitHub Repository Settings
+## 状态检查说明
 
-Configure these in **Settings → Branches → Branch protection rules**:
-
-### Step-by-step Configuration
-
-1. Go to repository Settings
-2. Click "Branches" in the left sidebar
-3. Click "Add rule" for each protected branch
-4. Configure as specified above
-5. Click "Create" or "Save changes"
-
-### Required Status Checks Configuration
-
-In the branch protection rule:
-
-1. ✅ Check "Require status checks to pass before merging"
-2. ✅ Check "Require branches to be up to date before merging"
-3. Search and add each required check:
-   - `fmt`
-   - `clippy`
-   - `Test (ubuntu-latest)`
-   - `Test (windows-latest)`
-   - `Test (macos-latest)`
-   - `Code Coverage`
-
-## Merge Strategy
-
-- **Preferred**: Squash and merge
-- **Commit message format**: Use PR title as commit message
-- **Delete head branches**: ✅ Enabled (auto-delete after merge)
-
-## Emergency Procedures
-
-If you need to bypass protection rules (emergency hotfix):
-
-1. Contact a repository administrator
-2. Administrator can temporarily disable rules
-3. Apply fix directly to `main`
-4. Re-enable protection rules immediately
-5. Document the incident
-
-## See Also
-
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
-- [CI/CD Workflows](../.github/workflows/) - GitHub Actions configuration
+- `fmt` - 代码格式化
+- `clippy` - 静态分析
+- `test` - 单元测试
+- `coverage` - 代码覆盖率

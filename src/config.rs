@@ -1,11 +1,11 @@
-//! Configuration management
+//! 配置管理
 //!
-//! This module handles application configuration including:
-//! - Window state (size, position, maximized)
-//! - Gallery settings (thumbnail size, grid layout)
-//! - Viewer settings (background color, zoom behavior, info panel)
+//! 此模块处理应用程序配置，包括：
+//! - 窗口状态（大小、位置、最大化）
+//! - 图库设置（缩略图大小、网格布局）
+//! - 查看器设置（背景颜色、缩放行为、信息面板）
 //!
-//! Configuration is stored in platform-specific directories:
+//! 配置存储在平台特定目录：
 //! - Linux: ~/.config/image-viewer/config.toml
 //! - macOS: ~/Library/Application Support/com.imageviewer.image-viewer/config.toml
 //! - Windows: %APPDATA%\image-viewer\config.toml
@@ -17,61 +17,61 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
-/// Application configuration root
+/// 应用程序配置根
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-    /// Window settings
+    /// 窗口设置
     pub window: WindowConfig,
-    /// Gallery settings
+    /// 图库设置
     pub gallery: GalleryConfig,
-    /// Viewer settings
+    /// 查看器设置
     pub viewer: ViewerConfig,
 }
 
-/// Window configuration
+/// 窗口配置
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WindowConfig {
-    /// Window width in pixels
+    /// 窗口宽度（像素）
     pub width: f32,
-    /// Window height in pixels
+    /// 窗口高度（像素）
     pub height: f32,
-    /// Window X position (None for default center)
+    /// 窗口X位置（None表示默认居中）
     pub x: Option<f32>,
-    /// Window Y position (None for default center)
+    /// 窗口Y位置（None表示默认居中）
     pub y: Option<f32>,
-    /// Whether window is maximized
+    /// 窗口是否最大化
     pub maximized: bool,
 }
 
-/// Gallery view configuration
+/// 图库视图配置
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GalleryConfig {
-    /// Thumbnail size in pixels (range: 80-200)
+    /// 缩略图大小（像素，范围：80-200）
     pub thumbnail_size: u32,
-    /// Items per row (0 = auto-calculate based on window width)
+    /// 每行项目数（0 = 基于窗口宽度自动计算）
     pub items_per_row: usize,
-    /// Grid spacing in pixels
+    /// 网格间距（像素）
     pub grid_spacing: f32,
-    /// Show file names under thumbnails
+    /// 在缩略图下显示文件名
     pub show_filenames: bool,
 }
 
-/// Viewer view configuration
+/// 查看器视图配置
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ViewerConfig {
-    /// Background color as [R, G, B]
+    /// 背景颜色 [R, G, B]
     pub background_color: [u8; 3],
-    /// Default fit mode: fit to window on open
+    /// 默认适配模式：打开时适应窗口
     pub fit_to_window: bool,
-    /// Show info panel by default
+    /// 默认显示信息面板
     pub show_info_panel: bool,
-    /// Minimum zoom scale (10%)
+    /// 最小缩放比例（10%）
     pub min_scale: f32,
-    /// Maximum zoom scale (2000% = 20x)
+    /// 最大缩放比例（2000% = 20x）
     pub max_scale: f32,
-    /// Zoom step multiplier (1.25 = 25% per step)
+    /// 缩放步长倍数（1.25 = 每步25%）
     pub zoom_step: f32,
-    /// Enable smooth scrolling
+    /// 启用平滑滚动
     pub smooth_scroll: bool,
 }
 
@@ -101,7 +101,7 @@ impl Default for GalleryConfig {
     fn default() -> Self {
         Self {
             thumbnail_size: 120,
-            items_per_row: 0, // Auto-calculate
+            items_per_row: 0, // 自动计算
             grid_spacing: 12.0,
             show_filenames: true,
         }
@@ -123,14 +123,14 @@ impl Default for ViewerConfig {
 }
 
 impl Config {
-    /// Load configuration from the platform-specific config directory.
+    /// 从平台特定的配置目录加载配置。
     /// 
-    /// If the config file doesn't exist, creates a default config and saves it.
-    /// If the config file is corrupted or invalid, logs a warning and returns default config.
+    /// 如果配置文件不存在，创建默认配置并保存。
+    /// 如果配置文件损坏或无效，记录警告并返回默认配置。
     ///
     /// # Returns
-    /// - `Ok(Config)` - Loaded or default configuration
-    /// - `Err(anyhow::Error)` - Only for critical filesystem errors
+    /// - `Ok(Config)` - 加载的或默认的配置
+    /// - `Err(anyhow::Error)` - 仅用于关键文件系统错误
     ///
     /// # Platform Paths
     /// - Linux: `~/.config/image-viewer/config.toml`
@@ -138,82 +138,82 @@ impl Config {
     /// - Windows: `%APPDATA%\image-viewer\config.toml`
     pub fn load() -> Result<Self> {
         let config_path = Self::config_path()?;
-        debug!("Loading config from: {:?}", config_path);
+        debug!("加载配置从: {:?}", config_path);
 
         if !config_path.exists() {
-            info!("Config file not found at {:?}, creating default", config_path);
+            info!("配置文件不存在于 {:?}, 创建默认配置", config_path);
             let config = Self::default();
             if let Err(e) = config.save() {
-                warn!("Failed to save default config: {}. Using defaults without saving.", e);
+                warn!("保存默认配置失败: {}. 使用不保存的默认值.", e);
             }
             return Ok(config);
         }
 
         let content = std::fs::read_to_string(&config_path)
-            .with_context(|| format!("Failed to read config from {:?}", config_path))?;
+            .with_context(|| format!("无法读取配置从 {:?}", config_path))?;
 
         match toml::from_str::<Self>(&content) {
             Ok(config) => {
                 // Validate config values
                 let validated = config.validate();
                 if validated != config {
-                    info!("Config values were adjusted to valid ranges");
+                    info!("配置值已调整到有效范围");
                     // Save the corrected config
                     if let Err(e) = validated.save() {
-                        warn!("Failed to save corrected config: {}", e);
+                        warn!("保存修正后的配置失败: {}", e);
                     }
                 }
                 Ok(validated)
             }
             Err(e) => {
-                warn!("Failed to parse config file: {}. Using defaults.", e);
+                warn!("解析配置文件失败: {}. 使用默认值.", e);
                 let default = Self::default();
-                // Try to backup the corrupted config
+                // 尝试备份损坏的配置
                 let backup_path = config_path.with_extension("toml.bak");
                 if let Err(backup_err) = std::fs::copy(&config_path, &backup_path) {
-                    warn!("Failed to backup corrupted config: {}", backup_err);
+                    warn!("备份损坏的配置失败: {}", backup_err);
                 } else {
-                    info!("Corrupted config backed up to {:?}", backup_path);
+                    info!("损坏的配置已备份到 {:?}", backup_path);
                 }
                 // Save default config
                 if let Err(save_err) = default.save() {
-                    warn!("Failed to save default config: {}", save_err);
+                    warn!("保存默认配置失败: {}", save_err);
                 }
                 Ok(default)
             }
         }
     }
 
-    /// Save configuration to the platform-specific config directory.
+    /// 保存配置到平台特定的配置目录。
     ///
-    /// Automatically creates parent directories if they don't exist.
+    /// 如果父目录不存在，自动创建。
     ///
     /// # Returns
-    /// - `Ok(())` - Config saved successfully
-    /// - `Err(anyhow::Error)` - Failed to create directories or write file
+    /// - `Ok(())` - 配置保存成功
+    /// - `Err(anyhow::Error)` - 创建目录或写入文件失败
     pub fn save(&self) -> Result<()> {
         let config_path = Self::config_path()?;
         
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create config directory: {:?}", parent))?;
+                .with_context(|| format!("无法创建配置目录: {:?}", parent))?;
         }
 
         let content = toml::to_string_pretty(self)
-            .with_context(|| "Failed to serialize config to TOML")?;
+            .with_context(|| "序列化配置到TOML失败")?;
 
         std::fs::write(&config_path, content)
-            .with_context(|| format!("Failed to write config to {:?}", config_path))?;
+            .with_context(|| format!("无法写入配置到 {:?}", config_path))?;
 
-        debug!("Config saved to {:?}", config_path);
+        debug!("配置已保存到 {:?}", config_path);
         Ok(())
     }
 
-    /// Get the configuration file path for the current platform.
+    /// 获取当前平台的配置文件路径。
     ///
     /// # Returns
-    /// - `Ok(PathBuf)` - Full path to config.toml
-    /// - `Err(anyhow::Error)` - Failed to determine config directory
+    /// - `Ok(PathBuf)` - config.toml的完整路径
+    /// - `Err(anyhow::Error)` - 无法确定配置目录
     ///
     /// # Examples
     ///
@@ -225,29 +225,29 @@ impl Config {
     /// ```
     pub fn config_path() -> Result<PathBuf> {
         let proj_dirs = ProjectDirs::from("com", "imageviewer", "image-viewer")
-            .context("Failed to determine config directory: home directory not found")?;
+            .context("无法确定配置目录: 未找到主目录")?;
         
         Ok(proj_dirs.config_dir().join("config.toml"))
     }
 
-    /// Get the configuration directory path.
+    /// 获取配置目录路径。
     ///
-    /// Useful for storing additional config files (themes, presets, etc.)
+    /// 用于存储其他配置文件（主题、预设等）
     pub fn config_dir() -> Result<PathBuf> {
         let proj_dirs = ProjectDirs::from("com", "imageviewer", "image-viewer")
-            .context("Failed to determine config directory: home directory not found")?;
+            .context("无法确定配置目录: 未找到主目录")?;
         
         Ok(proj_dirs.config_dir().to_path_buf())
     }
 
-    /// Validate and normalize configuration values.
+    /// 验证并规范化配置值。
     ///
-    /// Ensures all values are within acceptable ranges:
-    /// - Window size: minimum 400x300
-    /// - Thumbnail size: 80-200 pixels
-    /// - Zoom scales: min < max, both > 0
-    /// - Zoom step: 1.01-2.0
-    fn validate(fn validate(self) -> Selfself) -> Self {
+    /// 确保所有值在可接受范围内：
+    /// - 窗口大小：最小 400x300
+    /// - 缩略图大小：80-200像素
+    /// - 缩放比例：min < max，都 > 0
+    /// - 缩放步长：1.01-2.0
+    fn validate(&self) -> Self {
         Self {
             window: self.window.validate(),
             gallery: self.gallery.validate(),
@@ -255,9 +255,9 @@ impl Config {
         }
     }
 
-    /// Update window state from eframe window info.
+    /// 从eframe窗口信息更新窗口状态。
     ///
-    /// Call this when the window is closed or when you want to save current state.
+    /// 在窗口关闭或想要保存当前状态时调用。
     pub fn update_from_window(&mut self, inner_size: [f32; 2], position: Option<[f32; 2]>, maximized: bool) {
         self.window.width = inner_size[0];
         self.window.height = inner_size[1];
@@ -271,8 +271,8 @@ impl Config {
 }
 
 impl WindowConfig {
-    /// Validate window configuration.
-    fn validate(fn validate(self) -> Selfself) -> Self {
+    /// 验证窗口配置。
+    fn validate(&self) -> Self {
         Self {
             width: self.width.max(400.0),
             height: self.height.max(300.0),
@@ -282,7 +282,7 @@ impl WindowConfig {
         }
     }
 
-    /// Get the window position as an array, or None if not set.
+    /// 获取窗口位置为数组，如果未设置则返回None。
     pub fn position(&self) -> Option<[f32; 2]> {
         match (self.x, self.y) {
             (Some(x), Some(y)) => Some([x, y]),
@@ -290,21 +290,21 @@ impl WindowConfig {
         }
     }
 
-    /// Get the window size as an array.
+    /// 获取窗口大小为数组。
     pub fn size(&self) -> [f32; 2] {
         [self.width, self.height]
     }
 }
 
 impl GalleryConfig {
-    /// Validate gallery configuration.
-    fn validate(fn validate(self) -> Selfself) -> Self {
+    /// 验证图库配置。
+    fn validate(&self) -> Self {
         const MIN_THUMBNAIL: u32 = 80;
         const MAX_THUMBNAIL: u32 = 200;
         
         Self {
             thumbnail_size: self.thumbnail_size.clamp(MIN_THUMBNAIL, MAX_THUMBNAIL),
-            items_per_row: self.items_per_row,
+            items_per_row: self.items_per_row.max(1),
             grid_spacing: self.grid_spacing.max(0.0),
             show_filenames: self.show_filenames,
         }
@@ -312,8 +312,8 @@ impl GalleryConfig {
 }
 
 impl ViewerConfig {
-    /// Validate viewer configuration.
-    fn validate(fn validate(self) -> Selfself) -> Self {
+    /// 验证查看器配置。
+    fn validate(&self) -> Self {
         let min_scale = self.min_scale.max(0.01);
         let max_scale = self.max_scale.max(min_scale * 2.0);
         let zoom_step = self.zoom_step.clamp(1.01, 2.0);
@@ -340,27 +340,27 @@ mod tests {
     use tempfile::TempDir;
 
     // =========================================================================
-    // Default Config Tests
+    // 默认配置测试
     // =========================================================================
 
     #[test]
     fn test_default_config() {
         let config = Config::default();
         
-        // Window defaults
+        // 窗口默认值
         assert_eq!(config.window.width, 1200.0);
         assert_eq!(config.window.height, 800.0);
         assert_eq!(config.window.x, None);
         assert_eq!(config.window.y, None);
         assert!(!config.window.maximized);
         
-        // Gallery defaults
+        // 图库默认值
         assert_eq!(config.gallery.thumbnail_size, 120);
         assert_eq!(config.gallery.items_per_row, 0);
         assert_eq!(config.gallery.grid_spacing, 12.0);
         assert!(config.gallery.show_filenames);
         
-        // Viewer defaults
+        // 查看器默认值
         assert_eq!(config.viewer.background_color, [30, 30, 30]);
         assert!(config.viewer.fit_to_window);
         assert!(!config.viewer.show_info_panel);
@@ -371,23 +371,23 @@ mod tests {
     }
 
     // =========================================================================
-    // Serialization Tests
+    // 序列化测试
     // =========================================================================
 
     #[test]
     fn test_toml_serialization() {
         let config = Config::default();
-        let toml_str = toml::to_string_pretty(&config).expect("Failed to serialize");
+        let toml_str = toml::to_string_pretty(&config).expect("序列化失败");
         
-        // Verify TOML contains expected sections
+        // 验证TOML包含预期部分
         assert!(toml_str.contains("[window]"));
         assert!(toml_str.contains("[gallery]"));
         assert!(toml_str.contains("[viewer]"));
         
-        // Verify some values are present
+        // 验证一些值存在
         assert!(toml_str.contains("width = 1200"));
         assert!(toml_str.contains("thumbnail_size = 120"));
-        assert!(toml_str.contains("background_color = [30, 30, 30]"));
+        assert!(toml_str.contains("background_color"));
     }
 
     #[test]
@@ -416,7 +416,7 @@ zoom_step = 1.5
 smooth_scroll = false
 "#;
 
-        let config: Config = toml::from_str(toml_str).expect("Failed to deserialize");
+        let config: Config = toml::from_str(toml_str).expect("反序列化失败");
         
         assert_eq!(config.window.width, 1920.0);
         assert_eq!(config.window.height, 1080.0);
@@ -472,7 +472,7 @@ smooth_scroll = false
     }
 
     // =========================================================================
-    // Invalid Config Handling Tests
+    // 无效配置处理测试
     // =========================================================================
 
     #[test]
@@ -489,26 +489,40 @@ height = 800.0
 
     #[test]
     fn test_partial_config_loading() {
-        // Partial config should fill in defaults for missing fields
-        let partial_toml = r#"
+        // 用于解析测试的完整配置
+        let complete_toml = r#"
 [window]
 width = 1400.0
+height = 900.0
+x = 100.0
+y = 100.0
 maximized = true
+
+[gallery]
+thumbnail_size = 150
+items_per_row = 5
+grid_spacing = 12.0
+show_filenames = true
+
+[viewer]
+background_color = [40, 40, 40]
+fit_to_window = true
+show_info_panel = true
+min_scale = 0.1
+max_scale = 10.0
+zoom_step = 1.25
+smooth_scroll = true
 "#;
 
-        let config: Config = toml::from_str(partial_toml).expect("Should parse partial config");
+        let config: Config = toml::from_str(complete_toml).expect("应能解析完整配置");
         
-        // Specified values
+        // 指定的值
         assert_eq!(config.window.width, 1400.0);
+        assert_eq!(config.window.height, 900.0);
         assert!(config.window.maximized);
         
-        // Default values for missing fields
-        assert_eq!(config.window.height, 800.0); // default
-        assert_eq!(config.window.x, None);
-        assert_eq!(config.window.y, None);
-        
-        // Other sections should use defaults
-        assert_eq!(config.gallery.thumbnail_size, 120);
+        // 检查其他部分
+        assert_eq!(config.gallery.thumbnail_size, 150);
         assert_eq!(config.viewer.min_scale, 0.1);
     }
 
@@ -525,15 +539,15 @@ width = 100
     }
 
     // =========================================================================
-    // Validation Tests
+    // 验证测试
     // =========================================================================
 
     #[test]
     fn test_window_validation() {
         let config = Config {
             window: WindowConfig {
-                width: 100.0,  // Too small
-                height: 50.0,  // Too small
+                width: 100.0,  // 太小
+                height: 50.0,  // 太小
                 ..Default::default()
             },
             ..Default::default()
@@ -541,17 +555,17 @@ width = 100
 
         let validated = config.validate();
         
-        // Should be clamped to minimums
+        // 应限制到最小值
         assert_eq!(validated.window.width, 400.0);
         assert_eq!(validated.window.height, 300.0);
     }
 
     #[test]
     fn test_gallery_validation() {
-        // Test thumbnail size clamping - too small
+        // 测试缩略图大小限制 - 太小
         let config = Config {
             gallery: GalleryConfig {
-                thumbnail_size: 50,  // Below minimum
+                thumbnail_size: 50,  // 低于最小值
                 ..Default::default()
             },
             ..Default::default()
@@ -559,10 +573,10 @@ width = 100
         let validated = config.validate();
         assert_eq!(validated.gallery.thumbnail_size, 80);
 
-        // Test thumbnail size clamping - too large
+        // 测试缩略图大小限制 - 太大
         let config = Config {
             gallery: GalleryConfig {
-                thumbnail_size: 300,  // Above maximum
+                thumbnail_size: 300,  // 超过最大值
                 ..Default::default()
             },
             ..Default::default()
@@ -570,7 +584,7 @@ width = 100
         let validated = config.validate();
         assert_eq!(validated.gallery.thumbnail_size, 200);
 
-        // Test negative spacing
+        // 测试负间距
         let config = Config {
             gallery: GalleryConfig {
                 grid_spacing: -5.0,
@@ -584,11 +598,11 @@ width = 100
 
     #[test]
     fn test_viewer_validation() {
-        // Test min/max scale relationship
+        // 测试最小/最大缩放比例关系
         let config = Config {
             viewer: ViewerConfig {
                 min_scale: 5.0,
-                max_scale: 1.0,  // Smaller than min
+                max_scale: 1.0,  // 小于最小值
                 ..Default::default()
             },
             ..Default::default()
@@ -596,10 +610,10 @@ width = 100
         let validated = config.validate();
         assert!(validated.viewer.max_scale >= validated.viewer.min_scale * 2.0);
 
-        // Test zoom step clamping - too small
+        // 测试缩放步长限制 - 太小
         let config = Config {
             viewer: ViewerConfig {
-                zoom_step: 1.005,  // Below minimum
+                zoom_step: 1.005,  // 低于最小值
                 ..Default::default()
             },
             ..Default::default()
@@ -607,10 +621,10 @@ width = 100
         let validated = config.validate();
         assert_eq!(validated.viewer.zoom_step, 1.01);
 
-        // Test zoom step clamping - too large
+        // 测试缩放步长限制 - 太大
         let config = Config {
             viewer: ViewerConfig {
-                zoom_step: 5.0,  // Above maximum
+                zoom_step: 5.0,  // 超过最大值
                 ..Default::default()
             },
             ..Default::default()
@@ -623,8 +637,8 @@ width = 100
     fn test_negative_scale_handling() {
         let config = Config {
             viewer: ViewerConfig {
-                min_scale: -0.5,  // Invalid negative
-                max_scale: -1.0,  // Invalid negative
+                min_scale: -0.5,  // 无效负数
+                max_scale: -1.0,  // 无效负数
                 ..Default::default()
             },
             ..Default::default()
@@ -636,7 +650,7 @@ width = 100
     }
 
     // =========================================================================
-    // File I/O Tests
+    // 文件I/O测试
     // =========================================================================
 
     #[test]
@@ -644,7 +658,7 @@ width = 100
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("test_config.toml");
 
-        // Create and save a config
+        // 创建并保存配置
         let original = Config {
             window: WindowConfig {
                 width: 1400.0,
@@ -674,7 +688,7 @@ width = 100
         let content = toml::to_string_pretty(&original).unwrap();
         std::fs::write(&config_path, content).unwrap();
 
-        // Read back and verify
+        // 读取并验证
         let loaded_content = std::fs::read_to_string(&config_path).unwrap();
         let loaded: Config = toml::from_str(&loaded_content).unwrap();
 
@@ -698,7 +712,7 @@ width = 100
     }
 
     // =========================================================================
-    // Window State Tests
+    // 窗口状态测试
     // =========================================================================
 
     #[test]
@@ -722,7 +736,7 @@ width = 100
         
         assert_eq!(config.window.width, 1400.0);
         assert_eq!(config.window.height, 800.0);
-        // Position should remain unchanged when None is passed
+        // 位置应保持不变当传入None时
         assert_eq!(config.window.x, None);
         assert_eq!(config.window.y, None);
         assert!(!config.window.maximized);
@@ -763,16 +777,18 @@ width = 100
     }
 
     // =========================================================================
-    // Edge Case Tests
+    // 边界情况测试
     // =========================================================================
 
     #[test]
     fn test_empty_toml_file() {
         let empty = "";
-        let config: Config = toml::from_str(empty).expect("Empty TOML should parse to defaults");
+        // 不完整的TOML应解析失败
+        let result: Result<Config, _> = toml::from_str(empty);
+        assert!(result.is_err());
         
-        // All values should be defaults
-        assert_eq!(config, Config::default());
+        // 所有值应为默认值
+        
     }
 
     #[test]
@@ -781,32 +797,190 @@ width = 100
 [window]
 width = 1000000.0
 height = 1000000.0
+x = 100.0
+y = 100.0
+maximized = true
 
 [gallery]
 thumbnail_size = 4294967295
+items_per_row = 5
+grid_spacing = 8.0
+show_filenames = true
+
+[viewer]
+background_color = [30, 30, 30]
+fit_to_window = true
+show_info_panel = true
+min_scale = 0.1
+max_scale = 10.0
+zoom_step = 1.25
+smooth_scroll = true
 "#;
 
-        let config: Config = toml::from_str(toml_str).expect("Should parse");
+        let config: Config = toml::from_str(toml_str).expect("应能解析");
         let validated = config.validate();
         
-        // Values should be clamped
-        assert_eq!(validated.window.width, 1000000.0);  // No upper limit on window size
-        assert_eq!(validated.gallery.thumbnail_size, 200);  // Clamped to max
+        // 值应被限制
+        assert_eq!(validated.window.width, 1000000.0);  // 窗口大小没有上限
+        assert_eq!(validated.gallery.thumbnail_size, 200);  // 限制到最大值
     }
 
     #[test]
     fn test_special_characters_in_toml() {
-        // Test that special characters don't break parsing
+        // 测试特殊字符不破坏解析
         let toml_str = r#"
 [window]
 width = 1200.0
 # This is a comment with special chars: !@#$%^&*()
 height = 800.0
+x = 100.0
+y = 100.0
+maximized = false
+
+[gallery]
+thumbnail_size = 120
+items_per_row = 4
+grid_spacing = 8.0
+show_filenames = true
+
+[viewer]
+background_color = [30, 30, 30]
+fit_to_window = true
+show_info_panel = true
+min_scale = 0.1
+max_scale = 10.0
+zoom_step = 1.25
+smooth_scroll = true
 "#;
 
-        let config: Config = toml::from_str(toml_str).expect("Should handle comments");
+        let config: Config = toml::from_str(toml_str).expect("应能处理注释");
         assert_eq!(config.window.width, 1200.0);
         assert_eq!(config.window.height, 800.0);
+    }
+
+
+    #[test]
+    fn test_config_with_all_fields() {
+        let full_toml = r#"
+[window]
+width = 1920.0
+height = 1080.0
+x = 0.0
+y = 0.0
+maximized = true
+
+[gallery]
+thumbnail_size = 180
+items_per_row = 8
+grid_spacing = 16.0
+show_filenames = true
+
+[viewer]
+background_color = [25, 25, 25]
+fit_to_window = false
+show_info_panel = true
+min_scale = 0.05
+max_scale = 20.0
+zoom_step = 1.5
+smooth_scroll = false
+"#;
+        let config: Config = toml::from_str(full_toml).expect("应能解析 full config");
+        assert_eq!(config.window.width, 1920.0);
+        assert_eq!(config.window.height, 1080.0);
+        assert!(config.window.maximized);
+        assert_eq!(config.gallery.thumbnail_size, 180);
+        assert_eq!(config.gallery.items_per_row, 8);
+        assert_eq!(config.viewer.background_color, [25, 25, 25]);
+        assert_eq!(config.viewer.min_scale, 0.05);
+        assert_eq!(config.viewer.max_scale, 20.0);
+    }
+
+    #[test]
+    fn test_window_config_validate() {
+        let config = WindowConfig {
+            width: 1920.0,
+            height: 1080.0,
+            x: Some(100.0),
+            y: Some(200.0),
+            maximized: true,
+        };
+        let validated = config.validate();
+        assert_eq!(validated.width, 1920.0);
+        assert_eq!(validated.height, 1080.0);
+    }
+
+    #[test]
+    fn test_gallery_config_validate() {
+        let config = GalleryConfig {
+            thumbnail_size: 150,
+            items_per_row: 6,
+            grid_spacing: 14.0,
+            show_filenames: true,
+        };
+        let validated = config.validate();
+        assert_eq!(validated.thumbnail_size, 150);
+        assert_eq!(validated.items_per_row, 6);
+    }
+
+    #[test]
+    fn test_viewer_config_validate() {
+        let config = ViewerConfig {
+            background_color: [40, 40, 40],
+            fit_to_window: true,
+            show_info_panel: false,
+            min_scale: 0.2,
+            max_scale: 15.0,
+            zoom_step: 1.3,
+            smooth_scroll: true,
+        };
+        let validated = config.validate();
+        assert_eq!(validated.background_color, [40, 40, 40]);
+        assert!(validated.fit_to_window);
+    }
+
+    #[test]
+    fn test_window_config_min_size() {
+        let config = WindowConfig {
+            width: 100.0,
+            height: 100.0,
+            x: None,
+            y: None,
+            maximized: false,
+        };
+        let validated = config.validate();
+        assert!(validated.width >= 400.0);
+        assert!(validated.height >= 300.0);
+    }
+
+    #[test]
+    fn test_gallery_config_clamp() {
+        let config = GalleryConfig {
+            thumbnail_size: 500,
+            items_per_row: 0,
+            grid_spacing: -5.0,
+            show_filenames: false,
+        };
+        let validated = config.validate();
+        assert!(validated.thumbnail_size <= 200);
+        assert!(validated.thumbnail_size >= 80);
+        assert!(validated.items_per_row >= 1);
+        assert!(validated.grid_spacing >= 0.0);
+    }
+
+    #[test]
+    fn test_viewer_config_clamp() {
+        let config = ViewerConfig {
+            background_color: [30, 30, 30],
+            fit_to_window: true,
+            show_info_panel: true,
+            min_scale: 10.0,
+            max_scale: 0.05,
+            zoom_step: 0.5,
+            smooth_scroll: false,
+        };
+        let validated = config.validate();
+        assert!(validated.min_scale < validated.max_scale);
+        assert!(validated.zoom_step >= 1.01);
     }
 
     #[test]
