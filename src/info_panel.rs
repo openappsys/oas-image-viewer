@@ -224,7 +224,7 @@ impl InfoPanel {
                 ui.horizontal(|ui| {
                     ui.heading("📋 图像信息");
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("✕").clicked() {
+                        if ui.button("×").clicked() {
                             self.hide();
                         }
                     });

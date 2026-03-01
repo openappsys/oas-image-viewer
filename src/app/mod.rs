@@ -217,39 +217,43 @@ impl ImageViewerApp {
         let active_menu = ui.data(|d| d.get_temp::<Id>(active_menu_id));
         let is_menu_open = active_menu == Some(menu_id);
         
-        // 检查是否任何菜单正在显示
-        let any_menu_open = active_menu.is_some() && active_menu != Some(Id::NULL);
-        
-        // 创建菜单按钮，使用menu_button内部处理
+        // 创建菜单按钮，传入 open 状态
         let menu_btn = egui::menu::menu_button(ui, title, |ui| {
             add_contents(ui);
         });
         
-        // 自动展开逻辑：hover时如果其他菜单已打开，则打开此菜单
-        if menu_btn.response.hovered() && any_menu_open && !is_menu_open {
+        // 改进的自动展开逻辑：hover时直接展开此菜单（无需先点击）
+        if menu_btn.response.hovered() && !is_menu_open {
             ui.data_mut(|d| d.insert_temp(active_menu_id, menu_id));
         }
         
-        // 点击按钮时记录活跃菜单
+        // 点击按钮时记录活跃菜单（如果当前未打开则打开，已打开则关闭）
         if menu_btn.response.clicked() {
-            ui.data_mut(|d| d.insert_temp(active_menu_id, menu_id));
+            if is_menu_open {
+                ui.data_mut(|d| d.insert_temp(active_menu_id, Id::NULL));
+            } else {
+                ui.data_mut(|d| d.insert_temp(active_menu_id, menu_id));
+            }
         }
         
-        // 点击空白处关闭菜单
+        // 点击空白处或非菜单区域关闭菜单
         if ui.input(|i| i.pointer.any_click()) && !menu_btn.response.clicked() {
-            ui.data_mut(|d| d.insert_temp(active_menu_id, Id::NULL));
+            // 检查点击是否在菜单内容区域内
+            let clicked_in_menu = menu_btn.response.rect.contains(
+                ui.input(|i| i.pointer.interact_pos()).unwrap_or_default()
+            );
+            if !clicked_in_menu {
+                ui.data_mut(|d| d.insert_temp(active_menu_id, Id::NULL));
+            }
         }
     }
 
     fn handle_shortcuts(&mut self, ctx: &Context) {
-        // ? 键 - 快捷键帮助面板 (只处理一次，避免重复触发)
+        // ? 键 - 快捷键帮助面板
+        // 检测 Text 事件中的 "?" 字符
         let question_pressed = ctx.input(|i| {
             i.events.iter().any(|e| {
-                if let egui::Event::Text(text) = e {
-                    text == "?" && i.modifiers.is_none()
-                } else {
-                    false
-                }
+                matches!(e, egui::Event::Text(text) if text == "?")
             })
         });
         
