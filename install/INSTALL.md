@@ -12,39 +12,89 @@ This guide explains how to install Image-Viewer on different platforms and regis
 
 ## Windows
 
-### Quick Install
+### 系统要求
 
-1. Build the project:
+- Windows 7 / 8 / 10 / 11 (64位)
+- 无需管理员权限即可运行绿色版
+
+### 方式一：绿色版/便携版（推荐）
+
+最简单的方式，无需安装，解压即用：
+
+1. 下载绿色版压缩包 `image-viewer-windows-x64.zip`
+2. 解压到任意文件夹（如 `D:\Tools\Image-Viewer`）
+3. 直接运行 `image-viewer.exe`
+
+#### 绿色版特点
+- ✅ 无需管理员权限
+- ✅ 不写注册表
+- ✅ 可放在 U 盘随身携带
+- ✅ 配置保存在程序目录下
+
+### 方式二：安装版（可选）
+
+如需系统集成（右键菜单、默认程序）：
+
+1. 下载安装版 `image-viewer-windows-x64-setup.exe`
+2. 运行安装程序，按提示完成安装
+3. 可选：勾选"添加到右键菜单"
+
+### 方式三：从源码构建
+
+1. 安装 Rust 工具链（https://rustup.rs/）
+2. 克隆仓库并构建：
    ```cmd
    cargo build --release
    ```
+3. 构建完成后，可运行 `install\windows\install.bat` 进行系统集成
 
-2. Run the installer as Administrator:
-   ```cmd
-   install\windows\install.bat
-   ```
+### 右键菜单注册（可选）
 
-### Manual Registration
+运行 `install\windows\register-context-menu.bat` 添加"使用 Image-Viewer 打开"到右键菜单：
 
-If you prefer to manually register the context menu:
+```cmd
+# 在项目目录下运行
+install\windows\register-context-menu.bat
+```
 
-1. Double-click `install\windows\register-context-menu.reg`
-2. Click "Yes" when prompted by Registry Editor
-3. The "Open with Image-Viewer" option will appear in the right-click menu for supported image files
+**说明**：
+- 此脚本仅修改当前用户注册表，**无需管理员权限**
+- 支持 Windows 7/8/10/11
+- 可通过 `unregister-context-menu.bat` 卸载
 
-### Uninstall
+### 设置为默认图片查看器
 
-1. Run the uninstaller:
-   ```cmd
-   install\windows\unregister-context-menu.reg
-   ```
+#### 方法 1：通过设置应用（Windows 10/11）
+1. 打开 设置 → 应用 → 默认应用
+2. 搜索 ".png"、".jpg" 等图片格式
+3. 选择 Image-Viewer 作为默认应用
 
-2. Delete the installation directory:
-   ```cmd
-   rmdir /s "%PROGRAMFILES%\Image-Viewer"
-   ```
+#### 方法 2：通过右键菜单
+1. 右键点击任意图片文件
+2. 选择"打开方式" → "选择其他应用"
+3. 找到 Image-Viewer 并勾选"始终使用此应用打开"
 
-### Supported Formats
+### 便携版配置
+
+绿色版/便携版的配置文件保存在程序目录下：
+```
+Image-Viewer/
+├── image-viewer.exe
+├── config/
+│   └── config.toml      # 配置文件
+└── cache/               # 缓存目录
+```
+
+### 卸载
+
+#### 绿色版
+直接删除程序文件夹即可，无残留。
+
+#### 安装版
+1. 运行 `uninstall.bat` 或控制面板卸载
+2. 如需清理注册表，运行 `unregister-context-menu.bat`
+
+### 支持的图片格式
 
 - PNG (.png)
 - JPEG (.jpg, .jpeg)
@@ -52,9 +102,7 @@ If you prefer to manually register the context menu:
 - WebP (.webp)
 - TIFF (.tiff, .tif)
 - BMP (.bmp)
-- ICO (.ico) - optional
-
----
+- ICO (.ico)
 
 ## macOS
 

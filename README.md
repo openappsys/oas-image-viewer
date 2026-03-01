@@ -76,6 +76,8 @@ image-viewer /path/to/images/
 | `← / →` | Previous/Next image |
 | `F11` | Toggle fullscreen |
 | `Esc` | Exit fullscreen / Close viewer |
+| `F` | Toggle file info panel |
+| `?` | Show keyboard shortcuts help |
 
 ### Mouse Controls
 
