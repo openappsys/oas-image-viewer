@@ -86,32 +86,52 @@ fn setup_fonts(ctx: &egui::Context) {
     {
         // 按优先级尝试不同平台的中文字体
         let font_sources = [
-            // macOS - 苹方 (多种可能的位置和命名)
+            // ===== macOS =====
+            // 苹方
             "/System/Library/Fonts/PingFang.ttc",
             "/System/Library/Fonts/Supplemental/PingFang.ttc",
             "/Library/Fonts/PingFang.ttc",
-            // macOS - 黑体
+            // 黑体
             "/System/Library/Fonts/STHeiti Light.ttc",
             "/System/Library/Fonts/STHeiti Medium.ttc",
             "/System/Library/Fonts/STHeiti.ttc",
             "/Library/Fonts/STHeiti Light.ttc",
             "/Library/Fonts/STHeiti Medium.ttc",
-            // macOS - 冬青黑体
+            // 冬青黑体
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
             "/Library/Fonts/Hiragino Sans GB.ttc",
-            // macOS - Arial Unicode (备用)
+            // Arial Unicode (备用)
             "/Library/Fonts/Arial Unicode.ttf",
             "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-            // Linux
-            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            
+            // ===== Linux =====
+            // Noto Sans CJK (主流发行版)
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            // Windows
+            "/usr/share/fonts/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
+            // 文泉驿 (Ubuntu/Debian)
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
+            "/usr/local/share/fonts/wqy-zenhei.ttc",
+            // 文鼎 PL (Fedora/CentOS)
+            "/usr/share/fonts/cjkuni/uming.ttc",
+            "/usr/share/fonts/cjkuni/ukai.ttc",
+            "/usr/share/fonts/opentype/source-han-sans/SourceHanSansCN-Regular.otf",
+            // 思源黑体
+            "/usr/share/fonts/adobe-source-han-sans/SourceHanSansCN-Regular.otf",
+            "/usr/share/fonts/opentype/adobe-source-han-sans/SourceHanSansCN-Regular.otf",
+            // 方正 (一些发行版)
+            "/usr/share/fonts/fangzheng/fzyh.ttf",
+            
+            // ===== Windows =====
             "C:\\Windows\\Fonts\\msyh.ttc",
             "C:\\Windows\\Fonts\\msyhbd.ttc",
             "C:\\Windows\\Fonts\\simhei.ttf",
             "C:\\Windows\\Fonts\\simsun.ttc",
+            "C:\\Windows\\Fonts\\simkai.ttf",
+            "C:\\Windows\\Fonts\\simfang.ttf",
         ];
         
         for font_path in &font_sources {
