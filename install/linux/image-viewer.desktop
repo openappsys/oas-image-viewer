@@ -1,0 +1,22 @@
+[Desktop Entry]
+Name=Image Viewer
+GenericName=Image Viewer
+Comment=A modern image viewer built with Rust and egui
+Exec=image-viewer %F
+Icon=image-viewer
+Terminal=false
+Type=Application
+Categories=Graphics;Viewer;2DGraphics;RasterGraphics;
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/tiff;image/bmp;
+Keywords=image;viewer;picture;photo;gallery;
+StartupNotify=true
+StartupWMClass=image-viewer
+X-Desktop-File-Install-Version=0.26
+
+# Actions for quick access
+Actions=NewWindow;
+
+[Desktop Action NewWindow]
+Name=Open New Window
+Exec=image-viewer
+OnlyShowIn=Unity;GNOME;KDE;XFCE;

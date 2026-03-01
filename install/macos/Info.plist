@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Basic Application Info -->
+    <key>CFBundleName</key>
+    <string>Image-Viewer</string>
+    
+    <key>CFBundleDisplayName</key>
+    <string>Image Viewer</string>
+    
+    <key>CFBundleIdentifier</key>
+    <string>com.imageviewer.image-viewer</string>
+    
+    <key>CFBundleVersion</key>
+    <string>0.1.0</string>
+    
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    
+    <key>CFBundleExecutable</key>
+    <string>image-viewer</string>
+    
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    
+    <key>LSMinimumSystemVersion</key>
+    <string>10.11</string>
+    
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.graphics-design</string>
+    
+    <!-- Document Types - Image formats supported -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <!-- PNG -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Portable Network Graphics Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.png</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>png</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+                <string>image/png</string>
+            </array>
+        </dict>
+        
+        <!-- JPEG -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>JPEG Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.jpeg</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>jpg</string>
+                <string>jpeg</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+                <string>image/jpeg</string>
+            </array>
+        </dict>
+        
+        <!-- GIF -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Graphics Interchange Format</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.compuserve.gif</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>gif</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+                <string>image/gif</string>
+            </array>
+        </dict>
+        
+        <!-- WebP -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>WebP Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.webmproject.webp</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>webp</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+                <string>image/webp</string>
+            </array>
+        </dict>
+        
+        <!-- TIFF -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>TIFF Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.tiff</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>tiff</string>
+                <string>tif</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+                <string>image/tiff</string>
+            </array>
+        </dict>
+        
+        <!-- BMP -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Bitmap Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.microsoft.bmp</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>bmp</string>
+            </array>
+            <key>CFBundleTypeMIMETypes</key>
+            <array>
+                <string>image/bmp</string>
+                <string>image/x-windows-bmp</string>
+            </array>
+        </dict>
+    </array>
+    
+    <!-- UTExportedTypeDeclarations - Export the types we support -->
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.imageviewer.image</string>
+            <key>UTTypeDescription</key>
+            <string>Image File</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.image</string>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>png</string>
+                    <string>jpg</string>
+                    <string>jpeg</string>
+                    <string>gif</string>
+                    <string>webp</string>
+                    <string>tiff</string>
+                    <string>tif</string>
+                    <string>bmp</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
