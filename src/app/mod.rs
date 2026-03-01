@@ -13,7 +13,6 @@ use crate::gallery::Gallery;
 use crate::utils::is_image_file;
 use crate::viewer::Viewer;
 
-/// Main application state
 pub struct ImageViewerApp {
     config: Config,
     gallery: Gallery,
@@ -24,6 +23,7 @@ pub struct ImageViewerApp {
     decoder: ImageDecoder,
     frame: Option<Frame>,
     drag_hovering: bool,
+    show_about_window: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,7 +33,6 @@ enum View {
 }
 
 impl ImageViewerApp {
-    /// Create a new application instance with the given configuration.
     pub fn new(cc: &eframe::CreationContext<'_>, config: Config, initial_path: Option<PathBuf>) -> Self {
         debug!("Initializing ImageViewerApp");
         Self::configure_styles(&cc.egui_ctx);
@@ -48,9 +47,9 @@ impl ImageViewerApp {
             decoder: ImageDecoder::new(),
             frame: None,
             drag_hovering: false,
+            show_about_window: false,
         };
 
-        // Load initial path if provided
         if let Some(path) = initial_path {
             if path.is_file() && is_image_file(&path) {
                 app.open_image(path);
@@ -62,7 +61,6 @@ impl ImageViewerApp {
         app
     }
 
-    /// Configure visual styles for the application.
     fn configure_styles(ctx: &Context) {
         let mut style = (*ctx.style()).clone();
         style.spacing.item_spacing = egui::vec2(8.0, 8.0);
@@ -74,20 +72,16 @@ impl ImageViewerApp {
         ctx.set_style(style);
     }
 
-    /// Open a single image file
     pub fn open_image(&mut self, path: PathBuf) {
         info!("Opening image: {:?}", path);
         
-        // Check if ctx is available
         if self.viewer.get_ctx().is_none() {
             tracing::error!("Cannot open image: egui context not available");
             return;
         }
         
-        // Try to load and decode the image
         match self.decoder.decode_from_file(&path) {
             Ok(img) => {
-                // Convert to egui texture
                 let rgba = img.to_rgba8();
                 let size = [rgba.width() as usize, rgba.height() as usize];
                 let pixels = rgba.as_raw();
@@ -103,21 +97,18 @@ impl ImageViewerApp {
                 );
                 info!("Texture created successfully");
                 
-                
                 self.viewer.set_image_with_texture(path.clone(), texture, size);
                 self.current_view = View::Viewer;
                 info!("Image opened successfully, switched to Viewer mode");
                     
-                    // Update image list if this is a new file
-                    if !self.image_list.contains(&path) {
-                        self.image_list.push(path.clone());
-                        self.gallery.add_image(path.clone());
-                    }
-                    
-                    // Set current index
-                    if let Some(idx) = self.image_list.iter().position(|p| p == &path) {
-                        self.current_index = idx;
-                    }
+                if !self.image_list.contains(&path) {
+                    self.image_list.push(path.clone());
+                    self.gallery.add_image(path.clone());
+                }
+                
+                if let Some(idx) = self.image_list.iter().position(|p| p == &path) {
+                    self.current_index = idx;
+                }
             }
             Err(e) => {
                 tracing::error!("Failed to load image: {}", e);
@@ -125,7 +116,6 @@ impl ImageViewerApp {
         }
     }
 
-    /// Open a directory and load all images
     pub fn open_directory(&mut self, path: PathBuf) {
         info!("Opening directory: {:?}", path);
         
@@ -144,14 +134,12 @@ impl ImageViewerApp {
             
             self.image_list = images.clone();
             
-            // Open first image if any
             if let Some(first) = images.first() {
                 self.open_image(first.clone());
             }
         }
     }
 
-    /// Show file open dialog
     fn show_open_dialog(&mut self) {
         info!("Opening file dialog...");
         let result = rfd::FileDialog::new()
@@ -177,7 +165,6 @@ impl ImageViewerApp {
         }
     }
 
-    /// Navigate to next image
     fn next_image(&mut self) {
         if !self.image_list.is_empty() && self.current_index < self.image_list.len() - 1 {
             self.current_index += 1;
@@ -186,7 +173,6 @@ impl ImageViewerApp {
         }
     }
 
-    /// Navigate to previous image
     fn prev_image(&mut self) {
         if self.current_index > 0 {
             self.current_index -= 1;
@@ -195,41 +181,33 @@ impl ImageViewerApp {
         }
     }
 
-    /// Toggle fullscreen mode
     fn toggle_fullscreen(&mut self, ctx: &Context) {
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
             !self.is_fullscreen(ctx)));
     }
 
-    /// Check if currently fullscreen
     fn is_fullscreen(&self, ctx: &Context) -> bool {
         ctx.input(|i| i.viewport().fullscreen.unwrap_or(false))
     }
 
-    /// Handle keyboard shortcuts
     fn handle_shortcuts(&mut self, ctx: &Context) {
-        // Ctrl+O - Open file
         if ctx.input(|i| i.key_pressed(egui::Key::O) && i.modifiers.ctrl) {
             self.show_open_dialog();
         }
         
-        // Left arrow - Previous image
         if ctx.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
             self.prev_image();
         }
         
-        // Right arrow - Next image
         if ctx.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
             self.next_image();
         }
         
-        // F11 or Ctrl+Shift+F - Fullscreen toggle
         if ctx.input(|i| i.key_pressed(egui::Key::F11) ||
                     (i.key_pressed(egui::Key::F) && i.modifiers.ctrl && i.modifiers.shift)) {
             self.toggle_fullscreen(ctx);
         }
         
-        // Esc - Exit fullscreen or go back to gallery
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             if self.is_fullscreen(ctx) {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
@@ -238,30 +216,24 @@ impl ImageViewerApp {
             }
         }
         
-        // Ctrl++ / Ctrl+= - Zoom in
         if ctx.input(|i| i.key_pressed(egui::Key::PlusEquals) && i.modifiers.ctrl) {
             self.viewer.zoom_in();
         }
         
-        // Ctrl+- - Zoom out
         if ctx.input(|i| i.key_pressed(egui::Key::Minus) && i.modifiers.ctrl) {
             self.viewer.zoom_out();
         }
         
-        // Ctrl+0 - Reset zoom
         if ctx.input(|i| i.key_pressed(egui::Key::Num0) && i.modifiers.ctrl) {
             self.viewer.reset_zoom();
         }
         
-        // Ctrl+1 - 1:1 view (actual size)
         if ctx.input(|i| i.key_pressed(egui::Key::Num1) && i.modifiers.ctrl) {
             self.viewer.reset_zoom();
         }
     }
 
-    /// Handle file drops with support for multiple files
     fn handle_drops(&mut self, ctx: &Context) {
-        // Update drag hover state for visual feedback
         self.drag_hovering = is_drag_hovering(ctx);
         
         ctx.input(|i| {
@@ -269,10 +241,6 @@ impl ImageViewerApp {
                 let image_paths = extract_image_files(&i.raw.dropped_files);
                 
                 if !image_paths.is_empty() {
-                    // Store current list length to check if we had images before
-                    let had_images = !self.image_list.is_empty();
-                    
-                    // Add all dropped images to gallery
                     for path in &image_paths {
                         if !self.image_list.contains(path) {
                             self.image_list.push(path.clone());
@@ -280,9 +248,7 @@ impl ImageViewerApp {
                         }
                     }
                     
-                    // Open the first dropped image
                     if let Some(first_path) = image_paths.first() {
-                        // Find the index of the first image in our list
                         if let Some(idx) = self.image_list.iter().position(|p| p == first_path) {
                             self.current_index = idx;
                         }
@@ -292,56 +258,46 @@ impl ImageViewerApp {
                         self.open_image(path);
                     }
                     
-                    // Clear drag hover state
                     self.drag_hovering = false;
                 }
             } else {
-                // Reset hover state when not dropping
                 self.drag_hovering = false;
             }
         });
     }
     
-    /// Render drag overlay when files are being dragged over the window
     fn render_drag_overlay(&self, ctx: &Context) {
         if !self.drag_hovering {
             return;
         }
         
-        // Create a semi-transparent overlay
         let screen_rect = ctx.screen_rect();
         
         egui::Area::new(egui::Id::new("drag_overlay"))
             .fixed_pos(screen_rect.min)
             .show(ctx, |ui| {
-                // Draw a highlighted border around the window
                 let painter = ui.painter();
                 
-                // Fill with semi-transparent color
                 painter.rect_filled(
                     screen_rect,
                     0.0,
                     egui::Color32::from_rgba_premultiplied(52, 152, 219, 30),
                 );
                 
-                // Draw a prominent border
                 painter.rect_stroke(
                     screen_rect.shrink(2.0),
                     4.0,
                     egui::Stroke::new(4.0, egui::Color32::from_rgb(52, 152, 219)),
                 );
                 
-                // Draw another inner border for emphasis
                 painter.rect_stroke(
                     screen_rect.shrink(8.0),
                     4.0,
                     egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 180, 230)),
                 );
                 
-                // Show drop hint in the center
                 let center = screen_rect.center();
                 
-                // Background pill for text
                 let text = if let Some(preview) = get_drag_preview_text(ctx) {
                     format!("📂 {}", preview)
                 } else {
@@ -376,23 +332,44 @@ impl ImageViewerApp {
                 );
             });
     }
+
+    fn render_about_window(&mut self, ctx: &Context) {
+        if !self.show_about_window {
+            return;
+        }
+
+        egui::Window::new("关于")
+            .collapsible(false)
+            .resizable(false)
+            .fixed_size([300.0, 200.0])
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.heading("Image-Viewer");
+                    ui.add_space(10.0);
+                    ui.label("版本: v0.1.0");
+                    ui.add_space(5.0);
+                    ui.label("© 2026 Image-Viewer Contributors");
+                    ui.add_space(5.0);
+                    ui.label("许可证: MIT License");
+                    ui.add_space(20.0);
+                    if ui.button("关闭").clicked() {
+                        self.show_about_window = false;
+                    }
+                });
+            });
+    }
 }
 
 impl eframe::App for ImageViewerApp {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
-        // Set context FIRST so it's available for file dialogs
         self.viewer.set_ctx(ctx.clone());
         
-        // Handle shortcuts
         self.handle_shortcuts(ctx);
         
-        // Handle file drops (updates drag_hovering state)
         self.handle_drops(ctx);
         
-        // Render drag overlay if hovering
         self.render_drag_overlay(ctx);
 
-        // Menu bar (hidden in fullscreen)
         if !self.is_fullscreen(ctx) {
             egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
                 egui::menu::bar(ui, |ui| {
@@ -444,6 +421,12 @@ impl eframe::App for ImageViewerApp {
                             ui.close_menu();
                         }
                     });
+                    ui.menu_button("帮助", |ui| {
+                        if ui.button("关于").clicked() {
+                            self.show_about_window = true;
+                            ui.close_menu();
+                        }
+                    });
                 });
             });
         }
@@ -465,17 +448,15 @@ impl eframe::App for ImageViewerApp {
             }
         });
         
-        // 处理图库点击事件
         if let Some(path) = clicked_image {
             self.open_image(path);
         }
         
-        // Handle double-click for fullscreen in viewer mode
         if self.current_view == View::Viewer && response.response.double_clicked() {
             self.toggle_fullscreen(ctx);
         }
         
-        // Update viewer with frame reference for texture loading
+        self.render_about_window(ctx);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
