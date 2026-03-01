@@ -19,6 +19,7 @@ pub struct Viewer {
     dragging: bool,
     ctx: Option<Context>,
     user_zoomed: bool,
+    base_scale: f32,  // 自适应窗口时的基准缩放比例
     info_panel: InfoPanel,
     clipboard: ClipboardManager,
     context_menu_open: bool,
@@ -47,6 +48,7 @@ impl Viewer {
             dragging: false,
             ctx: None,
             user_zoomed: false,
+            base_scale: 1.0,
             info_panel,
             clipboard,
             context_menu_open: false,
@@ -72,6 +74,7 @@ impl Viewer {
         self.scale = 1.0;
         self.offset = Vec2::ZERO;
         self.user_zoomed = false;
+        self.base_scale = 1.0;
         self.info_panel.clear();
     }
 
@@ -94,6 +97,7 @@ impl Viewer {
         self.scale = 1.0;
         self.offset = Vec2::ZERO;
         self.user_zoomed = false;
+        self.base_scale = 1.0;
     }
 
     pub fn set_image_with_texture_and_data(
@@ -116,6 +120,7 @@ impl Viewer {
         self.scale = 1.0;
         self.offset = Vec2::ZERO;
         self.user_zoomed = false;
+        self.base_scale = 1.0;
     }
 
     pub fn clear(&mut self) {
@@ -123,6 +128,7 @@ impl Viewer {
         self.scale = 1.0;
         self.offset = Vec2::ZERO;
         self.user_zoomed = false;
+        self.base_scale = 1.0;
         self.info_panel.clear();
     }
 
@@ -340,12 +346,29 @@ impl Viewer {
     }
 
     pub fn calculate_display_size(&self, image_size: Vec2, container_size: Vec2) -> Vec2 {
-        let base_size = if self.config.fit_to_window && !self.user_zoomed {
-            self.fit_to_rect(image_size, container_size)
+        // 计算自适应尺寸和对应的基准缩放比例
+        let fitted_size = self.fit_to_rect(image_size, container_size);
+        let fitted_scale = fitted_size.x / image_size.x; // 自适应时的缩放比例
+        
+        if self.config.fit_to_window && !self.user_zoomed {
+            // 首次显示或重置后，使用自适应尺寸
+            fitted_size
         } else {
-            image_size
-        };
-        base_size * self.scale
+            // 用户手动缩放后，基于自适应尺寸进行缩放
+            // 实际缩放比例 = 自适应比例 * 用户缩放倍数
+            let effective_scale = fitted_scale * self.scale;
+            image_size * effective_scale
+        }
+    }
+    
+    /// 获取当前实际缩放比例（相对于原始尺寸）
+    pub fn current_scale(&self, image_size: Vec2, container_size: Vec2) -> f32 {
+        let fitted_scale = self.fit_to_rect(image_size, container_size).x / image_size.x;
+        if self.config.fit_to_window && !self.user_zoomed {
+            fitted_scale
+        } else {
+            fitted_scale * self.scale
+        }
     }
 
     pub fn fit_to_rect(&self, image_size: Vec2, container_size: Vec2) -> Vec2 {
@@ -417,13 +440,20 @@ impl Viewer {
     }
 
     pub fn zoom_in(&mut self) {
+        // 首次缩放时，从当前显示比例开始（scale=1.0 对应自适应尺寸）
+        if !self.user_zoomed {
+            self.scale = 1.0;
+            self.user_zoomed = true;
+        }
         self.scale = (self.scale * self.config.zoom_step).min(self.config.max_scale);
-        self.user_zoomed = true;
     }
 
     pub fn zoom_out(&mut self) {
+        if !self.user_zoomed {
+            self.scale = 1.0;
+            self.user_zoomed = true;
+        }
         self.scale = (self.scale / self.config.zoom_step).max(self.config.min_scale);
-        self.user_zoomed = true;
     }
 
     pub fn reset_zoom(&mut self) {
@@ -436,6 +466,7 @@ impl Viewer {
         self.scale = 1.0;
         self.offset = Vec2::ZERO;
         self.user_zoomed = false;
+        self.base_scale = 1.0;
     }
 
     pub fn scale(&self) -> f32 {
