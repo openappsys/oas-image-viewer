@@ -8,6 +8,7 @@ use tracing::{debug, info};
 
 use crate::config::Config;
 use crate::decoder::ImageDecoder;
+use crate::dnd::{extract_image_files, is_drag_hovering, get_drag_preview_text};
 use crate::gallery::Gallery;
 use crate::utils::is_image_file;
 use crate::viewer::Viewer;
@@ -22,6 +23,7 @@ pub struct ImageViewerApp {
     current_index: usize,
     decoder: ImageDecoder,
     frame: Option<Frame>,
+    drag_hovering: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,6 +47,7 @@ impl ImageViewerApp {
             current_index: 0,
             decoder: ImageDecoder::new(),
             frame: None,
+            drag_hovering: false,
         };
 
         // Load initial path if provided
@@ -256,27 +259,122 @@ impl ImageViewerApp {
         }
     }
 
-    /// Handle file drops
+    /// Handle file drops with support for multiple files
     fn handle_drops(&mut self, ctx: &Context) {
+        // Update drag hover state for visual feedback
+        self.drag_hovering = is_drag_hovering(ctx);
+        
         ctx.input(|i| {
             if !i.raw.dropped_files.is_empty() {
-                for file in &i.raw.dropped_files {
-                    if let Some(path) = &file.path {
-                        if path.is_file() && is_image_file(path) {
-                            let path = path.clone();
-                            let _ = i;
-                            self.open_image(path);
-                            return;
-                        } else if path.is_dir() {
-                            let path = path.clone();
-                            let _ = i;
-                            self.open_directory(path);
-                            return;
+                let image_paths = extract_image_files(&i.raw.dropped_files);
+                
+                if !image_paths.is_empty() {
+                    // Store current list length to check if we had images before
+                    let had_images = !self.image_list.is_empty();
+                    
+                    // Add all dropped images to gallery
+                    for path in &image_paths {
+                        if !self.image_list.contains(path) {
+                            self.image_list.push(path.clone());
+                            self.gallery.add_image(path.clone());
                         }
                     }
+                    
+                    // Open the first dropped image
+                    if let Some(first_path) = image_paths.first() {
+                        // Find the index of the first image in our list
+                        if let Some(idx) = self.image_list.iter().position(|p| p == first_path) {
+                            self.current_index = idx;
+                        }
+                        
+                        let path = first_path.clone();
+                        let _ = i;
+                        self.open_image(path);
+                    }
+                    
+                    // Clear drag hover state
+                    self.drag_hovering = false;
                 }
+            } else {
+                // Reset hover state when not dropping
+                self.drag_hovering = false;
             }
         });
+    }
+    
+    /// Render drag overlay when files are being dragged over the window
+    fn render_drag_overlay(&self, ctx: &Context) {
+        if !self.drag_hovering {
+            return;
+        }
+        
+        // Create a semi-transparent overlay
+        let screen_rect = ctx.screen_rect();
+        
+        egui::Area::new(egui::Id::new("drag_overlay"))
+            .fixed_pos(screen_rect.min)
+            .show(ctx, |ui| {
+                // Draw a highlighted border around the window
+                let painter = ui.painter();
+                
+                // Fill with semi-transparent color
+                painter.rect_filled(
+                    screen_rect,
+                    0.0,
+                    egui::Color32::from_rgba_premultiplied(52, 152, 219, 30),
+                );
+                
+                // Draw a prominent border
+                painter.rect_stroke(
+                    screen_rect.shrink(2.0),
+                    4.0,
+                    egui::Stroke::new(4.0, egui::Color32::from_rgb(52, 152, 219)),
+                );
+                
+                // Draw another inner border for emphasis
+                painter.rect_stroke(
+                    screen_rect.shrink(8.0),
+                    4.0,
+                    egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 180, 230)),
+                );
+                
+                // Show drop hint in the center
+                let center = screen_rect.center();
+                
+                // Background pill for text
+                let text = if let Some(preview) = get_drag_preview_text(ctx) {
+                    format!("📂 {}", preview)
+                } else {
+                    "📂 释放以打开图片".to_string()
+                };
+                
+                let font = egui::FontId::proportional(20.0);
+                let text_size = painter.layout(
+                    text.clone(),
+                    font.clone(),
+                    egui::Color32::WHITE,
+                    f32::INFINITY,
+                ).size();
+                
+                let pill_rect = egui::Rect::from_center_size(
+                    center,
+                    text_size + egui::Vec2::new(40.0, 24.0),
+                );
+                
+                painter.rect_filled(
+                    pill_rect,
+                    8.0,
+                    egui::Color32::from_rgba_premultiplied(0, 0, 0, 180),
+                );
+                
+                painter.text(
+                    pill_rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    text,
+                    font,
+                    egui::Color32::WHITE,
+                );
+            });
     }
 }
 
@@ -288,8 +386,11 @@ impl eframe::App for ImageViewerApp {
         // Handle shortcuts
         self.handle_shortcuts(ctx);
         
-        // Handle file drops
+        // Handle file drops (updates drag_hovering state)
         self.handle_drops(ctx);
+        
+        // Render drag overlay if hovering
+        self.render_drag_overlay(ctx);
 
         // Menu bar (hidden in fullscreen)
         if !self.is_fullscreen(ctx) {

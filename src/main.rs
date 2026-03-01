@@ -12,6 +12,7 @@ use crate::config::Config;
 mod app;
 mod config;
 mod decoder;
+mod dnd;
 mod gallery;
 mod utils;
 mod viewer;
