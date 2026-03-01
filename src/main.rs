@@ -18,6 +18,7 @@ mod shortcuts_help;
 mod utils;
 mod info_panel;
 mod viewer;
+mod clipboard;
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt()

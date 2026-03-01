@@ -85,8 +85,9 @@ impl ImageViewerApp {
                     color_image,
                     egui::TextureOptions::default(),
                 );
+                let rgba_data = rgba.as_raw().to_vec();
                 self.viewer
-                    .set_image_with_texture(path.clone(), texture, size);
+                    .set_image_with_texture_and_data(path.clone(), texture, size, rgba_data);
                 self.current_view = View::Viewer;
                 if !self.image_list.contains(&path) {
                     self.image_list.push(path.clone());

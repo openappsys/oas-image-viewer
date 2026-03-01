@@ -52,6 +52,8 @@ rayon = "1.8"
 # EXIF metadata reading
 kamadak-exif = "0.5"
 chrono = "0.4"
+# Clipboard support
+arboard = "3.3"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "windef"] }
