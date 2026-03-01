@@ -19,7 +19,7 @@
 
 ### 环境要求
 
-- [Rust](https://rust-lang.org/) 1.90 或更高版本
+- [Rust](https://rust-lang.org/) 1.93 或更高版本
 - 系统依赖（仅 Linux）：
   ```bash
   # Ubuntu/Debian

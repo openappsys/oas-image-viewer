@@ -24,7 +24,7 @@
 #### 方式二：从源码构建
 
 ```bash
-# 1. 确保已安装 Rust 1.90+
+# 1. 确保已安装 Rust 1.93+
 rustc --version
 
 # 2. 克隆仓库
@@ -245,7 +245,7 @@ random_order = false        # 随机顺序
 
 1. **检查 Rust 版本**
    ```bash
-   rustc --version  # 需要 1.90+
+   rustc --version  # 需要 1.93+
    ```
 
 2. **检查系统依赖**（Linux）

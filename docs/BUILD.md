@@ -22,7 +22,7 @@
 #### 环境要求
 
 - Windows 10/11 64位
-- [Rust](https://rustup.rs/) 1.90 或更高版本
+- [Rust](https://rustup.rs/) 1.93 或更高版本
 - [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/) (包含 C++ 构建工具)
 
 #### 依赖安装
@@ -89,7 +89,7 @@ cargo wix --no-build --output target/wix/image-viewer.msi
 #### 环境要求
 
 - macOS 11.0 (Big Sur) 或更高版本
-- [Rust](https://rustup.rs/) 1.90 或更高版本
+- [Rust](https://rustup.rs/) 1.93 或更高版本
 - [Homebrew](https://brew.sh/)
 
 #### 依赖安装
@@ -195,7 +195,7 @@ create-dmg \
 #### 环境要求
 
 - Ubuntu 20.04+ / Debian 11+ / Fedora 35+ / Arch Linux
-- [Rust](https://rustup.rs/) 1.90 或更高版本
+- [Rust](https://rustup.rs/) 1.93 或更高版本
 
 #### 依赖安装
 

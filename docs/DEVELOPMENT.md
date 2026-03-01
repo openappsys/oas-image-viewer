@@ -16,7 +16,7 @@
 
 ### 1. 安装 Rust
 
-确保安装 Rust 1.90 或更高版本：
+确保安装 Rust 1.93 或更高版本：
 
 ```bash
 # 使用 rustup 安装
@@ -26,7 +26,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup update stable
 
 # 验证版本
-rustc --version  # 应显示 1.90.0 或更高
+rustc --version  # 应显示 1.93.0 或更高
 ```
 
 ### 2. 安装系统依赖
