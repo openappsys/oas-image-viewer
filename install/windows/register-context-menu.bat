@@ -3,8 +3,6 @@ chcp 65001 >nul
 :: Image-Viewer Context Menu Registration Script
 :: Universal for Windows 7/8/10/11 - no admin rights needed
 
-setlocal EnableDelayedExpansion
-
 echo ==========================================
 echo Image-Viewer Context Menu Registration
 echo ==========================================
@@ -18,16 +16,13 @@ echo Script directory: %SCRIPT_DIR%
 echo.
 
 :: Try to find image-viewer.exe in various locations
-set "EXE_FOUND=0"
 set "EXE_PATH="
 
 :: Check 1: Parent of parent directory (for install\windows\ structure)
 echo Checking: %SCRIPT_DIR%\..\..\image-viewer.exe
 if exist "%SCRIPT_DIR%\..\..\image-viewer.exe" (
-    for %%F in ("%SCRIPT_DIR%\..\..") do set "ROOT_DIR=%%~fF"
-    set "EXE_PATH=%ROOT_DIR%\image-viewer.exe"
-    set "EXE_FOUND=1"
-    echo [OK] Found at: %EXE_PATH%
+    for %%F in ("%SCRIPT_DIR%\..\..") do set "EXE_PATH=%%~fF\image-viewer.exe"
+    echo [OK] Found
     goto :found_exe
 )
 
@@ -35,8 +30,7 @@ if exist "%SCRIPT_DIR%\..\..\image-viewer.exe" (
 echo Checking: %SCRIPT_DIR%\image-viewer.exe
 if exist "%SCRIPT_DIR%\image-viewer.exe" (
     set "EXE_PATH=%SCRIPT_DIR%\image-viewer.exe"
-    set "EXE_FOUND=1"
-    echo [OK] Found at: %EXE_PATH%
+    echo [OK] Found
     goto :found_exe
 )
 
@@ -44,21 +38,18 @@ if exist "%SCRIPT_DIR%\image-viewer.exe" (
 echo Checking: %LOCALAPPDATA%\Image-Viewer\image-viewer.exe
 if exist "%LOCALAPPDATA%\Image-Viewer\image-viewer.exe" (
     set "EXE_PATH=%LOCALAPPDATA%\Image-Viewer\image-viewer.exe"
-    set "EXE_FOUND=1"
-    echo [OK] Found at: %EXE_PATH%
+    echo [OK] Found
     goto :found_exe
 )
 
 :: Not found
-if %EXE_FOUND%==0 (
-    echo.
-    echo [ERROR] image-viewer.exe not found!
-    echo.
-    echo Please ensure you have downloaded the correct package.
-    echo.
-    pause
-    exit /b 1
-)
+echo.
+echo [ERROR] image-viewer.exe not found!
+echo.
+echo Please ensure you have downloaded the correct package.
+echo.
+pause
+exit /b 1
 
 :found_exe
 echo.
@@ -92,13 +83,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%"
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Failed to register context menu.
-    del "%PS_SCRIPT%"
+    del "%PS_SCRIPT%" 2>nul
     pause
     exit /b 1
 )
 
 :: Clean up
-del "%PS_SCRIPT%"
+del "%PS_SCRIPT%" 2>nul
 
 echo.
 echo ==========================================
@@ -108,9 +99,4 @@ echo.
 echo You can now right-click on image files and select:
 echo   "Open with Image-Viewer"
 echo.
-echo NOTE for Windows 11 users:
-echo If you don't see the menu in the modern context menu,
-echo click "Show more options" or press Shift+F10
-echo.
-
 pause
