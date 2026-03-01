@@ -178,6 +178,8 @@ impl Viewer {
 
         // 缩放指示器
         self.render_zoom_indicator(ui, rect);
+        // 图片尺寸指示器（左下角）
+        self.render_dimensions_indicator(ui, rect);
     }
 
     fn render_image(
@@ -297,6 +299,52 @@ impl Viewer {
             pill_rect.center(),
             egui::Align2::CENTER_CENTER,
             zoom_text,
+            font,
+            Color32::WHITE,
+        );
+    }
+    /// 渲染图片尺寸指示器（左下角）
+    fn render_dimensions_indicator(&self, ui: &mut Ui, rect: Rect) {
+        let dimensions_text = if let Some(ref image) = self.current_image {
+            if let Some((width, height)) = image.dimensions {
+                let mp = (width as f64 * height as f64) / 1_000_000.0;
+                format!("{}×{} / {:.1} MP", width, height, mp)
+            } else {
+                "-".to_string()
+            }
+        } else {
+            "-".to_string()
+        };
+
+        // 放在左下角
+        let pos = rect.left_bottom() + Vec2::new(10.0, -10.0);
+
+        let font = egui::FontId::proportional(12.0);
+        let text_size = ui
+            .painter()
+            .layout(
+                dimensions_text.clone(),
+                font.clone(),
+                Color32::WHITE,
+                f32::INFINITY,
+            )
+            .size();
+
+        let pill_rect = Rect::from_center_size(
+            pos + Vec2::new(text_size.x / 2.0 + 5.0, -text_size.y / 2.0 - 5.0),
+            text_size + Vec2::new(16.0, 10.0),
+        );
+
+        ui.painter().rect_filled(
+            pill_rect,
+            4.0,
+            Color32::from_rgba_premultiplied(0, 0, 0, 180),
+        );
+
+        ui.painter().text(
+            pill_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            dimensions_text,
             font,
             Color32::WHITE,
         );
