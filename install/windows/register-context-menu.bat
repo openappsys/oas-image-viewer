@@ -10,7 +10,7 @@ echo Image-Viewer Context Menu Registration
 echo ==========================================
 echo.
 
-:: Get script directory (e.g., install\windows\
+:: Get script directory
 set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 
@@ -22,7 +22,6 @@ set "EXE_FOUND=0"
 set "EXE_PATH="
 
 :: Check 1: Parent of parent directory (for install\windows\ structure)
-:: SCRIPT_DIR is install\windows\, so ..\.. is the root
 echo Checking: %SCRIPT_DIR%\..\..\image-viewer.exe
 if exist "%SCRIPT_DIR%\..\..\image-viewer.exe" (
     for %%F in ("%SCRIPT_DIR%\..\..") do set "ROOT_DIR=%%~fF"
@@ -32,7 +31,7 @@ if exist "%SCRIPT_DIR%\..\..\image-viewer.exe" (
     goto :found_exe
 )
 
-:: Check 2: Same directory as script (rare case)
+:: Check 2: Same directory as script
 echo Checking: %SCRIPT_DIR%\image-viewer.exe
 if exist "%SCRIPT_DIR%\image-viewer.exe" (
     set "EXE_PATH=%SCRIPT_DIR%\image-viewer.exe"
@@ -56,14 +55,6 @@ if %EXE_FOUND%==0 (
     echo [ERROR] image-viewer.exe not found!
     echo.
     echo Please ensure you have downloaded the correct package.
-    echo The exe should be in the same folder as 'install' directory.
-    echo.
-    echo Expected structure:
-    echo   image-viewer-v0.2.0-windows-x86_64/
-    echo   ├── image-viewer.exe      ^<-- This file
-    echo   └── install/
-    echo       └── windows/
-    echo           └── register-context-menu.bat  ^<-- You are here
     echo.
     pause
     exit /b 1
@@ -78,30 +69,36 @@ echo.
 echo Registering context menu...
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "\
-\$exePath = '%EXE_PATH%'; \
-\$formats = @('png', 'jpg', 'jpeg', 'gif', 'webp', 'tiff', 'tif', 'bmp', 'ico', 'heic', 'heif', 'avif'); \
+:: Create PowerShell script file
+set "PS_SCRIPT=%TEMP%\iv-register.ps1"
+(
+echo $exePath = '%EXE_PATH%';
+echo $formats = @('png', 'jpg', 'jpeg', 'gif', 'webp', 'tiff', 'tif', 'bmp', 'ico', 'heic', 'heif', 'avif');
+echo foreach ($fmt in $formats) {
+echo     $regPath = "HKCU:\Software\Classes\.$fmt\shell\OpenWithImageViewer";
+echo     New-Item -Path $regPath -Force ^| Out-Null;
+echo     Set-ItemProperty -Path $regPath -Name '(Default)' -Value 'Open with Image-Viewer';
+echo     Set-ItemProperty -Path $regPath -Name 'Icon' -Value $exePath;
+echo     $cmdPath = "$regPath\command";
+echo     New-Item -Path $cmdPath -Force ^| Out-Null;
+echo     Set-ItemProperty -Path $cmdPath -Name '(Default)' -Value "`"$exePath`" \"%1\"";
+echo }
+echo Write-Host 'Context menu registered successfully.';
+) > "%PS_SCRIPT%"
 
-foreach (\$fmt in \$formats) { \
-    \$regPath = \"HKCU:\Software\Classes\.$fmt\shell\OpenWithImageViewer\"; \
-    New-Item -Path \$regPath -Force ^| Out-Null; \
-    Set-ItemProperty -Path \$regPath -Name '(Default)' -Value 'Open with Image-Viewer'; \
-    Set-ItemProperty -Path \$regPath -Name 'Icon' -Value \$exePath; \
-    \
-    \$cmdPath = \"\$regPath\command\"; \
-    New-Item -Path \$cmdPath -Force ^| Out-Null; \
-    Set-ItemProperty -Path \$cmdPath -Name '(Default)' -Value \"\`\"\$exePath\`\" \"%%1\"\"; \
-}\
-
-Write-Host 'Context menu registered successfully.'; \
-"
+:: Run PowerShell script
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%"
 
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Failed to register context menu.
+    del "%PS_SCRIPT%"
     pause
     exit /b 1
 )
+
+:: Clean up
+del "%PS_SCRIPT%"
 
 echo.
 echo ==========================================
