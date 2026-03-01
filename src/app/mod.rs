@@ -203,6 +203,22 @@ impl ImageViewerApp {
     }
 
     fn handle_shortcuts(&mut self, ctx: &Context) {
+        // ? 键 - 快捷键帮助面板
+        ctx.input(|i| {
+            for event in &i.events {
+                if let egui::Event::Text(text) = event {
+                    if text == "?" {
+                        self.shortcuts_help_panel.toggle();
+                    }
+                }
+            }
+        });
+        
+        // G 键 - 切换图库/查看器
+        if ctx.input(|i| i.key_pressed(egui::Key::G) && !i.modifiers.any()) {
+            self.toggle_view();
+        }
+        
         if ctx.input(|i| i.key_pressed(egui::Key::O) && i.modifiers.ctrl) {
             self.show_open_dialog();
         }
@@ -246,6 +262,28 @@ impl ImageViewerApp {
     }
 
     /// Handle file drops - only collect files, don't process immediately
+    fn toggle_view(&mut self) {
+        match self.current_view {
+            View::Gallery => {
+                if let Some(index) = self.gallery.selected_index() {
+                    if index < self.image_list.len() {
+                        self.current_index = index;
+                        self.open_image(self.image_list[index].clone());
+                    }
+                } else if !self.image_list.is_empty() {
+                    self.current_index = 0;
+                    self.open_image(self.image_list[0].clone());
+                }
+            }
+            View::Viewer => {
+                self.current_view = View::Gallery;
+                if self.current_index < self.image_list.len() {
+                    self.gallery.select_image(self.current_index);
+                }
+            }
+        }
+    }
+
     fn handle_drops(&mut self, ctx: &Context) {
         self.drag_hovering = is_drag_hovering(ctx);
         
