@@ -66,7 +66,6 @@ fn main() -> Result<()> {
         "Image Viewer",
         native_options,
         Box::new(move |cc| {
-            // 配置中文字体支持
             setup_fonts(&cc.egui_ctx);
             Box::new(ImageViewerApp::new(cc, config, initial_path_clone))
         }),
@@ -76,43 +75,71 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
 /// 配置字体支持，包括中文字体
 fn setup_fonts(ctx: &egui::Context) {
     use egui::FontFamily;
     
-    // 尝试加载系统字体
     let mut fonts = egui::FontDefinitions::default();
+    let mut font_loaded = false;
     
-    // 添加系统默认字体作为备选
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // 尝试加载系统字体
+        // 按优先级尝试不同平台的中文字体
         let font_sources = [
-            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",  // Linux 文泉驿
-            "/System/Library/Fonts/PingFang.ttc",            // macOS 苹方
-            "C:\\Windows\\Fonts\\msyh.ttc",             // Windows 微软雅黑
-            "C:\\Windows\\Fonts\\simhei.ttf",           // Windows 黑体
+            // macOS - 苹方 (多种可能的位置和命名)
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/Supplemental/PingFang.ttc",
+            "/Library/Fonts/PingFang.ttc",
+            // macOS - 黑体
+            "/System/Library/Fonts/STHeiti Light.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            "/System/Library/Fonts/STHeiti.ttc",
+            "/Library/Fonts/STHeiti Light.ttc",
+            "/Library/Fonts/STHeiti Medium.ttc",
+            // macOS - 冬青黑体
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            "/Library/Fonts/Hiragino Sans GB.ttc",
+            // macOS - Arial Unicode (备用)
+            "/Library/Fonts/Arial Unicode.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+            // Linux
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+            // Windows
+            "C:\\Windows\\Fonts\\msyh.ttc",
+            "C:\\Windows\\Fonts\\msyhbd.ttc",
+            "C:\\Windows\\Fonts\\simhei.ttf",
+            "C:\\Windows\\Fonts\\simsun.ttc",
         ];
         
         for font_path in &font_sources {
-            if let Ok(font_data) = std::fs::read(font_path) {
-                fonts.font_data.insert(
-                    "system_font".to_owned(),
-                    egui::FontData::from_owned(font_data).into(),
-                );
-                fonts.families
-                    .entry(FontFamily::Proportional)
-                    .or_default()
-                    .push("system_font".to_owned());
-                fonts.families
-                    .entry(FontFamily::Monospace)
-                    .or_default()
-                    .push("system_font".to_owned());
-                info!("Loaded system font from: {}", font_path);
-                break;
+            match std::fs::read(font_path) {
+                Ok(font_data) => {
+                    fonts.font_data.insert(
+                        "chinese_font".to_owned(),
+                        egui::FontData::from_owned(font_data),
+                    );
+                    fonts.families
+                        .entry(FontFamily::Proportional)
+                        .or_default()
+                        .insert(0, "chinese_font".to_owned());
+                    fonts.families
+                        .entry(FontFamily::Monospace)
+                        .or_default()
+                        .push("chinese_font".to_owned());
+                    info!("Loaded Chinese font from: {}", font_path);
+                    font_loaded = true;
+                    break;
+                }
+                Err(_) => continue,
             }
         }
+    }
+    
+    if !font_loaded {
+        warn!("No Chinese font loaded, menus may display as squares on some systems");
     }
     
     ctx.set_fonts(fonts);
