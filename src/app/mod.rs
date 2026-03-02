@@ -1,4 +1,4 @@
-//! Main application module
+//! 主应用程序模块
 
 use std::path::PathBuf;
 
@@ -43,7 +43,7 @@ impl ImageViewerApp {
         initial_path: Option<PathBuf>,
         config_saver: crate::config::DebouncedConfigSaver,
     ) -> Self {
-        debug!("Initializing ImageViewerApp");
+        debug!("初始化 ImageViewerApp");
         Self::configure_styles(&cc.egui_ctx);
 
         let mut app = Self {
@@ -85,10 +85,10 @@ impl ImageViewerApp {
     }
 
     pub fn open_image(&mut self, path: PathBuf) {
-        info!("Opening image: {:?}", path);
+        info!("正在打开图像: {:?}", path);
         
         if self.viewer.get_ctx().is_none() {
-            tracing::error!("Cannot open image: egui context not available");
+            tracing::error!("无法打开图像: egui 上下文不可用");
             return;
         }
         
@@ -101,17 +101,17 @@ impl ImageViewerApp {
                 let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels);
                 let ctx = self.viewer.get_ctx().unwrap();
                 let texture_name = path.file_name().unwrap_or_default().to_string_lossy();
-                info!("Creating texture for: {}", texture_name);
+                info!("正在为 {} 创建纹理", texture_name);
                 let texture = ctx.load_texture(
                     texture_name.to_string(),
                     color_image,
                     egui::TextureOptions::default(),
                 );
-                info!("Texture created successfully");
+                info!("纹理创建成功");
                 
                 self.viewer.set_image_with_texture(path.clone(), texture, size);
                 self.current_view = View::Viewer;
-                info!("Image opened successfully, switched to Viewer mode");
+                info!("图像打开成功，已切换到查看器模式");
                     
                 if !self.image_list.contains(&path) {
                     self.image_list.push(path.clone());
@@ -123,13 +123,13 @@ impl ImageViewerApp {
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to load image: {}", e);
+                tracing::error!("加载图像失败: {}", e);
             }
         }
     }
 
     pub fn open_directory(&mut self, path: PathBuf) {
-        info!("Opening directory: {:?}", path);
+        info!("正在打开目录: {:?}", path);
         
         if let Ok(entries) = std::fs::read_dir(&path) {
             let mut images: Vec<PathBuf> = entries
@@ -153,27 +153,27 @@ impl ImageViewerApp {
     }
 
     fn show_open_dialog(&mut self) {
-        info!("Opening file dialog...");
+        info!("正在打开文件对话框...");
         let result = rfd::FileDialog::new()
             .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp", "tiff", "tif", "bmp"])
             .add_filter("All Files", &["*"])
             .pick_files();
         
-        info!("File dialog result: {:?}", result.is_some());
+        info!("文件对话框结果: {:?}", result.is_some());
         
         if let Some(paths) = result {
-            info!("Selected {} files", paths.len());
+            info!("选择了 {} 个文件", paths.len());
             for path in &paths {
-                info!("Checking path: {:?}, extension: {:?}", path, path.extension());
+                info!("检查路径: {:?}, 扩展名: {:?}", path, path.extension());
                 if is_image_file(path) {
-                    info!("Path is image file, opening...");
+                    info!("路径是图像文件，正在打开...");
                     self.pending_drop_files.push(path.clone());
                 } else {
-                    info!("Path is NOT an image file");
+                    info!("路径不是图像文件");
                 }
             }
         } else {
-            info!("No files selected or dialog cancelled");
+            info!("未选择文件或对话框已取消");
         }
     }
 
@@ -591,9 +591,9 @@ impl eframe::App for ImageViewerApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        debug!("Application exiting, saving configuration");
+        debug!("应用程序退出，正在保存配置");
         if let Err(e) = self.config.save() {
-            tracing::error!("Failed to save config on exit: {}", e);
+            tracing::error!("退出时保存配置失败: {}", e);
         }
     }
 }

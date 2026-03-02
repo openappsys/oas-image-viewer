@@ -32,14 +32,14 @@ impl ImageDecoder {
     pub fn decode_from_file(&self, path: &Path) -> Result<DynamicImage, DecoderError> {
         debug!("从 {:?} 解码图像", path);
 
-        // Try to detect format from file content first (more reliable)
+        // 首先尝试从文件内容检测格式（更可靠）
         let format_hint = self.detect_format(path).ok();
         if let Some(fmt) = format_hint {
             debug!("根据扩展名检测到格式: {:?}", fmt);
         }
 
-        // image::open automatically detects format from file content (magic number)
-        // This is more reliable than extension-based detection
+        // image::open 自动从文件内容检测格式（magic number）
+        // 这比基于扩展名的检测更可靠
         match image::open(path) {
             Ok(img) => {
                 debug!("使用自动格式检测成功解码图像");
@@ -48,7 +48,7 @@ impl ImageDecoder {
             Err(e) => {
                 error!("自动格式检测失败: {}", e);
 
-                // Fallback: read raw bytes and try to guess format from content
+                // 备用方案：读取原始字节并尝试从内容猜测格式
                 debug!("尝试备用解码方法...");
                 match std::fs::read(path) {
                     Ok(data) => match image::load_from_memory(&data) {

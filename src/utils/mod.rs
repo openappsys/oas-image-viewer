@@ -1,11 +1,11 @@
-//! Utility modules
+//! 工具模块
 
 pub mod errors;
 pub mod threading;
 
 use std::path::Path;
 
-/// Format a file size for display
+/// 格式化文件大小用于显示
 pub fn format_file_size(size: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
 
@@ -23,15 +23,15 @@ pub fn format_file_size(size: u64) -> String {
     }
 }
 
-/// Get file name from path, with fallback
+/// 从路径获取文件名，带后备处理
 pub fn file_name_from_path(path: &Path) -> String {
     path.file_name()
         .and_then(|n| n.to_str())
         .map(|s| s.to_string())
-        .unwrap_or_else(|| "Unknown".to_string())
+        .unwrap_or_else(|| "未知".to_string())
 }
 
-/// Check if a path is likely an image file
+/// 检查路径是否为图像文件
 pub fn is_image_file(path: &Path) -> bool {
     let ext = path
         .extension()

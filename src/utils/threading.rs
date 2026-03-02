@@ -1,28 +1,28 @@
-//! Threading utilities
+//! 线程工具
 
 use std::sync::Arc;
 
 use rayon::ThreadPool;
 
-/// Thread pool for background tasks
+/// 后台任务线程池
 pub struct ThreadPoolManager {
     pool: Arc<ThreadPool>,
 }
 
 impl ThreadPoolManager {
-    /// Create a new thread pool manager
+    /// 创建新的线程池管理器
     pub fn new(num_threads: usize) -> Self {
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(num_threads)
             .build()
-            .expect("Failed to create thread pool");
+            .expect("创建线程池失败");
 
         Self {
             pool: Arc::new(pool),
         }
     }
 
-    /// Execute a task in the thread pool
+    /// 在线程池中执行任务
     pub fn spawn<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -30,7 +30,7 @@ impl ThreadPoolManager {
         self.pool.spawn(f);
     }
 
-    /// Get the thread pool
+    /// 获取线程池
     pub fn pool(&self) -> &ThreadPool {
         &self.pool
     }

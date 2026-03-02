@@ -1,54 +1,54 @@
-//! Error types for the image viewer
+//! 图片查看器的错误类型
 
 use std::io;
 
 use thiserror::Error;
 
-/// Main application error type
+/// 主应用程序错误类型
 #[derive(Error, Debug)]
 pub enum AppError {
-    #[error("IO error: {0}")]
+    #[error("IO错误: {0}")]
     Io(#[from] io::Error),
 
-    #[error("Configuration error: {0}")]
+    #[error("配置错误: {0}")]
     Config(String),
 
-    #[error("Image decoding error: {0}")]
+    #[error("图像解码错误: {0}")]
     Decode(#[from] DecoderError),
 
-    #[error("UI error: {0}")]
+    #[error("UI错误: {0}")]
     Ui(String),
 
-    #[error("Unknown error: {0}")]
+    #[error("未知错误: {0}")]
     Unknown(String),
 }
 
-/// Image decoder specific errors
+/// 图像解码器特定错误
 #[derive(Error, Debug)]
 pub enum DecoderError {
-    #[error("Unsupported image format")]
+    #[error("不支持的图像格式")]
     UnsupportedFormat,
 
-    #[error("Failed to decode image: {0}")]
+    #[error("解码图像失败: {0}")]
     DecodeFailed(String),
 
-    #[error("File not found: {0}")]
+    #[error("文件未找到: {0}")]
     FileNotFound(String),
 
-    #[error("Invalid image data")]
+    #[error("无效的图像数据")]
     InvalidData,
 }
 
-/// Gallery related errors
+/// 图库相关错误
 #[derive(Error, Debug)]
 pub enum GalleryError {
-    #[error("Failed to load image: {0}")]
+    #[error("加载图像失败: {0}")]
     LoadFailed(String),
 
-    #[error("Thumbnail generation failed: {0}")]
+    #[error("缩略图生成失败: {0}")]
     ThumbnailFailed(String),
 
-    #[error("Directory not found: {0}")]
+    #[error("目录未找到: {0}")]
     DirectoryNotFound(String),
 }
 
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_decoder_error_variants() {
         let err1 = DecoderError::UnsupportedFormat;
-        assert!(err1.to_string().contains("Unsupported"));
+        assert!(err1.to_string().contains("不支持"));
 
         let err2 = DecoderError::DecodeFailed("test error".to_string());
         assert!(err2.to_string().contains("test error"));
@@ -69,7 +69,7 @@ mod tests {
         assert!(err3.to_string().contains("/path/to/file"));
 
         let err4 = DecoderError::InvalidData;
-        assert!(err4.to_string().contains("Invalid"));
+        assert!(err4.to_string().contains("无效"));
     }
 
     #[test]
@@ -123,17 +123,17 @@ mod tests {
     #[test]
     fn test_app_error_variants() {
         let err1 = AppError::Io(io::Error::new(io::ErrorKind::Other, "io error"));
-        assert!(err1.to_string().contains("IO error"));
+        assert!(err1.to_string().contains("IO错误"));
 
         let err2 = AppError::Config("invalid config".to_string());
-        assert!(err2.to_string().contains("Configuration"));
+        assert!(err2.to_string().contains("配置错误"));
         assert!(err2.to_string().contains("invalid config"));
 
         let err3 = AppError::Ui("ui error".to_string());
-        assert!(err3.to_string().contains("UI error"));
+        assert!(err3.to_string().contains("UI错误"));
 
         let err4 = AppError::Unknown("unknown".to_string());
-        assert!(err4.to_string().contains("Unknown"));
+        assert!(err4.to_string().contains("未知错误"));
     }
 
     #[test]
@@ -141,13 +141,13 @@ mod tests {
         let decoder_err = DecoderError::DecodeFailed("corrupt data".to_string());
         assert_eq!(
             decoder_err.to_string(),
-            "Failed to decode image: corrupt data"
+            "解码图像失败: corrupt data"
         );
 
         let gallery_err = GalleryError::ThumbnailFailed("timeout".to_string());
         assert_eq!(
             gallery_err.to_string(),
-            "Thumbnail generation failed: timeout"
+            "缩略图生成失败: timeout"
         );
     }
 }

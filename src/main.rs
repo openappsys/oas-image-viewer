@@ -25,12 +25,12 @@ fn main() -> Result<()> {
         .with_env_filter("info,image_viewer=debug")
         .init();
 
-    info!("Starting Image Viewer v{}", env!("CARGO_PKG_VERSION"));
+    info!("正在启动图片查看器 v{}", env!("CARGO_PKG_VERSION"));
 
     let args: Vec<String> = env::args().collect();
     let initial_path = if args.len() > 1 {
         let path = PathBuf::from(&args[1]);
-        info!("Opening from command line: {:?}", path);
+        info!("从命令行打开: {:?}", path);
         Some(path)
     } else {
         None
@@ -38,11 +38,11 @@ fn main() -> Result<()> {
 
     let config = match Config::load() {
         Ok(cfg) => {
-            info!("Configuration loaded successfully");
+            info!("配置加载成功");
             cfg
         }
         Err(e) => {
-            warn!("Failed to load config: {}. Using defaults.", e);
+            warn!("加载配置失败: {}. 使用默认配置。", e);
             Config::default()
         }
     };
@@ -81,7 +81,7 @@ fn main() -> Result<()> {
             ))
         }),
     )
-    .map_err(|e| anyhow::anyhow!("Failed to run application: {}", e))?;
+    .map_err(|e| anyhow::anyhow!("运行应用程序失败: {}", e))?;
 
     Ok(())
 }
@@ -160,7 +160,7 @@ fn setup_fonts(ctx: &egui::Context) {
                         .entry(FontFamily::Monospace)
                         .or_default()
                         .push("chinese_font".to_owned());
-                    info!("Loaded Chinese font from: {}", font_path);
+                    info!("已加载中文字体: {}", font_path);
                     font_loaded = true;
                     break;
                 }
@@ -170,7 +170,7 @@ fn setup_fonts(ctx: &egui::Context) {
     }
 
     if !font_loaded {
-        warn!("No Chinese font loaded, menus may display as squares on some systems");
+        warn!("未加载中文字体，菜单在某些系统上可能显示为方块");
     }
 
     ctx.set_fonts(fonts);
