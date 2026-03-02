@@ -1,26 +1,107 @@
 # Image Viewer
 
-A modern, fast image viewer built with Rust and egui.
+一个使用 Rust 和 egui 构建的现代化、高性能图片查看器。
 
 [![CI](https://github.com/yourusername/image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/image-viewer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+## 特性
 
-- 🖼️ **Multiple Format Support**: PNG, JPEG, GIF, WebP, TIFF, BMP
-- 📁 **Gallery View**: Browse images in a thumbnail grid
-- 🔍 **Zoom & Pan**: Smooth zooming with mouse wheel and drag to pan
-- ⚡ **Fast**: Built with Rust for maximum performance
-- 🎨 **Modern UI**: Clean interface powered by egui
-- 🔧 **Configurable**: Customize through config file
-- 🖥️ **Cross-Platform**: Windows, macOS, and Linux support
+- 🖼️ **多格式支持**：PNG、JPEG、GIF、WebP、TIFF、BMP
+- 📁 **画廊视图**：缩略图网格浏览
+- 🔍 **缩放与平移**：鼠标滚轮缩放，拖拽平移
+- ⚡ **高性能**：Rust 构建，极致性能
+- 🎨 **现代化 UI**：基于 egui 的简洁界面
+- 🔧 **可配置**：通过配置文件自定义
+- 🖥️ **跨平台**：支持 Windows、macOS、Linux
+- 🧪 **高测试覆盖**：451+ 单元测试保障质量
 
-## Installation
+## 架构说明
 
-### Prerequisites
+本项目采用 **Clean Architecture** 架构设计，将代码组织为清晰的分层结构：
 
-- [Rust 1.93 or higher
-- System dependencies (Linux only):
+### 分层架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        UI 层                                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │   main.rs   │ │ info_panel  │ │   shortcuts_help    │   │
+│  │  (入口点)   │ │  (信息面板)  │ │     (快捷键帮助)     │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│                     Domain 层                               │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
+│  │      app/mod.rs         │  │       config.rs         │   │
+│  │   (ImageViewerApp)      │  │      (配置管理)          │   │
+│  │   应用状态、事件循环      │  │    配置加载与持久化       │   │
+│  └─────────────────────────┘  └─────────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│                   Application 层                            │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐    │
+│  │    viewer    │ │    gallery   │ │     decoder      │    │
+│  │  (图像查看器) │ │    (图库)     │ │   (图像解码器)    │    │
+│  │ 缩放/平移/渲染│ │ 缩略图/网格   │ │  多格式解码      │    │
+│  └──────────────┘ └──────────────┘ └──────────────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│                   Infrastructure 层                         │
+│  ┌──────────┐ ┌──────────┐ ┌────────────────────────────┐  │
+│  │   dnd    │ │ clipboard│ │          utils             │  │
+│  │ (拖放)   │ │ (剪贴板)  │ │  errors / threading / ...  │  │
+│  └──────────┘ └──────────┘ └────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 架构原则
+
+1. **依赖方向**：内层不依赖外层，外层依赖内层
+2. **Domain 层**：核心业务逻辑，独立于框架
+3. **Application 层**：用例实现，编排 Domain 层
+4. **Infrastructure 层**：技术细节，可替换的实现
+5. **UI 层**：用户界面，最外层，最易变化
+
+### 模块依赖图
+
+```
+                    main.rs
+                      │
+                      ▼
+                ┌───────────┐
+                │   app     │◄───────┐
+                │  (Domain) │        │
+                └─────┬─────┘        │
+                      │              │
+        ┌─────────────┼─────────────┐│
+        │             │             ││
+        ▼             ▼             ▼│
+   ┌─────────┐  ┌──────────┐  ┌─────────┐
+   │ viewer  │  │  gallery │  │ decoder │
+   └────┬────┘  └────┬─────┘  └────┬────┘
+        │            │             │
+        └────────────┴─────────────┘
+                     │
+                     ▼
+        ┌─────────────────────────────┐
+        │        utils / dnd          │
+        │      / clipboard            │
+        │    (Infrastructure)         │
+        └─────────────────────────────┘
+```
+
+### 数据流向
+
+```
+用户输入 → UI 层 → App 控制器 → Application 组件 → Infrastructure 服务
+                                              ↓
+显示更新 ← UI 层 ← App 控制器 ←←←←←←←←←← 数据返回
+```
+
+## 安装
+
+### 前提条件
+
+- Rust 1.93 或更高版本
+- Linux 系统依赖：
   ```bash
   # Ubuntu/Debian
   sudo apt-get install libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
@@ -32,69 +113,70 @@ A modern, fast image viewer built with Rust and egui.
   sudo pacman -S gtk3 libxcb
   ```
 
-### Build from Source
+### 从源码构建
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/yourusername/image-viewer.git
 cd image-viewer
 
-# Build release version
+# 构建 release 版本
 cargo build --release
 
-# Run
+# 运行
 ./target/release/image-viewer
 ```
 
-### Pre-built Binaries
+### 预构建二进制文件
 
-Download pre-built binaries from the [Releases](https://github.com/yourusername/image-viewer/releases) page.
+从 [Releases](https://github.com/yourusername/image-viewer/releases) 页面下载预构建的二进制文件。
 
-## Usage
+## 使用
 
-### Basic Usage
+### 基础用法
 
 ```bash
-# Open the image viewer
+# 启动图片查看器
 image-viewer
 
-# Open with a specific image
+# 打开指定图片
 image-viewer /path/to/image.png
 
-# Open a directory
+# 打开目录
 image-viewer /path/to/images/
 ```
 
-### Keyboard Shortcuts
+### 快捷键
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + O` | Open file |
-| `Ctrl + +` | Zoom in |
-| `Ctrl + -` | Zoom out |
-| `Ctrl + 0` | Reset zoom |
-| `← / →` | Previous/Next image |
-| `F11` | Toggle fullscreen |
-| `Esc` | Exit fullscreen / Close viewer |
-| `F` | Toggle file info panel |
-| `?` | Show keyboard shortcuts help |
+| 快捷键 | 操作 |
+|--------|------|
+| `Ctrl + O` | 打开文件 |
+| `Ctrl + +` | 放大 |
+| `Ctrl + -` | 缩小 |
+| `Ctrl + 0` | 重置缩放 |
+| `← / →` | 上一张/下一张 |
+| `F11` | 切换全屏 |
+| `Esc` | 退出全屏/关闭查看器 |
+| `G` | 切换画廊/查看器 |
+| `F` | 切换信息面板 |
+| `?` | 显示快捷键帮助 |
 
-### Mouse Controls
+### 鼠标控制
 
-- **Scroll**: Zoom in/out
-- **Drag**: Pan when zoomed
-- **Double-click**: Toggle fullscreen
-- **Right-click**: Context menu
+- **滚轮**：缩放
+- **拖拽**：平移（缩放后）
+- **双击**：切换全屏
+- **右键**：上下文菜单
 
-## Configuration
+## 配置
 
-Configuration is stored in platform-specific locations:
+配置文件位置（平台特定）：
 
 - **Linux**: `~/.config/image-viewer/config.toml`
 - **macOS**: `~/Library/Application Support/com.imageviewer.image-viewer/config.toml`
 - **Windows**: `%APPDATA%\image-viewer\config\config.toml`
 
-### Example Configuration
+### 配置示例
 
 ```toml
 [window]
@@ -112,101 +194,125 @@ fit_to_window = true
 show_info_panel = true
 ```
 
-## Development
+## 开发
 
-### Project Structure
+### 项目结构
 
 ```
 image-viewer/
 ├── src/
-│   ├── main.rs          # Application entry point
-│   ├── config.rs        # Configuration management
-│   ├── app/             # Main application logic
-│   ├── viewer/          # Image viewer component
-│   ├── gallery/         # Gallery grid component
-│   ├── decoder/         # Image decoding
-│   └── utils/           # Utilities (errors, threading)
-├── assets/              # Static assets
-├── .github/workflows/   # CI/CD configuration
-└── Cargo.toml          # Dependencies
+│   ├── main.rs              # 应用程序入口点
+│   ├── config.rs            # 配置管理
+│   ├── app/                 # 核心应用逻辑 (Domain)
+│   ├── viewer/              # 图像查看器 (Application)
+│   ├── gallery/             # 图库模块 (Application)
+│   ├── decoder/             # 图像解码 (Application)
+│   ├── dnd/                 # 拖放处理 (Infrastructure)
+│   ├── clipboard/           # 剪贴板 (Infrastructure)
+│   ├── info_panel.rs        # 信息面板 (UI)
+│   ├── shortcuts_help.rs    # 快捷键帮助 (UI)
+│   └── utils/               # 工具函数 (Infrastructure)
+├── tests/                   # 集成测试
+├── assets/                  # 静态资源
+├── .github/workflows/       # CI/CD 配置
+└── Cargo.toml              # 依赖管理
 ```
 
-### Development Commands
+### 开发命令
 
 ```bash
-# Run in development mode
+# 开发模式运行
 cargo run
 
-# Run tests
+# 运行测试
 cargo test
 
-# Check formatting
+# 运行带覆盖率测试
+cargo tarpaulin
+
+# 检查格式
 cargo fmt -- --check
 
-# Run clippy
+# 运行 clippy
 cargo clippy -- -D warnings
 
-# Build release
+# 构建 release
 cargo build --release
 ```
 
-### Code Quality
+### 代码质量
 
-This project enforces strict code quality:
+本项目强制执行严格的代码质量标准：
 
-- **rustfmt**: Consistent code formatting (`rustfmt.toml`)
-- **clippy**: Linting with strict rules (`.clippy.toml`)
-- **EditorConfig**: Consistent editor settings (`.editorconfig`)
+- **rustfmt**: 一致的代码格式 (`rustfmt.toml`)
+- **clippy**: 严格规则的 linting (`.clippy.toml`)
+- **EditorConfig**: 一致的编辑器设置 (`.editorconfig`)
+- **测试覆盖**: 451+ 单元测试，核心模块覆盖率 >80%
 
-## Architecture
+## v0.3.0 新特性
 
-### Tech Stack
+### 🏗️ 架构重构
 
-- **GUI Framework**: [egui](https://github.com/emilk/egui) / [eframe](https://github.com/emilk/egui/tree/master/crates/eframe)
-- **Image Decoding**: [image](https://github.com/image-rs/image) crate
-- **Error Handling**: [anyhow](https://github.com/dtolnay/anyhow) + [thiserror](https://github.com/dtolnay/thiserror)
-- **Logging**: [tracing](https://github.com/tokio-rs/tracing)
-- **Configuration**: [serde](https://github.com/serde-rs/serde) + [toml](https://github.com/toml-rs/toml)
-- **Threading**: [rayon](https://github.com/rayon-rs/rayon) for parallel processing
+- 采用 Clean Architecture 架构设计
+- 清晰的四层架构：Domain → Application → Infrastructure → UI
+- 模块间依赖关系明确，提高可维护性
 
-### Module Overview
+### 🧪 测试增强
 
-| Module | Purpose |
-|--------|---------|
-| `app` | Main application state and event loop |
-| `viewer` | Full-size image display with zoom/pan |
-| `gallery` | Thumbnail grid for browsing |
-| `decoder` | Image format decoding |
-| `utils` | Error types and threading utilities |
+- 451+ 单元测试通过
+- 每个模块都包含全面的单元测试
+- 新增集成测试覆盖核心用例
 
-## Contributing
+### ⚡ 性能优化
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- 缩略图后台线程异步加载
+- 图像解码双重容错机制
+- 配置保存防抖处理
 
-Please ensure:
-- Code is formatted with `cargo fmt`
-- Clippy passes with `cargo clippy -- -D warnings`
-- All tests pass with `cargo test`
+### 🐛 Bug 修复
 
-## Roadmap
+- 修复缩略图异步加载内存泄漏
+- 优化图像缩放算法
+- 修复全屏模式下菜单栏显示问题
 
-- [ ] Slideshow mode
-- [ ] EXIF metadata display
-- [ ] Basic image editing (rotate, crop)
-- [ ] Custom themes
-- [ ] Plugin system
-- [ ] RAW image support
+## 技术栈
 
-## License
+- **GUI 框架**: [egui](https://github.com/emilk/egui) / [eframe](https://github.com/emilk/egui/tree/master/crates/eframe)
+- **图像解码**: [image](https://github.com/image-rs/image) crate
+- **错误处理**: [anyhow](https://github.com/dtolnay/anyhow) + [thiserror](https://github.com/dtolnay/thiserror)
+- **日志**: [tracing](https://github.com/tokio-rs/tracing)
+- **配置**: [serde](https://github.com/serde-rs/serde) + [toml](https://github.com/toml-rs/toml)
+- **并发**: [rayon](https://github.com/rayon-rs/rayon)
+- **剪贴板**: [arboard](https://github.com/1Password/arboard)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 参与贡献
 
-## Acknowledgments
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
 
-- [egui](https://github.com/emilk/egui) for the excellent immediate-mode GUI library
-- [image-rs](https://github.com/image-rs) for the image decoding library
-- All contributors to the Rust ecosystem
+请确保：
+- 使用 `cargo fmt` 格式化代码
+- 使用 `cargo clippy -- -D warnings` 通过 linting
+- 使用 `cargo test` 通过所有测试
+
+## 路线图
+
+- [ ] 幻灯片模式
+- [ ] EXIF 元数据显示
+- [ ] 基础图像编辑（旋转、裁剪）
+- [ ] 自定义主题
+- [ ] 插件系统
+- [ ] RAW 图像支持
+
+## 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+
+## 致谢
+
+- [egui](https://github.com/emilk/egui) 优秀的即时模式 GUI 库
+- [image-rs](https://github.com/image-rs) 图像解码库
+- 所有 Rust 生态系统的贡献者
