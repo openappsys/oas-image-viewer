@@ -177,7 +177,7 @@ impl JsonStorage {
         std::fs::create_dir_all(&config_dir)
             .map_err(|e| CoreError::StorageError(format!("Failed to create config dir: {}", e)))?;
 
-        let config_path = config_dir.join("config.json");
+        let config_path = config_dir.join("config.toml");
         
         // 记录配置文件完整路径到日志文件
         Self::log_debug(&format!("配置文件路径: {:?}", config_path));
@@ -251,11 +251,11 @@ impl JsonStorage {
 
     /// 保存配置到文件
     fn save_to_file(path: &Path, config: &AppConfig) -> Result<()> {
-        let json = serde_json::to_string_pretty(config)
+        let json = toml::to_string_pretty(config)
             .map_err(|e| CoreError::StorageError(format!("Failed to serialize: {}", e)))?;
 
         // 原子写入
-        let temp_path = path.with_extension("json.tmp");
+        let temp_path = path.with_extension("toml.tmp");
         std::fs::write(&temp_path, json)
             .map_err(|e| CoreError::StorageError(format!("Failed to write: {}", e)))?;
 
@@ -270,7 +270,7 @@ impl JsonStorage {
         let content = std::fs::read_to_string(path)
             .map_err(|e| CoreError::StorageError(format!("Failed to read: {}", e)))?;
 
-        let config: AppConfig = serde_json::from_str(&content)
+        let config: AppConfig = toml::from_str(&content)
             .map_err(|e| CoreError::StorageError(format!("Failed to parse: {}", e)))?;
 
         Ok(config)

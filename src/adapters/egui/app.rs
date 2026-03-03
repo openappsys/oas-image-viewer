@@ -95,18 +95,27 @@ impl EguiApp {
 
     /// 处理待处理文件
     fn process_pending_files(&mut self, ctx: &Context) {
+        // 获取窗口尺寸用于计算适应窗口的缩放
+        let rect = ctx.screen_rect();
+        let win_w = rect.width();
+        let win_h = rect.height();
+        
         while let Some(path) = self.pending_files.pop() {
             let path_str = path.to_string_lossy().to_string();
             
             // 尝试加载图像数据和纹理
             let load_result = self.load_image_with_data(ctx, &path);
             
+            let fit_to_window = self.service.get_state()
+                .map(|s| s.config.viewer.fit_to_window)
+                .unwrap_or(true);
+            
             let _ = self.service.update_state(|state| {
                 // 打开图像获取元数据
                 let _ = self
                     .service
                     .view_use_case
-                    .open_image(&path, &mut state.view);
+                    .open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
             });
             
             // 更新纹理缓存和数据
@@ -242,8 +251,17 @@ impl EguiApp {
                     });
                     // 打开选中的图片（加载纹理和数据）
                     self.load_and_set_image(ctx, &path);
+                    
+                    // 获取窗口尺寸
+                    let rect = ctx.screen_rect();
+                    let win_w = rect.width();
+                    let win_h = rect.height();
+                    let fit_to_window = self.service.get_state()
+                        .map(|s| s.config.viewer.fit_to_window)
+                        .unwrap_or(true);
+                    
                     let _ = self.service.update_state(|state| {
-                        let _ = self.service.view_use_case.open_image(&path, &mut state.view);
+                        let _ = self.service.view_use_case.open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
                     });
                 }
             } else {
@@ -276,9 +294,14 @@ impl EguiApp {
                         let path = image.path().to_path_buf();
                         // 加载纹理和数据
                         self.load_and_set_image(ctx, &path);
+                        // 获取窗口尺寸
+                        let rect = ctx.screen_rect();
+                        let win_w = rect.width();
+                        let win_h = rect.height();
+                        let fit_to_window = state.config.viewer.fit_to_window;
                         // 打开图片
                         let _ = self.service.update_state(|state| {
-                            let _ = self.service.view_use_case.open_image(&path, &mut state.view);
+                            let _ = self.service.view_use_case.open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
                         });
                     }
                 }
@@ -301,9 +324,14 @@ impl EguiApp {
                         let path = image.path().to_path_buf();
                         // 加载纹理和数据
                         self.load_and_set_image(ctx, &path);
+                        // 获取窗口尺寸
+                        let rect = ctx.screen_rect();
+                        let win_w = rect.width();
+                        let win_h = rect.height();
+                        let fit_to_window = state.config.viewer.fit_to_window;
                         // 打开图片
                         let _ = self.service.update_state(|state| {
-                            let _ = self.service.view_use_case.open_image(&path, &mut state.view);
+                            let _ = self.service.view_use_case.open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
                         });
                     }
                 }
@@ -381,27 +409,36 @@ impl EguiApp {
             });
         }
 
-        // Ctrl+0 - 重置缩放（与 v0.2.0 一致）
+        // Ctrl+0 - 适应窗口（根据窗口大小自动计算）
         if ctx.input(|i| i.key_pressed(egui::Key::Num0) && i.modifiers.ctrl) {
             let _ = self.service.update_state(|state| {
-                state.view.scale = crate::core::domain::Scale::new(
-                    1.0,
-                    state.config.viewer.min_scale,
-                    state.config.viewer.max_scale
-                );
-                state.view.offset = crate::core::domain::Position::default();
-                state.view.user_zoomed = true;
+                // 获取窗口尺寸
+                let rect = ctx.screen_rect();
+                let win_w = rect.width();
+                let win_h = rect.height();
+                
+                // 获取当前图像尺寸
+                if let Some(ref image) = state.view.current_image {
+                    let img_w = image.metadata().width;
+                    let img_h = image.metadata().height;
+                    
+                    // 计算适应窗口的缩放比例
+                    let fit_scale = crate::core::use_cases::ViewImageUseCase::calculate_fit_scale(
+                        img_w, img_h, win_w, win_h,
+                    );
+                    
+                    state.view.scale = crate::core::domain::Scale::new(
+                        fit_scale,
+                        state.config.viewer.min_scale,
+                        state.config.viewer.max_scale,
+                    );
+                    state.view.offset = crate::core::domain::Position::default();
+                    state.view.user_zoomed = true;
+                }
             });
         }
 
-        // Ctrl+0 重置缩放
-        if ctx.input(|i| i.key_pressed(egui::Key::Num0) && i.modifiers.ctrl) {
-            let _ = self.service.update_state(|state| {
-                self.service.view_use_case.reset_zoom(&mut state.view);
-            });
-        }
-        
-        // Ctrl+1 - 重置缩放（与 v0.2.0 一致）
+        // Ctrl+1 - 1:1（原始尺寸，100%）
         if ctx.input(|i| i.key_pressed(egui::Key::Num1) && i.modifiers.ctrl) {
             let _ = self.service.update_state(|state| {
                 state.view.scale = crate::core::domain::Scale::new(
@@ -761,8 +798,13 @@ impl EguiApp {
                                 if let Some(image) = state.gallery.gallery.get_image(index) {
                                     let path = image.path().to_path_buf();
                                     self.load_and_set_image(ctx, &path);
+                                    // 获取窗口尺寸
+                                    let rect = ctx.screen_rect();
+                                    let win_w = rect.width();
+                                    let win_h = rect.height();
+                                    let fit_to_window = state.config.viewer.fit_to_window;
                                     let _ = self.service.update_state(|state| {
-                                        let _ = self.service.view_use_case.open_image(&path, &mut state.view);
+                                        let _ = self.service.view_use_case.open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
                                     });
                                 }
                             }
@@ -783,8 +825,13 @@ impl EguiApp {
                                 if let Some(image) = state.gallery.gallery.get_image(index) {
                                     let path = image.path().to_path_buf();
                                     self.load_and_set_image(ctx, &path);
+                                    // 获取窗口尺寸
+                                    let rect = ctx.screen_rect();
+                                    let win_w = rect.width();
+                                    let win_h = rect.height();
+                                    let fit_to_window = state.config.viewer.fit_to_window;
                                     let _ = self.service.update_state(|state| {
-                                        let _ = self.service.view_use_case.open_image(&path, &mut state.view);
+                                        let _ = self.service.view_use_case.open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
                                     });
                                 }
                             }
@@ -811,8 +858,31 @@ impl EguiApp {
                         ui.close_menu();
                     }
                     if ui.button("重置缩放 (Ctrl+0)").clicked() {
+                        // Ctrl+0 = 适应窗口
                         let _ = self.service.update_state(|state| {
-                            self.service.view_use_case.reset_zoom(&mut state.view);
+                            // 获取窗口尺寸
+                            let rect = ctx.screen_rect();
+                            let win_w = rect.width();
+                            let win_h = rect.height();
+                            
+                            // 获取当前图像尺寸
+                            if let Some(ref image) = state.view.current_image {
+                                let img_w = image.metadata().width;
+                                let img_h = image.metadata().height;
+                                
+                                // 计算适应窗口的缩放比例
+                                let fit_scale = crate::core::use_cases::ViewImageUseCase::calculate_fit_scale(
+                                    img_w, img_h, win_w, win_h,
+                                );
+                                
+                                state.view.scale = crate::core::domain::Scale::new(
+                                    fit_scale,
+                                    state.config.viewer.min_scale,
+                                    state.config.viewer.max_scale,
+                                );
+                                state.view.offset = crate::core::domain::Position::default();
+                                state.view.user_zoomed = true;
+                            }
                         });
                         ui.close_menu();
                     }
@@ -938,12 +1008,20 @@ impl eframe::App for EguiApp {
             // 加载纹理和数据
             self.load_and_set_image(ctx, path);
             
+            // 获取窗口尺寸
+            let rect = ctx.screen_rect();
+            let win_w = rect.width();
+            let win_h = rect.height();
+            let fit_to_window = self.service.get_state()
+                .map(|s| s.config.viewer.fit_to_window)
+                .unwrap_or(true);
+            
             let path = path.clone();
             let _ = self.service.update_state(|state| {
                 let _ = self
                     .service
                     .view_use_case
-                    .open_image(&path, &mut state.view);
+                    .open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
             });
         }
         

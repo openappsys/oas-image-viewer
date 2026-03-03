@@ -156,7 +156,9 @@ fn run_app() -> Result<()> {
                     path,
                 );
             } else {
-                let _ = service.view_use_case.open_image(path, &mut state.view);
+                // 初始加载时使用默认窗口大小（稍后会被实际窗口大小覆盖）
+                let fit_to_window = state.config.viewer.fit_to_window;
+                let _ = service.view_use_case.open_image(path, &mut state.view, None, None, fit_to_window);
             }
         });
     }
