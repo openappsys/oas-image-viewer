@@ -35,7 +35,18 @@ fn main() -> Result<()> {
 
     // 创建依赖
     let image_source = Arc::new(FsImageSource::new());
-    let storage = Arc::new(JsonStorage::new()?.with_debounce());
+    let storage: Arc<dyn Storage> = match JsonStorage::new() {
+        Ok(s) => {
+            info!("存储初始化成功");
+            Arc::new(s.with_debounce())
+        }
+        Err(e) => {
+            warn!("创建存储失败: {}. 将不使用持久化存储。", e);
+            // 创建一个临时存储，配置不会持久化但不会崩溃
+            let temp_config = std::env::temp_dir().join("image-viewer-temp-config.json");
+            Arc::new(JsonStorage::from_path(temp_config))
+        }
+    };
 
     // 加载配置
     let config = match storage.load_config() {

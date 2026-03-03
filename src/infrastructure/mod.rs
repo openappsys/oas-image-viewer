@@ -181,6 +181,14 @@ impl JsonStorage {
         })
     }
 
+    /// 从指定路径创建存储（用于临时/回退存储）
+    pub fn from_path(config_path: PathBuf) -> Self {
+        Self {
+            config_path,
+            save_tx: None,
+        }
+    }
+
     /// 获取配置目录
     fn config_dir() -> Result<PathBuf> {
         let proj_dirs = directories::ProjectDirs::from("com", "imageviewer", "image-viewer")
