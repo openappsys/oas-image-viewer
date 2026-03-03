@@ -170,11 +170,18 @@ impl JsonStorage {
     /// 创建新的 JSON 存储
     pub fn new() -> Result<Self> {
         let config_dir = Self::config_dir()?;
+        
+        // 打印配置目录路径（用于调试）
+        eprintln!("[DEBUG] 配置目录: {:?}", config_dir);
+        
         std::fs::create_dir_all(&config_dir)
             .map_err(|e| CoreError::StorageError(format!("Failed to create config dir: {}", e)))?;
 
         let config_path = config_dir.join("config.json");
-
+        
+        // 打印配置文件完整路径
+        eprintln!("[DEBUG] 配置文件路径: {:?}", config_path);
+        
         Ok(Self {
             config_path,
             save_tx: None,
@@ -266,9 +273,14 @@ impl Default for JsonStorage {
 
 impl Storage for JsonStorage {
     fn load_config(&self) -> Result<AppConfig> {
+        // 打印正在加载的配置文件路径
+        eprintln!("[DEBUG] 加载配置文件: {:?}", self.config_path);
+        
         if self.config_path.exists() {
+            eprintln!("[DEBUG] 配置文件存在，开始读取...");
             Self::load_from_file(&self.config_path)
         } else {
+            eprintln!("[DEBUG] 配置文件不存在，使用默认配置");
             Ok(AppConfig::default())
         }
     }
