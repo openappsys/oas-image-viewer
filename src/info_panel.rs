@@ -218,13 +218,16 @@ impl InfoPanel {
     }
 
     /// 渲染信息面板
-    pub fn ui(&mut self, ctx: &Context) {
+    /// 返回 true 如果用户点击了关闭按钮
+    pub fn ui(&mut self, ctx: &Context) -> bool {
         // 检查是否有新的EXIF数据
         self.check_exif_receiver();
 
         if !self.visible {
-            return;
+            return false;
         }
+        
+        let mut should_close = false;
 
         let panel_width = self.width;
 
@@ -244,6 +247,7 @@ impl InfoPanel {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("×").clicked() {
                             self.hide();
+                            should_close = true;
                         }
                     });
                 });
@@ -265,6 +269,8 @@ impl InfoPanel {
                         }
                     });
             });
+            
+        should_close
     }
 
     /// 渲染信息内容

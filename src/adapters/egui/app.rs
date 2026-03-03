@@ -475,8 +475,15 @@ impl EguiApp {
             }
         }
         
-        // 渲染信息面板
-        self.info_panel.ui(ctx);
+        // 渲染信息面板并检查是否需要关闭
+        let should_close = self.info_panel.ui(ctx);
+        
+        // 如果用户点击了关闭按钮，同步更新配置
+        if should_close {
+            let _ = self.service.update_state(|state| {
+                state.config.viewer.show_info_panel = false;
+            });
+        }
     }
 
     /// 悬停菜单按钮
