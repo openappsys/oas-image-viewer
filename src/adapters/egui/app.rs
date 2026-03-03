@@ -27,6 +27,8 @@ pub struct EguiApp {
     drag_hovering: bool,
     /// 当前图像纹理缓存 (path, texture_handle)
     current_texture: Option<(String, egui::TextureHandle)>,
+    /// 当前显示的图片路径，用于检测图片变化
+    current_image_path: Option<PathBuf>,
     /// 关于窗口位置
     about_window_pos: Option<egui::Pos2>,
     /// 快捷键帮助窗口位置
@@ -59,6 +61,7 @@ impl EguiApp {
             pending_files: Vec::new(),
             drag_hovering: false,
             current_texture: None,
+            current_image_path: None,
             about_window_pos,
             shortcuts_window_pos,
         }
@@ -490,6 +493,7 @@ impl EguiApp {
     }
 
     /// 渲染信息面板 (F-104)
+    /// 渲染信息面板
     fn render_info_panel(&mut self, ctx: &Context) {
         // 同步配置中的 show_info_panel 状态
         if let Ok(state) = self.service.get_state() {
@@ -502,13 +506,19 @@ impl EguiApp {
                 }
             }
             
-            // 如果有当前图片，更新信息面板
+            // 只在图片路径改变时才更新信息面板（避免每帧重复加载EXIF）
             if let Some(ref image) = state.view.current_image {
-                self.info_panel.set_image_info(
-                    image.path(),
-                    (image.metadata().width, image.metadata().height),
-                    &format!("{:?}", image.metadata().format),
-                );
+                let new_path = image.path().to_path_buf();
+                if self.current_image_path.as_ref() != Some(&new_path) {
+                    self.current_image_path = Some(new_path.clone());
+                    self.info_panel.set_image_info(
+                        &new_path,
+                        (image.metadata().width, image.metadata().height),
+                        &format!("{:?}", image.metadata().format),
+                    );
+                }
+            } else {
+                self.current_image_path = None;
             }
         }
         
