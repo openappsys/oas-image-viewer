@@ -16,6 +16,8 @@ pub struct InfoPanel {
     current_info: Option<ImageInfo>,
     exif_receiver: Option<Receiver<ExifData>>,
     loading_exif: bool,
+    /// EXIF 加载开始时间，用于超时检测
+    exif_load_start: Option<std::time::Instant>,
 }
 
 /// 图像信息数据结构
@@ -77,6 +79,7 @@ impl InfoPanel {
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
+            exif_load_start: None,
         }
     }
 
@@ -88,6 +91,7 @@ impl InfoPanel {
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
+            exif_load_start: None,
         }
     }
 
@@ -141,6 +145,7 @@ impl InfoPanel {
 
         self.current_info = Some(info);
         self.loading_exif = true;
+        self.exif_load_start = Some(std::time::Instant::now()); // 记录开始时间
 
         // 异步加载EXIF数据
         self.load_exif_async(path);
@@ -176,6 +181,17 @@ impl InfoPanel {
 
     /// 检查并接收异步加载的EXIF数据
     fn check_exif_receiver(&mut self) {
+        // 检查是否超时（3秒）
+        if let Some(start) = self.exif_load_start {
+            if start.elapsed().as_secs() > 3 {
+                warn!("EXIF加载超时");
+                self.loading_exif = false;
+                self.exif_receiver = None;
+                self.exif_load_start = None;
+                return;
+            }
+        }
+        
         if let Some(receiver) = &self.exif_receiver {
             match receiver.try_recv() {
                 Ok(exif_data) => {
@@ -184,6 +200,7 @@ impl InfoPanel {
                     }
                     self.loading_exif = false;
                     self.exif_receiver = None;
+                    self.exif_load_start = None;
                     debug!("EXIF数据加载完成");
                 }
                 Err(std::sync::mpsc::TryRecvError::Empty) => {
@@ -193,6 +210,7 @@ impl InfoPanel {
                     // 通道断开，加载失败
                     self.loading_exif = false;
                     self.exif_receiver = None;
+                    self.exif_load_start = None;
                     warn!("EXIF加载通道断开");
                 }
             }
