@@ -631,6 +631,7 @@ impl eframe::App for EguiApp {
 
         // 渲染主内容
         let mut clicked_image: Option<PathBuf> = None;
+        let mut viewer_actions: (bool, f32, Option<egui::Vec2>) = (false, 0.0, None);
 
         // 获取当前纹理引用
         let texture_ref = self.current_texture.as_ref();
@@ -647,7 +648,7 @@ impl eframe::App for EguiApp {
                     }
                 }
                 ViewMode::Viewer => {
-                    self.viewer_widget.ui(
+                    viewer_actions = self.viewer_widget.ui(
                         ui,
                         &state.view,
                         &state.config.viewer,
@@ -656,6 +657,40 @@ impl eframe::App for EguiApp {
                 }
             }
         });
+        
+        // 处理查看器动作（双击全屏、滚轮缩放、拖拽平移）
+        let (double_clicked, zoom_delta, drag_offset) = viewer_actions;
+        
+        // 处理双击全屏
+        if double_clicked {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
+                !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
+            ));
+        }
+        
+        // 处理滚轮缩放
+        if zoom_delta != 0.0 {
+            let _ = self.service.update_state(|state| {
+                let current_scale = state.view.scale.value();
+                let min_scale = state.config.viewer.min_scale;
+                let max_scale = state.config.viewer.max_scale;
+                let new_scale = if zoom_delta > 1.0 {
+                    (current_scale * zoom_delta).min(max_scale)
+                } else {
+                    (current_scale * zoom_delta).max(min_scale)
+                };
+                // 更新缩放值
+                state.view.scale = crate::core::domain::Scale::new(new_scale, min_scale, max_scale);
+            });
+        }
+        
+        // 处理拖拽平移
+        if let Some(offset) = drag_offset {
+            let _ = self.service.update_state(|state| {
+                state.view.offset.x += offset.x;
+                state.view.offset.y += offset.y;
+            });
+        }
 
         // 处理画廊点击
         if let Some(ref path) = clicked_image {

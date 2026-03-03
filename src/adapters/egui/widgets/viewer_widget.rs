@@ -8,17 +8,20 @@ use egui::{Color32, Rect, Sense, Ui, Vec2};
 #[derive(Default)]
 pub struct ViewerWidget {
     dragging: bool,
+    /// 累积的滚轮增量，用于平滑缩放
+    zoom_accumulator: f32,
 }
 
 impl ViewerWidget {
     /// 渲染查看器
+    /// 返回 (是否双击全屏, 缩放变化量, 拖拽偏移量)
     pub fn ui(
         &mut self,
         ui: &mut Ui,
         state: &ViewState,
         settings: &ViewerSettings,
         texture: Option<&(String, egui::TextureHandle)>,
-    ) {
+    ) -> (bool, f32, Option<Vec2>) {
         let available_size = ui.available_size();
         let bg_color = Color32::from_rgb(
             settings.background_color.r,
@@ -30,26 +33,38 @@ impl ViewerWidget {
         ui.painter().rect_filled(rect, 0.0, bg_color);
 
         // 处理双击全屏
-        if response.double_clicked() {
-            ui.ctx()
-                .send_viewport_cmd(egui::ViewportCommand::Fullscreen(
-                    !ui.ctx().input(|i| i.viewport().fullscreen.unwrap_or(false)),
-                ));
-        }
+        let double_clicked = response.double_clicked();
 
         // 处理拖拽平移
-        if response.dragged() {
-            // 这里应该更新 state.offset，但需要 mutable access
+        let drag_delta = if response.dragged() {
             self.dragging = true;
+            ui.input(|i| i.pointer.delta())
         } else {
             self.dragging = false;
-        }
+            Vec2::ZERO
+        };
 
         // 处理滚轮缩放
+        let mut zoom_delta = 0.0;
         if response.hovered() && !self.dragging {
             let scroll_delta = ui.input(|i| i.scroll_delta.y);
-            if scroll_delta != 0.0 && settings.smooth_scroll {
-                // 这里应该更新 state.scale
+            if scroll_delta != 0.0 {
+                // 累积滚轮增量
+                self.zoom_accumulator += scroll_delta;
+                
+                // 每累积一定量就触发一次缩放
+                const ZOOM_THRESHOLD: f32 = 10.0;
+                if self.zoom_accumulator.abs() >= ZOOM_THRESHOLD {
+                    // 根据方向确定缩放因子
+                    zoom_delta = if self.zoom_accumulator > 0.0 { 1.1 } else { 0.9 };
+                    self.zoom_accumulator = 0.0; // 重置累积器
+                }
+            } else {
+                // 没有滚轮输入时，逐渐减少累积值（平滑过渡）
+                self.zoom_accumulator *= 0.9;
+                if self.zoom_accumulator.abs() < 1.0 {
+                    self.zoom_accumulator = 0.0;
+                }
             }
         }
 
@@ -72,6 +87,9 @@ impl ViewerWidget {
 
         // 渲染尺寸指示器
         self.render_dimensions_indicator(ui, rect, state);
+        
+        let drag_offset = if drag_delta != Vec2::ZERO { Some(drag_delta) } else { None };
+        (double_clicked, zoom_delta, drag_offset)
     }
 
     /// 渲染图像
