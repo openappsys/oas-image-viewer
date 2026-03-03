@@ -102,9 +102,9 @@ mod tests {
     fn test_app_error_from_io() {
         let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
         let app_err = AppError::from(io_err);
-        
+
         match app_err {
-            AppError::Io(_) => {},
+            AppError::Io(_) => {}
             _ => panic!("Expected Io error"),
         }
     }
@@ -113,9 +113,9 @@ mod tests {
     fn test_app_error_from_decoder() {
         let decoder_err = DecoderError::UnsupportedFormat;
         let app_err = AppError::from(decoder_err);
-        
+
         match app_err {
-            AppError::Decode(_) => {},
+            AppError::Decode(_) => {}
             _ => panic!("Expected Decode error"),
         }
     }
@@ -139,15 +139,9 @@ mod tests {
     #[test]
     fn test_error_display_messages() {
         let decoder_err = DecoderError::DecodeFailed("corrupt data".to_string());
-        assert_eq!(
-            decoder_err.to_string(),
-            "解码图像失败: corrupt data"
-        );
+        assert_eq!(decoder_err.to_string(), "解码图像失败: corrupt data");
 
         let gallery_err = GalleryError::ThumbnailFailed("timeout".to_string());
-        assert_eq!(
-            gallery_err.to_string(),
-            "缩略图生成失败: timeout"
-        );
+        assert_eq!(gallery_err.to_string(), "缩略图生成失败: timeout");
     }
 }

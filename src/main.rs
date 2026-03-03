@@ -1,32 +1,30 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::env;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use eframe::NativeOptions;
 use tracing::{info, warn};
 
-use crate::app::ImageViewerApp;
-use crate::config::{Config, DebouncedConfigSaver};
-
-mod app;
-mod config;
-mod decoder;
-mod dnd;
-mod gallery;
-mod shortcuts_help;
-mod utils;
-mod info_panel;
-mod viewer;
-mod clipboard;
+use image_viewer::adapters::egui::EguiApp;
+use image_viewer::core::domain::{GalleryLayout, ViewerSettings, WindowState};
+use image_viewer::core::ports::{AppConfig, Storage};
+use image_viewer::core::use_cases::{
+    ImageViewerService, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase,
+};
+use image_viewer::infrastructure::{FsImageSource, JsonStorage};
 
 fn main() -> Result<()> {
+    // 初始化日志
     tracing_subscriber::fmt()
         .with_env_filter("info,image_viewer=debug")
         .init();
 
     info!("正在启动图片查看器 v{}", env!("CARGO_PKG_VERSION"));
 
+    // 解析命令行参数
     let args: Vec<String> = env::args().collect();
     let initial_path = if args.len() > 1 {
         let path = PathBuf::from(&args[1]);
@@ -36,17 +34,56 @@ fn main() -> Result<()> {
         None
     };
 
-    let config = match Config::load() {
+    // 创建依赖
+    let image_source = Arc::new(FsImageSource::new());
+    let storage = Arc::new(JsonStorage::new()?.with_debounce());
+
+    // 加载配置
+    let config = match storage.load_config() {
         Ok(cfg) => {
             info!("配置加载成功");
             cfg
         }
         Err(e) => {
             warn!("加载配置失败: {}. 使用默认配置。", e);
-            Config::default()
+            AppConfig::default()
         }
     };
 
+    // 创建用例
+    let view_use_case = ViewImageUseCase::new(image_source.clone(), storage.clone());
+    let navigate_use_case = NavigateGalleryUseCase;
+    let config_use_case = ManageConfigUseCase::new(storage.clone());
+
+    // 创建应用服务
+    let service = Arc::new(ImageViewerService::new(
+        view_use_case,
+        navigate_use_case,
+        config_use_case,
+    ));
+
+    // 初始化配置
+    service.initialize()?;
+
+    // 如果有初始路径，加载它
+    if let Some(ref path) = initial_path {
+        let _ = service.update_state(|state| {
+            if path.is_dir() {
+                // 加载目录到画廊
+                let image_source = FsImageSource::new();
+                let _ = service.navigate_use_case.load_directory(
+                    &mut state.gallery,
+                    &image_source,
+                    path,
+                );
+            } else {
+                // 打开单个图像
+                let _ = service.view_use_case.open_image(path, &mut state.view);
+            }
+        });
+    }
+
+    // 配置窗口
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([config.window.width, config.window.height])
         .with_min_inner_size([400.0, 300.0]);
@@ -64,21 +101,14 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
-    // 创建防抖配置保存器
-    let config_saver = DebouncedConfigSaver::new();
-
-    let initial_path_clone = initial_path.clone();
+    // 运行应用程序
+    let service_clone = service.clone();
     eframe::run_native(
         "Image Viewer",
         native_options,
         Box::new(move |cc| {
             setup_fonts(&cc.egui_ctx);
-            Box::new(ImageViewerApp::new(
-                cc,
-                config,
-                initial_path_clone,
-                config_saver,
-            ))
+            Box::new(EguiApp::new(cc, service_clone))
         }),
     )
     .map_err(|e| anyhow::anyhow!("运行应用程序失败: {}", e))?;
@@ -98,49 +128,21 @@ fn setup_fonts(ctx: &egui::Context) {
         // 按优先级尝试不同平台的中文字体
         let font_sources = [
             // ===== macOS =====
-            // 苹方
             "/System/Library/Fonts/PingFang.ttc",
             "/System/Library/Fonts/Supplemental/PingFang.ttc",
             "/Library/Fonts/PingFang.ttc",
-            // 黑体
             "/System/Library/Fonts/STHeiti Light.ttc",
             "/System/Library/Fonts/STHeiti Medium.ttc",
-            "/System/Library/Fonts/STHeiti.ttc",
-            "/Library/Fonts/STHeiti Light.ttc",
-            "/Library/Fonts/STHeiti Medium.ttc",
-            // 冬青黑体
             "/System/Library/Fonts/Hiragino Sans GB.ttc",
             "/Library/Fonts/Hiragino Sans GB.ttc",
-            // Arial Unicode (备用)
-            "/Library/Fonts/Arial Unicode.ttf",
-            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
             // ===== Linux =====
-            // Noto Sans CJK (主流发行版)
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
-            // 文泉驿 (Ubuntu/Debian)
             "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
             "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
-            "/usr/local/share/fonts/wqy-zenhei.ttc",
-            // 文鼎 PL (Fedora/CentOS)
-            "/usr/share/fonts/cjkuni/uming.ttc",
-            "/usr/share/fonts/cjkuni/ukai.ttc",
-            "/usr/share/fonts/opentype/source-han-sans/SourceHanSansCN-Regular.otf",
-            // 思源黑体
-            "/usr/share/fonts/adobe-source-han-sans/SourceHanSansCN-Regular.otf",
-            "/usr/share/fonts/opentype/adobe-source-han-sans/SourceHanSansCN-Regular.otf",
-            // 方正 (一些发行版)
-            "/usr/share/fonts/fangzheng/fzyh.ttf",
             // ===== Windows =====
             "C:\\Windows\\Fonts\\msyh.ttc",
-            "C:\\Windows\\Fonts\\msyhbd.ttc",
             "C:\\Windows\\Fonts\\simhei.ttf",
-            "C:\\Windows\\Fonts\\simsun.ttc",
-            "C:\\Windows\\Fonts\\simkai.ttf",
-            "C:\\Windows\\Fonts\\simfang.ttf",
         ];
 
         for font_path in &font_sources {

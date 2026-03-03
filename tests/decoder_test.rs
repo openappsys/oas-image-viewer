@@ -100,3 +100,146 @@ fn test_extension_edge_cases() {
         );
     }
 }
+
+/// 测试路径包含多个点的文件名
+#[test]
+fn test_filename_with_multiple_dots() {
+    let test_cases = vec![
+        ("my.image.file.png", Some("png")),
+        ("archive.v2.jpg", Some("jpg")),
+        ("file.name.with.dots.gif", Some("gif")),
+    ];
+
+    for (filename, expected_ext) in test_cases {
+        let path = Path::new(filename);
+        let ext = path.extension().and_then(|e| e.to_str());
+        assert_eq!(ext, expected_ext, "Failed for: {}", filename);
+    }
+}
+
+/// 测试路径的各种格式
+#[test]
+fn test_path_formats() {
+    let test_cases = vec![
+        "/absolute/path/to/image.png",
+        "./relative/path/image.jpg",
+        "../parent/image.gif",
+        "image.webp",
+        "~/home/image.bmp",
+    ];
+
+    for path_str in test_cases {
+        let path = Path::new(path_str);
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        let is_image = matches!(
+            ext.to_lowercase().as_str(),
+            "png" | "jpg" | "jpeg" | "gif" | "webp" | "tiff" | "tif" | "bmp"
+        );
+        assert!(is_image, "Should be image: {}", path_str);
+    }
+}
+
+/// 测试Unicode文件名
+#[test]
+fn test_unicode_filenames() {
+    let test_cases = vec![
+        ("图片.png", "png"),
+        ("画像.jpg", "jpg"),
+        ("이미지.gif", "gif"),
+        ("изображение.webp", "webp"),
+    ];
+
+    for (filename, expected_ext) in test_cases {
+        let path = Path::new(filename);
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap();
+        assert_eq!(ext, expected_ext, "Failed for: {}", filename);
+    }
+}
+
+/// 测试数字文件名
+#[test]
+fn test_numeric_filenames() {
+    let test_cases = vec![
+        ("001.png", true),
+        ("123.jpg", true),
+        ("image_2024.gif", true),
+        ("2024.01.01.png", true),
+    ];
+
+    for (filename, expected_supported) in test_cases {
+        let path = Path::new(filename);
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase());
+        let is_supported = matches!(
+            ext.as_deref(),
+            Some("png" | "jpg" | "jpeg" | "gif" | "webp" | "tiff" | "tif" | "bmp")
+        );
+        assert_eq!(is_supported, expected_supported, "Failed for: {}", filename);
+    }
+}
+
+/// 测试特殊字符文件名
+#[test]
+fn test_special_char_filenames() {
+    let test_cases = vec![
+        ("my-image.png", "png"),
+        ("my_image.jpg", "jpg"),
+        ("image+test.gif", "gif"),
+        ("image(test).webp", "webp"),
+    ];
+
+    for (filename, expected_ext) in test_cases {
+        let path = Path::new(filename);
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap();
+        assert_eq!(ext, expected_ext, "Failed for: {}", filename);
+    }
+}
+
+/// 测试空字符串和特殊路径
+#[test]
+fn test_empty_and_special_paths() {
+    let test_cases = vec![
+        ("", false),
+        (".", false),
+        ("..", false),
+        ("/", false),
+        ("./", false),
+        ("../", false),
+    ];
+
+    for (path_str, expected_supported) in test_cases {
+        let path = Path::new(path_str);
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase());
+        let is_supported = matches!(
+            ext.as_deref(),
+            Some("png" | "jpg" | "jpeg" | "gif" | "webp" | "tiff" | "tif" | "bmp")
+        );
+        assert_eq!(
+            is_supported, expected_supported,
+            "Failed for: {:?}",
+            path_str
+        );
+    }
+}
+
+/// 测试扩展名大小写混合
+#[test]
+fn test_mixed_case_extensions() {
+    let test_cases = vec![
+        ("image.Png", "Png"),
+        ("image.jPg", "jPg"),
+        ("image.GiF", "GiF"),
+        ("image.WEBP", "WEBP"),
+    ];
+
+    for (filename, expected_ext) in test_cases {
+        let path = Path::new(filename);
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap();
+        assert_eq!(ext, expected_ext, "Failed for: {}", filename);
+    }
+}
