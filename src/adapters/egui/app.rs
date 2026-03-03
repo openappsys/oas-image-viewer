@@ -645,13 +645,7 @@ impl eframe::App for EguiApp {
         // 处理拖放
         self.handle_drops(ctx);
 
-        // 渲染拖拽覆盖层
-        self.render_drag_overlay(ctx);
-
-        // 渲染菜单栏
-        self.render_menu_bar(ctx);
-
-        // 渲染主内容
+        // 渲染主内容（先于菜单栏，确保菜单在顶层）
         let mut clicked_image: Option<PathBuf> = None;
         let mut viewer_actions: (bool, f32, Option<egui::Vec2>) = (false, 0.0, None);
 
@@ -731,6 +725,12 @@ impl eframe::App for EguiApp {
                     .open_image(&path, &mut state.view);
             });
         }
+        
+        // 渲染拖拽覆盖层（在内容之后，但在菜单之前）
+        self.render_drag_overlay(ctx);
+
+        // 渲染菜单栏（最后渲染，确保在顶层）
+        self.render_menu_bar(ctx);
 
         // 渲染关于窗口
         self.render_about_window(ctx);
