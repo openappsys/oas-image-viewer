@@ -18,7 +18,7 @@
 
 ## 架构说明
 
-本项目采用 **Clean Architecture** 架构设计，将代码组织为清晰的分层结构：
+本项目采用 **分层架构** 架构设计，将代码组织为清晰的分层结构：
 
 ### 分层架构
 
@@ -253,7 +253,7 @@ cargo build --release
 
 ### 🏗️ 架构重构
 
-- 采用 Clean Architecture 架构设计
+- 采用 分层架构 架构设计
 - 清晰的四层架构：Domain → Application → Infrastructure → UI
 - 模块间依赖关系明确，提高可维护性
 

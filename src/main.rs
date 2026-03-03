@@ -9,7 +9,6 @@ use eframe::NativeOptions;
 use tracing::{info, warn};
 
 use image_viewer::adapters::egui::EguiApp;
-use image_viewer::core::domain::{GalleryLayout, ViewerSettings, WindowState};
 use image_viewer::core::ports::{AppConfig, Storage};
 use image_viewer::core::use_cases::{
     ImageViewerService, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase,

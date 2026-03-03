@@ -135,6 +135,8 @@ jobs:
     
     - name: Build release (x86_64 Linux/macOS/Windows)
       if: matrix.target != 'aarch64-unknown-linux-gnu'
+      env:
+        RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
       run: cargo build --release --target ${{ matrix.target }}
     
     - name: Install dependencies (ARM64 native)

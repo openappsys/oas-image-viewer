@@ -74,10 +74,15 @@ pub struct GalleryLayout {
 pub struct ViewerSettings {
     pub background_color: Color,
     pub fit_to_window: bool,
+    pub show_info_panel: bool,
     pub min_scale: f32,
     pub max_scale: f32,
     pub zoom_step: f32,
     pub smooth_scroll: bool,
+    /// 关于窗口位置（x, y）
+    pub about_window_pos: Option<Position>,
+    /// 快捷键帮助窗口位置（x, y）
+    pub shortcuts_window_pos: Option<Position>,
 }
 
 /// 窗口状态
@@ -214,6 +219,7 @@ impl Color {
     }
 
     /// 转换为 u32 RGBA
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_u32(&self) -> u32 {
         ((self.r as u32) << 24) | ((self.g as u32) << 16) | ((self.b as u32) << 8) | (self.a as u32)
     }
@@ -270,10 +276,13 @@ impl ViewerSettings {
         Self {
             background_color: self.background_color,
             fit_to_window: self.fit_to_window,
+            show_info_panel: self.show_info_panel,
             min_scale,
             max_scale,
             zoom_step,
             smooth_scroll: self.smooth_scroll,
+            about_window_pos: self.about_window_pos,
+            shortcuts_window_pos: self.shortcuts_window_pos,
         }
     }
 }
@@ -283,10 +292,13 @@ impl Default for ViewerSettings {
         Self {
             background_color: Color::rgb(30, 30, 30),
             fit_to_window: true,
+            show_info_panel: false,
             min_scale: 0.1,
             max_scale: 20.0,
             zoom_step: 1.25,
             smooth_scroll: true,
+            about_window_pos: None,
+            shortcuts_window_pos: None,
         }
     }
 }
@@ -320,6 +332,7 @@ impl Default for WindowState {
 
 impl NavigationDirection {
     /// 从字符串解析导航方向
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "next" | "forward" => Some(Self::Next),
@@ -527,5 +540,51 @@ mod tests {
         // 128/255 ≈ 0.5，所以 R 应该是约 128
         assert!(premultiplied[0] < 255);
         assert_eq!(premultiplied[3], 128); // Alpha 不变
+    }
+
+    // =========================================================================
+    // Bug 修复回归测试
+    // =========================================================================
+
+    /// Bug 3 回归测试：验证 ViewerSettings 支持窗口位置记忆
+    #[test]
+    fn test_viewer_settings_window_position_memory() {
+        let settings = ViewerSettings {
+            about_window_pos: Some(Position::new(100.0, 200.0)),
+            shortcuts_window_pos: Some(Position::new(300.0, 400.0)),
+            ..Default::default()
+        };
+
+        // 验证位置正确保存
+        assert_eq!(settings.about_window_pos.unwrap().x, 100.0);
+        assert_eq!(settings.about_window_pos.unwrap().y, 200.0);
+        assert_eq!(settings.shortcuts_window_pos.unwrap().x, 300.0);
+        assert_eq!(settings.shortcuts_window_pos.unwrap().y, 400.0);
+
+        // 验证 validated 保留位置信息
+        let validated = settings.validated();
+        assert!(validated.about_window_pos.is_some());
+        assert!(validated.shortcuts_window_pos.is_some());
+    }
+
+    /// Bug 3 回归测试：验证默认情况下窗口位置为 None
+    #[test]
+    fn test_viewer_settings_default_window_positions() {
+        let settings = ViewerSettings::default();
+        assert!(settings.about_window_pos.is_none());
+        assert!(settings.shortcuts_window_pos.is_none());
+    }
+
+    /// Bug 2 回归测试：验证 ViewerSettings 支持 show_info_panel 字段
+    #[test]
+    fn test_viewer_settings_show_info_panel() {
+        let settings = ViewerSettings {
+            show_info_panel: true,
+            ..Default::default()
+        };
+        assert!(settings.show_info_panel);
+
+        let settings = ViewerSettings::default();
+        assert!(!settings.show_info_panel);
     }
 }

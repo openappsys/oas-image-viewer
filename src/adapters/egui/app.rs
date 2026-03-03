@@ -23,12 +23,29 @@ pub struct EguiApp {
     show_shortcuts: bool,
     pending_files: Vec<PathBuf>,
     drag_hovering: bool,
+    /// 当前图像纹理缓存 (path, texture_handle)
+    current_texture: Option<(String, egui::TextureHandle)>,
+    /// 关于窗口位置
+    about_window_pos: Option<egui::Pos2>,
+    /// 快捷键帮助窗口位置
+    shortcuts_window_pos: Option<egui::Pos2>,
 }
 
 impl EguiApp {
     /// 创建新的 Egui 应用程序
     pub fn new(cc: &eframe::CreationContext<'_>, service: Arc<ImageViewerService>) -> Self {
         Self::configure_styles(&cc.egui_ctx);
+
+        // 加载配置中的窗口位置
+        let (about_window_pos, shortcuts_window_pos) = if let Ok(state) = service.get_state() {
+            let about_pos = state.config.viewer.about_window_pos
+                .map(|p| egui::pos2(p.x, p.y));
+            let shortcuts_pos = state.config.viewer.shortcuts_window_pos
+                .map(|p| egui::pos2(p.x, p.y));
+            (about_pos, shortcuts_pos)
+        } else {
+            (None, None)
+        };
 
         Self {
             service,
@@ -38,6 +55,9 @@ impl EguiApp {
             show_shortcuts: false,
             pending_files: Vec::new(),
             drag_hovering: false,
+            current_texture: None,
+            about_window_pos,
+            shortcuts_window_pos,
         }
     }
 
@@ -64,15 +84,56 @@ impl EguiApp {
     }
 
     /// 处理待处理文件
-    fn process_pending_files(&mut self) {
+    fn process_pending_files(&mut self, ctx: &Context) {
         while let Some(path) = self.pending_files.pop() {
+            let path_str = path.to_string_lossy().to_string();
+            
+            // 尝试加载图像数据和纹理
+            let texture_result = self.load_image_texture(ctx, &path);
+            
             let _ = self.service.update_state(|state| {
+                // 打开图像获取元数据
                 let _ = self
                     .service
                     .view_use_case
                     .open_image(&path, &mut state.view);
             });
+            
+            // 更新纹理缓存
+            if let Ok(texture) = texture_result {
+                self.current_texture = Some((path_str, texture));
+            } else {
+                self.current_texture = None;
+            }
         }
+    }
+
+    /// 加载图像纹理
+    fn load_image_texture(&self, ctx: &Context, path: &std::path::Path) -> anyhow::Result<egui::TextureHandle> {
+        use image::io::Reader as ImageReader;
+        
+        let img = ImageReader::open(path)?
+            .with_guessed_format()?
+            .decode()?;
+        
+        // 转换为 RGBA8
+        let rgba = img.to_rgba8();
+        let (width, height) = rgba.dimensions();
+        
+        // 创建 egui 图像数据
+        let image_data = egui::ColorImage::from_rgba_unmultiplied(
+            [width as usize, height as usize],
+            &rgba.into_raw(),
+        );
+        
+        // 创建纹理
+        let texture = ctx.load_texture(
+            path.file_name().unwrap_or_default().to_string_lossy().to_string(),
+            image_data,
+            egui::TextureOptions::LINEAR,
+        );
+        
+        Ok(texture)
     }
 
     /// 处理拖放
@@ -144,6 +205,13 @@ impl EguiApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
                 !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
             ));
+        }
+
+        // F 键 - 切换文件信息面板
+        if ctx.input(|i| i.key_pressed(egui::Key::F) && !i.modifiers.any()) {
+            let _ = self.service.update_state(|state| {
+                state.config.viewer.show_info_panel = !state.config.viewer.show_info_panel;
+            });
         }
 
         // ESC - 退出全屏或返回画廊
@@ -251,25 +319,36 @@ impl EguiApp {
             return;
         }
 
-        egui::Window::new("关于")
+        let mut window = egui::Window::new("关于")
             .collapsible(false)
             .resizable(false)
-            .fixed_size([300.0, 200.0])
-            .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.heading("Image-Viewer");
-                    ui.add_space(10.0);
-                    ui.label("版本: v0.3.0");
-                    ui.add_space(5.0);
-                    ui.label("© 2026 Image-Viewer Contributors");
-                    ui.add_space(5.0);
-                    ui.label("许可证: MIT License");
-                    ui.add_space(20.0);
-                    if ui.button("关闭").clicked() {
-                        self.show_about = false;
-                    }
-                });
+            .fixed_size([300.0, 200.0]);
+        
+        // 如果有保存的位置，使用它
+        if let Some(pos) = self.about_window_pos {
+            window = window.current_pos(pos);
+        }
+        
+        let response = window.show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.heading("Image-Viewer");
+                ui.add_space(10.0);
+                ui.label("版本: v0.3.0");
+                ui.add_space(5.0);
+                ui.label("© 2026 Image-Viewer Contributors");
+                ui.add_space(5.0);
+                ui.label("许可证: MIT License");
+                ui.add_space(20.0);
+                if ui.button("关闭").clicked() {
+                    self.show_about = false;
+                }
             });
+        });
+
+        // 保存窗口位置
+        if let Some(inner) = response {
+            self.about_window_pos = Some(inner.response.rect.left_top());
+        }
     }
 
     /// 渲染快捷键帮助
@@ -278,37 +357,49 @@ impl EguiApp {
             return;
         }
 
-        egui::Window::new("快捷键帮助")
+        let mut window = egui::Window::new("快捷键帮助")
             .collapsible(false)
             .resizable(false)
-            .default_size([300.0, 400.0])
-            .show(ctx, |ui| {
-                ui.label("文件操作:");
-                ui.label("  Ctrl+O - 打开文件");
-                ui.separator();
+            .default_size([300.0, 400.0]);
+        
+        // 如果有保存的位置，使用它
+        if let Some(pos) = self.shortcuts_window_pos {
+            window = window.current_pos(pos);
+        }
+        
+        let response = window.show(ctx, |ui| {
+            ui.label("文件操作:");
+            ui.label("  Ctrl+O - 打开文件");
+            ui.separator();
 
-                ui.label("导航:");
-                ui.label("  ← → - 上一张/下一张");
-                ui.label("  G - 切换画廊/查看器");
-                ui.separator();
+            ui.label("导航:");
+            ui.label("  ← → - 上一张/下一张");
+            ui.label("  G - 切换画廊/查看器");
+            ui.separator();
 
-                ui.label("缩放:");
-                ui.label("  Ctrl++ - 放大");
-                ui.label("  Ctrl+- - 缩小");
-                ui.label("  Ctrl+0 - 重置缩放");
-                ui.label("  鼠标滚轮 - 缩放");
-                ui.separator();
+            ui.label("缩放:");
+            ui.label("  Ctrl++ - 放大");
+            ui.label("  Ctrl+- - 缩小");
+            ui.label("  Ctrl+0 - 重置缩放");
+            ui.label("  鼠标滚轮 - 缩放");
+            ui.separator();
 
-                ui.label("其他:");
-                ui.label("  F11 - 全屏");
-                ui.label("  ? - 显示此帮助");
-                ui.label("  Esc - 退出全屏/返回");
-                ui.separator();
+            ui.label("其他:");
+            ui.label("  F - 显示/隐藏文件信息面板");
+            ui.label("  F11 - 全屏");
+            ui.label("  ? - 显示此帮助");
+            ui.label("  Esc - 退出全屏/返回");
+            ui.separator();
 
-                if ui.button("关闭").clicked() {
-                    self.show_shortcuts = false;
-                }
-            });
+            if ui.button("关闭").clicked() {
+                self.show_shortcuts = false;
+            }
+        });
+
+        // 保存窗口位置
+        if let Some(inner) = response {
+            self.shortcuts_window_pos = Some(inner.response.rect.left_top());
+        }
     }
 
     /// 悬停菜单按钮
@@ -455,7 +546,7 @@ impl EguiApp {
 impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         // 处理待处理文件
-        self.process_pending_files();
+        self.process_pending_files(ctx);
 
         // 处理快捷键
         self.handle_shortcuts(ctx);
@@ -472,6 +563,9 @@ impl eframe::App for EguiApp {
         // 渲染主内容
         let mut clicked_image: Option<PathBuf> = None;
 
+        // 获取当前纹理引用
+        let texture_ref = self.current_texture.as_ref();
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let state = self.service.get_state().unwrap_or_default();
 
@@ -484,13 +578,26 @@ impl eframe::App for EguiApp {
                     }
                 }
                 ViewMode::Viewer => {
-                    self.viewer_widget.ui(ui, &state.view, &state.config.viewer);
+                    self.viewer_widget.ui(
+                        ui,
+                        &state.view,
+                        &state.config.viewer,
+                        texture_ref,
+                    );
                 }
             }
         });
 
         // 处理画廊点击
-        if let Some(path) = clicked_image {
+        if let Some(ref path) = clicked_image {
+            // 加载纹理
+            if let Ok(texture) = self.load_image_texture(ctx, path) {
+                self.current_texture = Some((path.to_string_lossy().to_string(), texture));
+            } else {
+                self.current_texture = None;
+            }
+            
+            let path = path.clone();
             let _ = self.service.update_state(|state| {
                 let _ = self
                     .service
@@ -507,8 +614,17 @@ impl eframe::App for EguiApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        // 保存配置
+        // 保存主窗口位置和子窗口位置到配置
         let _ = self.service.update_state(|state| {
+            // 从当前保存的位置更新配置
+            if let Some(pos) = self.about_window_pos {
+                state.config.viewer.about_window_pos = 
+                    Some(crate::core::domain::Position::new(pos.x, pos.y));
+            }
+            if let Some(pos) = self.shortcuts_window_pos {
+                state.config.viewer.shortcuts_window_pos = 
+                    Some(crate::core::domain::Position::new(pos.x, pos.y));
+            }
             let _ = self.service.config_use_case.save_config(&state.config);
         });
     }

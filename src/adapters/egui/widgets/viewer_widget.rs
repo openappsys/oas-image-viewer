@@ -12,7 +12,13 @@ pub struct ViewerWidget {
 
 impl ViewerWidget {
     /// 渲染查看器
-    pub fn ui(&mut self, ui: &mut Ui, state: &ViewState, settings: &ViewerSettings) {
+    pub fn ui(
+        &mut self,
+        ui: &mut Ui,
+        state: &ViewState,
+        settings: &ViewerSettings,
+        texture: Option<&(String, egui::TextureHandle)>,
+    ) {
         let available_size = ui.available_size();
         let bg_color = Color32::from_rgb(
             settings.background_color.r,
@@ -49,7 +55,7 @@ impl ViewerWidget {
 
         // 渲染图像或占位符
         if let Some(ref image) = state.current_image {
-            self.render_image(ui, image, state, rect, &response, settings);
+            self.render_image(ui, image, state, rect, &response, settings, texture);
         } else {
             // 无图像占位符
             ui.painter().text(
@@ -77,32 +83,50 @@ impl ViewerWidget {
         rect: Rect,
         _response: &egui::Response,
         _settings: &ViewerSettings,
+        texture: Option<&(String, egui::TextureHandle)>,
     ) {
-        // 这里将渲染实际的图像纹理
-        // 由于 Core 层不持有纹理，需要在 Adapter 层管理
-        // 这里显示文件名作为占位
+        // 如果有纹理，渲染实际图像
+        if let Some((_, texture_handle)) = texture {
+            // 计算缩放后的图像尺寸
+            let img_size = texture_handle.size_vec2();
+            let scale = state.scale.value();
+            let scaled_size = img_size * scale;
 
-        let center = rect.center();
-        let text = format!(
-            "{}\n{}x{}",
-            image.file_name().unwrap_or("Unknown"),
-            image.metadata().width,
-            image.metadata().height,
-        );
+            // 计算居中位置（考虑偏移）
+            let center = rect.center() + Vec2::new(state.offset.x, state.offset.y);
+            let image_rect = Rect::from_center_size(center, scaled_size);
 
-        ui.painter().text(
-            center,
-            egui::Align2::CENTER_CENTER,
-            text,
-            egui::FontId::proportional(14.0),
-            Color32::WHITE,
-        );
+            // 渲染图像纹理
+            ui.painter().image(
+                texture_handle.id(),
+                image_rect,
+                Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        } else {
+            // 纹理加载中或失败，显示文件名作为占位
+            let center = rect.center();
+            let text = format!(
+                "{}\n{}x{}",
+                image.file_name().unwrap_or("Unknown"),
+                image.metadata().width,
+                image.metadata().height,
+            );
+
+            ui.painter().text(
+                center,
+                egui::Align2::CENTER_CENTER,
+                text,
+                egui::FontId::proportional(14.0),
+                Color32::WHITE,
+            );
+        }
 
         // 缩放指示
         if state.user_zoomed {
             let zoom_text = format!("{:.0}%", state.scale.percentage());
             ui.painter().text(
-                center + Vec2::new(0.0, 30.0),
+                rect.center() + Vec2::new(0.0, 30.0),
                 egui::Align2::CENTER_CENTER,
                 zoom_text,
                 egui::FontId::proportional(12.0),

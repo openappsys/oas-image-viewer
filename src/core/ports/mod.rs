@@ -219,6 +219,7 @@ mod tests {
     fn test_app_config_viewer_settings() {
         let config = AppConfig::default();
         assert!(config.viewer.fit_to_window);
+        assert!(!config.viewer.show_info_panel); // Bug 2 修复: F 键控制信息面板
         assert!((config.viewer.min_scale - 0.1).abs() < 0.001);
         assert!((config.viewer.max_scale - 20.0).abs() < 0.001);
         assert!((config.viewer.zoom_step - 1.25).abs() < 0.001);

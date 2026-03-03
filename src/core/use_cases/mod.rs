@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex};
 /// 图像查看用例
 pub struct ViewImageUseCase {
     image_source: Arc<dyn ImageSource>,
+    #[allow(dead_code)]
     storage: Arc<dyn Storage>,
 }
 

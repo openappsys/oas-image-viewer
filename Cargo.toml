@@ -66,6 +66,13 @@ tempfile = "3.8"
 [profile.release]
 opt-level = 3
 lto = true
+
+# Windows: 静态链接 C 运行时，避免依赖 VC++ Redistributable
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
 codegen-units = 1
 strip = true
 
