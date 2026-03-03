@@ -29,6 +29,8 @@ pub struct EguiApp {
     drag_hovering: bool,
     /// 当前图像纹理缓存 (path, texture_handle)
     current_texture: Option<(String, egui::TextureHandle)>,
+    /// 当前纹理的 RGBA 数据，用于复制到剪贴板 (width, height, data)
+    current_texture_data: Option<(usize, usize, Vec<u8>)>,
     /// 当前显示的图片路径，用于检测图片变化
     current_image_path: Option<PathBuf>,
     /// 关于窗口位置
@@ -65,6 +67,7 @@ impl EguiApp {
             pending_files: Vec::new(),
             drag_hovering: false,
             current_texture: None,
+            current_texture_data: None,
             current_image_path: None,
             about_window_pos,
             shortcuts_window_pos,
@@ -101,7 +104,7 @@ impl EguiApp {
             let path_str = path.to_string_lossy().to_string();
             
             // 尝试加载图像数据和纹理
-            let texture_result = self.load_image_texture(ctx, &path);
+            let load_result = self.load_image_with_data(ctx, &path);
             
             let _ = self.service.update_state(|state| {
                 // 打开图像获取元数据
@@ -111,17 +114,26 @@ impl EguiApp {
                     .open_image(&path, &mut state.view);
             });
             
-            // 更新纹理缓存
-            if let Ok(texture) = texture_result {
-                self.current_texture = Some((path_str, texture));
-            } else {
-                self.current_texture = None;
+            // 更新纹理缓存和数据
+            match load_result {
+                Ok((texture, width, height, rgba_data)) => {
+                    self.current_texture = Some((path_str, texture));
+                    self.current_texture_data = Some((width, height, rgba_data));
+                }
+                Err(_) => {
+                    self.current_texture = None;
+                    self.current_texture_data = None;
+                }
             }
         }
     }
 
-    /// 加载图像纹理
-    fn load_image_texture(&self, ctx: &Context, path: &std::path::Path) -> anyhow::Result<egui::TextureHandle> {
+    /// 加载图像纹理和原始 RGBA 数据（用于复制到剪贴板）
+    fn load_image_with_data(
+        &self,
+        ctx: &Context,
+        path: &std::path::Path,
+    ) -> anyhow::Result<(egui::TextureHandle, usize, usize, Vec<u8>)> {
         use image::io::Reader as ImageReader;
         
         let img = ImageReader::open(path)?
@@ -131,11 +143,12 @@ impl EguiApp {
         // 转换为 RGBA8
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();
+        let rgba_data = rgba.into_raw();
         
         // 创建 egui 图像数据
         let image_data = egui::ColorImage::from_rgba_unmultiplied(
             [width as usize, height as usize],
-            &rgba.into_raw(),
+            &rgba_data,
         );
         
         // 创建纹理
@@ -145,7 +158,22 @@ impl EguiApp {
             egui::TextureOptions::LINEAR,
         );
         
-        Ok(texture)
+        Ok((texture, width as usize, height as usize, rgba_data))
+    }
+
+    /// 加载并设置当前图像（纹理 + RGBA数据）
+    fn load_and_set_image(&mut self, ctx: &Context, path: &std::path::Path) {
+        match self.load_image_with_data(ctx, path) {
+            Ok((texture, width, height, rgba_data)) => {
+                self.current_texture = Some((path.to_string_lossy().to_string(), texture));
+                self.current_texture_data = Some((width, height, rgba_data));
+                self.current_image_path = Some(path.to_path_buf());
+            }
+            Err(_) => {
+                self.current_texture = None;
+                self.current_texture_data = None;
+            }
+        }
     }
 
     /// 处理拖放
@@ -222,11 +250,8 @@ impl EguiApp {
                     let _ = self.service.update_state(|state| {
                         state.view.view_mode = ViewMode::Viewer;
                     });
-                    // 打开选中的图片
-                    if let Ok(texture) = self.load_image_texture(ctx, &path) {
-                        self.current_texture = Some((path.to_string_lossy().to_string(), texture));
-                        self.current_image_path = Some(path.clone());
-                    }
+                    // 打开选中的图片（加载纹理和数据）
+                    self.load_and_set_image(ctx, &path);
                     let _ = self.service.update_state(|state| {
                         let _ = self.service.view_use_case.open_image(&path, &mut state.view);
                     });
@@ -261,10 +286,8 @@ impl EguiApp {
                 if let Ok(state) = self.service.get_state() {
                     if let Some(image) = state.gallery.gallery.get_image(index) {
                         let path = image.path().to_path_buf();
-                        // 加载纹理
-                        if let Ok(texture) = self.load_image_texture(ctx, &path) {
-                            self.current_texture = Some((path.to_string_lossy().to_string(), texture));
-                        }
+                        // 加载纹理和数据
+                        self.load_and_set_image(ctx, &path);
                         // 打开图片
                         let _ = self.service.update_state(|state| {
                             let _ = self.service.view_use_case.open_image(&path, &mut state.view);
@@ -290,10 +313,8 @@ impl EguiApp {
                 if let Ok(state) = self.service.get_state() {
                     if let Some(image) = state.gallery.gallery.get_image(index) {
                         let path = image.path().to_path_buf();
-                        // 加载纹理
-                        if let Ok(texture) = self.load_image_texture(ctx, &path) {
-                            self.current_texture = Some((path.to_string_lossy().to_string(), texture));
-                        }
+                        // 加载纹理和数据
+                        self.load_and_set_image(ctx, &path);
                         // 打开图片
                         let _ = self.service.update_state(|state| {
                             let _ = self.service.view_use_case.open_image(&path, &mut state.view);
@@ -615,10 +636,18 @@ impl EguiApp {
             let has_image = true; // 有图片
             let clipboard_available = self.clipboard_manager.is_available();
             
-            // 复制图片
+            // 复制图片（使用已加载的 texture_data，与 v0.2.0 一致）
             ui.add_enabled_ui(has_image && clipboard_available, |ui| {
                 if ui.button("📋 复制图片").clicked() {
-                    match self.clipboard_manager.copy_image_from_file(path) {
+                    // 优先使用已加载的 RGBA 数据
+                    let copy_result = if let Some((width, height, ref data)) = self.current_texture_data {
+                        self.clipboard_manager.copy_image(data, width, height)
+                    } else {
+                        // 回退到从文件加载
+                        self.clipboard_manager.copy_image_from_file(path)
+                    };
+                    
+                    match copy_result {
                         Ok(_) => {
                             self.last_context_menu_result = Some("图片已复制".to_string());
                         }
@@ -904,12 +933,8 @@ impl eframe::App for EguiApp {
 
         // 处理画廊点击
         if let Some(ref path) = clicked_image {
-            // 加载纹理
-            if let Ok(texture) = self.load_image_texture(ctx, path) {
-                self.current_texture = Some((path.to_string_lossy().to_string(), texture));
-            } else {
-                self.current_texture = None;
-            }
+            // 加载纹理和数据
+            self.load_and_set_image(ctx, path);
             
             let path = path.clone();
             let _ = self.service.update_state(|state| {
