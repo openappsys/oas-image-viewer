@@ -171,11 +171,42 @@ impl EguiApp {
             self.show_shortcuts = !self.show_shortcuts;
         }
 
-        // G 键 - 切换视图
+        // G 键 - 切换视图（v0.2.0 兼容：画廊→查看器时打开选中图片）
         if ctx.input(|i| i.key_pressed(egui::Key::G) && !i.modifiers.any()) {
-            let _ = self.service.update_state(|state| {
-                self.service.view_use_case.toggle_view_mode(&mut state.view);
-            });
+            let should_open_image = self.service.get_state().map(|state| {
+                // 当前是画廊模式且即将切换到查看器
+                state.view.view_mode == ViewMode::Gallery && 
+                state.gallery.gallery.selected_index().is_some()
+            }).unwrap_or(false);
+            
+            if should_open_image {
+                // 获取选中的图片路径
+                let selected_path: Option<PathBuf> = self.service.get_state().ok().and_then(|state| {
+                    state.gallery.gallery.selected_index().and_then(|index| {
+                        state.gallery.gallery.get_image(index).map(|img| img.path().to_path_buf())
+                    })
+                });
+                
+                if let Some(path) = selected_path {
+                    // 切换到查看器模式
+                    let _ = self.service.update_state(|state| {
+                        state.view.view_mode = ViewMode::Viewer;
+                    });
+                    // 打开选中的图片
+                    if let Ok(texture) = self.load_image_texture(ctx, &path) {
+                        self.current_texture = Some((path.to_string_lossy().to_string(), texture));
+                        self.current_image_path = Some(path.clone());
+                    }
+                    let _ = self.service.update_state(|state| {
+                        let _ = self.service.view_use_case.open_image(&path, &mut state.view);
+                    });
+                }
+            } else {
+                // 普通切换（查看器→画廊 或 画廊无选中）
+                let _ = self.service.update_state(|state| {
+                    self.service.view_use_case.toggle_view_mode(&mut state.view);
+                });
+            }
         }
 
         // Ctrl+O - 打开文件
@@ -691,7 +722,8 @@ impl eframe::App for EguiApp {
 
         // 渲染主内容（先于菜单栏，确保菜单在顶层）
         let mut clicked_image: Option<PathBuf> = None;
-        let mut viewer_actions: (bool, f32, Option<egui::Vec2>) = (false, 0.0, None);
+        let mut viewer_actions: (bool, f32, Option<egui::Pos2>, Option<egui::Vec2>) = 
+            (false, 1.0, None, None);
 
         // 获取当前纹理引用
         let texture_ref = self.current_texture.as_ref();
@@ -719,7 +751,7 @@ impl eframe::App for EguiApp {
         });
         
         // 处理查看器动作（双击全屏、滚轮缩放、拖拽平移）
-        let (double_clicked, zoom_delta, drag_offset) = viewer_actions;
+        let (double_clicked, zoom_factor, mouse_pos, drag_offset) = viewer_actions;
         
         // 处理双击全屏
         if double_clicked {
@@ -728,19 +760,38 @@ impl eframe::App for EguiApp {
             ));
         }
         
-        // 处理滚轮缩放
-        if zoom_delta != 0.0 {
+        // 处理滚轮缩放（v0.2.0 方式：以鼠标为中心，调整 offset）
+        if zoom_factor != 1.0 {
             let _ = self.service.update_state(|state| {
                 let current_scale = state.view.scale.value();
                 let min_scale = state.config.viewer.min_scale;
                 let max_scale = state.config.viewer.max_scale;
-                let new_scale = if zoom_delta > 1.0 {
-                    (current_scale * zoom_delta).min(max_scale)
-                } else {
-                    (current_scale * zoom_delta).max(min_scale)
-                };
+                
+                // 计算新缩放值并限制范围
+                let new_scale = (current_scale * zoom_factor).clamp(min_scale, max_scale);
+                
+                // v0.2.0 关键：以鼠标位置为中心缩放，调整 offset
+                if let Some(mouse) = mouse_pos {
+                    // 获取窗口中心（用于计算相对位置）
+                    let rect = ctx.screen_rect();
+                    let center = rect.center();
+                    
+                    // 计算鼠标相对于中心的偏移（包含当前的 offset）
+                    let zoom_center = mouse - center;
+                    let current_offset = egui::Vec2::new(state.view.offset.x, state.view.offset.y);
+                    let zoom_center_relative = zoom_center - current_offset;
+                    
+                    // 根据缩放比例调整 offset，使鼠标指向的位置保持不动
+                    let scale_ratio = new_scale / current_scale;
+                    let new_offset = current_offset - zoom_center_relative * (scale_ratio - 1.0);
+                    
+                    state.view.offset.x = new_offset.x;
+                    state.view.offset.y = new_offset.y;
+                }
+                
                 // 更新缩放值
                 state.view.scale = crate::core::domain::Scale::new(new_scale, min_scale, max_scale);
+                state.view.user_zoomed = true;
             });
         }
         

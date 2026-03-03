@@ -14,14 +14,15 @@ pub struct ViewerWidget {
 
 impl ViewerWidget {
     /// 渲染查看器
-    /// 返回 (是否双击全屏, 缩放变化量, 拖拽偏移量)
+    /// 返回 (是否双击全屏, 缩放因子, 鼠标位置, 拖拽偏移量)
+    /// 缩放因子: 1.0 表示无变化, >1.0 放大, <1.0 缩小
     pub fn ui(
         &mut self,
         ui: &mut Ui,
         state: &ViewState,
         settings: &ViewerSettings,
         texture: Option<&(String, egui::TextureHandle)>,
-    ) -> (bool, f32, Option<Vec2>) {
+    ) -> (bool, f32, Option<egui::Pos2>, Option<Vec2>) {
         let available_size = ui.available_size();
         let bg_color = Color32::from_rgb(
             settings.background_color.r,
@@ -44,14 +45,17 @@ impl ViewerWidget {
             Vec2::ZERO
         };
 
-        // 处理滚轮缩放 - 与 v0.2.0 一致的连续缩放
-        let mut zoom_delta = 0.0;
+        // 处理滚轮缩放 - 与 v0.2.0 一致：以鼠标为中心
+        let mut zoom_factor = 1.0;
+        let mut mouse_pos: Option<egui::Pos2> = None;
+        
         if response.hovered() && !self.dragging {
             let scroll_delta = ui.input(|i| i.scroll_delta.y);
             if scroll_delta != 0.0 {
-                // 连续缩放：使用与 v0.2.0 相同的公式
-                // zoom_factor = 1.0 + scroll_delta * 0.001
-                zoom_delta = 1.0 + scroll_delta * 0.001;
+                // 与 v0.2.0 相同的连续缩放公式
+                zoom_factor = 1.0 + scroll_delta * 0.001;
+                // 获取鼠标位置
+                mouse_pos = ui.input(|i| i.pointer.hover_pos());
             }
         }
 
@@ -76,7 +80,7 @@ impl ViewerWidget {
         self.render_dimensions_indicator(ui, rect, state);
         
         let drag_offset = if drag_delta != Vec2::ZERO { Some(drag_delta) } else { None };
-        (double_clicked, zoom_delta, drag_offset)
+        (double_clicked, zoom_factor, mouse_pos, drag_offset)
     }
 
     /// 渲染图像
