@@ -806,6 +806,9 @@ impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         // 每帧禁用 UI 缩放，确保 Ctrl++ 只缩放图片而不是整个界面
         ctx.set_pixels_per_point(1.0);
+
+        // 初始化画廊缩略图加载器（与 v0.2.0 一致）
+        self.gallery_widget.init(ctx);
         
         // 处理待处理文件
         self.process_pending_files(ctx);
