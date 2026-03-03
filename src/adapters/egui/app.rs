@@ -242,8 +242,9 @@ impl EguiApp {
             }
         }
 
-        // F11 - 全屏
-        if ctx.input(|i| i.key_pressed(egui::Key::F11)) {
+        // F11 - 全屏（v0.2.0 兼容：也支持 Ctrl+Shift+F）
+        if ctx.input(|i| i.key_pressed(egui::Key::F11) ||
+                    (i.key_pressed(egui::Key::F) && i.modifiers.ctrl && i.modifiers.shift)) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
                 !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
             ));
