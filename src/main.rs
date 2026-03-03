@@ -15,6 +15,7 @@ use image_viewer::core::ports::{AppConfig, Storage};
 use image_viewer::core::use_cases::{
     ImageViewerService, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase,
 };
+use image_viewer::core::domain::Image;
 use image_viewer::infrastructure::{FsImageSource, JsonStorage};
 
 fn main() {
@@ -156,6 +157,16 @@ fn run_app() -> Result<()> {
                     path,
                 );
             } else {
+                // 打开图片并添加到画廊（只添加当前图片，不加载整个目录）
+                let image = Image::new(
+                    path.file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown")
+                        .to_string(),
+                    path.clone(),
+                );
+                state.gallery.gallery.add_image(image);
+                
                 // 初始加载时使用默认窗口大小（稍后会被实际窗口大小覆盖）
                 let fit_to_window = state.config.viewer.fit_to_window;
                 let _ = service.view_use_case.open_image(path, &mut state.view, None, None, fit_to_window);
