@@ -171,21 +171,33 @@ impl JsonStorage {
     pub fn new() -> Result<Self> {
         let config_dir = Self::config_dir()?;
         
-        // 打印配置目录路径（用于调试）
-        eprintln!("[DEBUG] 配置目录: {:?}", config_dir);
+        // 记录配置目录到日志文件
+        Self::log_debug(&format!("配置目录: {:?}", config_dir));
         
         std::fs::create_dir_all(&config_dir)
             .map_err(|e| CoreError::StorageError(format!("Failed to create config dir: {}", e)))?;
 
         let config_path = config_dir.join("config.json");
         
-        // 打印配置文件完整路径
-        eprintln!("[DEBUG] 配置文件路径: {:?}", config_path);
+        // 记录配置文件完整路径到日志文件
+        Self::log_debug(&format!("配置文件路径: {:?}", config_path));
         
         Ok(Self {
             config_path,
             save_tx: None,
         })
+    }
+    
+    /// 记录调试信息到日志文件
+    fn log_debug(msg: &str) {
+        use std::io::Write;
+        let line = format!("[DEBUG] {}\n", msg);
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("image-viewer.log") {
+            let _ = file.write_all(line.as_bytes());
+        }
     }
 
     /// 从指定路径创建存储（用于临时/回退存储）
@@ -273,14 +285,14 @@ impl Default for JsonStorage {
 
 impl Storage for JsonStorage {
     fn load_config(&self) -> Result<AppConfig> {
-        // 打印正在加载的配置文件路径
-        eprintln!("[DEBUG] 加载配置文件: {:?}", self.config_path);
+        // 记录正在加载的配置文件路径
+        Self::log_debug(&format!("加载配置文件: {:?}", self.config_path));
         
         if self.config_path.exists() {
-            eprintln!("[DEBUG] 配置文件存在，开始读取...");
+            Self::log_debug("配置文件存在，开始读取...");
             Self::load_from_file(&self.config_path)
         } else {
-            eprintln!("[DEBUG] 配置文件不存在，使用默认配置");
+            Self::log_debug("配置文件不存在，使用默认配置");
             Ok(AppConfig::default())
         }
     }
