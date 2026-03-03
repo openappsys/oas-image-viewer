@@ -427,34 +427,44 @@ impl EguiApp {
 
         let screen_rect = ctx.screen_rect();
 
+        // 获取拖拽预览文本
+        let text = if let Some(preview) = Self::get_drag_preview_text(ctx) {
+            format!("📂 {}", preview)
+        } else {
+            "📂 释放以打开图片".to_string()
+        };
+
         egui::Area::new(egui::Id::new("drag_overlay"))
             .fixed_pos(screen_rect.min)
             .show(ctx, |ui| {
                 let painter = ui.painter();
 
+                // 半透明背景
                 painter.rect_filled(
                     screen_rect,
                     0.0,
                     egui::Color32::from_rgba_premultiplied(52, 152, 219, 30),
                 );
 
+                // 外边框（与 v0.2.0 一致）
                 painter.rect_stroke(
                     screen_rect.shrink(2.0),
                     4.0,
                     egui::Stroke::new(4.0, egui::Color32::from_rgb(52, 152, 219)),
                 );
 
+                // 内边框（与 v0.2.0 一致）
+                painter.rect_stroke(
+                    screen_rect.shrink(8.0),
+                    4.0,
+                    egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 180, 230)),
+                );
+
                 let center = screen_rect.center();
-                let text = "📂 释放以打开图片";
 
                 let font = egui::FontId::proportional(20.0);
                 let text_size = painter
-                    .layout(
-                        text.to_string(),
-                        font.clone(),
-                        egui::Color32::WHITE,
-                        f32::INFINITY,
-                    )
+                    .layout(text.clone(), font.clone(), egui::Color32::WHITE, f32::INFINITY)
                     .size();
 
                 let pill_rect =
@@ -474,6 +484,24 @@ impl EguiApp {
                     egui::Color32::WHITE,
                 );
             });
+    }
+
+    /// 获取拖拽预览文本（显示正在拖拽的文件数量）
+    fn get_drag_preview_text(ctx: &Context) -> Option<String> {
+        ctx.input(|i| {
+            let count = i.raw.hovered_files.len();
+            if count > 1 {
+                Some(format!("{} 个文件", count))
+            } else if count == 1 {
+                i.raw.hovered_files.first().and_then(|f| {
+                    f.path.as_ref().and_then(|p| {
+                        p.file_name().map(|n| n.to_string_lossy().to_string())
+                    })
+                })
+            } else {
+                None
+            }
+        })
     }
 
     /// 渲染关于窗口
