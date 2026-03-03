@@ -293,6 +293,17 @@ impl EguiApp {
                 self.service.view_use_case.reset_zoom(&mut state.view);
             });
         }
+        
+        // Ctrl+1 原始尺寸（1:1）
+        if ctx.input(|i| i.key_pressed(egui::Key::Num1) && i.modifiers.ctrl) {
+            let _ = self.service.update_state(|state| {
+                // 设置为 1.0（100%）原始尺寸
+                let min = state.config.viewer.min_scale;
+                let max = state.config.viewer.max_scale;
+                state.view.scale = crate::core::domain::Scale::new(1.0, min, max);
+                state.view.user_zoomed = true;
+            });
+        }
     }
 
     /// 渲染拖拽覆盖层
