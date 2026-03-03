@@ -15,6 +15,7 @@ use crate::core::ports::FileDialogPort;
 use crate::core::use_cases::{AppState, GalleryState, ImageViewerService, ViewState};
 use crate::info_panel::InfoPanel;
 use crate::clipboard::ClipboardManager;
+use crate::shortcuts_help::ShortcutsHelpPanel;
 
 /// Egui 应用程序适配器
 pub struct EguiApp {
@@ -22,9 +23,9 @@ pub struct EguiApp {
     viewer_widget: ViewerWidget,
     gallery_widget: GalleryWidget,
     info_panel: InfoPanel,
+    shortcuts_help_panel: ShortcutsHelpPanel,
     clipboard_manager: ClipboardManager,
     show_about: bool,
-    show_shortcuts: bool,
     pending_files: Vec<PathBuf>,
     drag_hovering: bool,
     /// 当前图像纹理缓存 (path, texture_handle)
@@ -35,8 +36,6 @@ pub struct EguiApp {
     current_image_path: Option<PathBuf>,
     /// 关于窗口位置
     about_window_pos: Option<egui::Pos2>,
-    /// 快捷键帮助窗口位置
-    shortcuts_window_pos: Option<egui::Pos2>,
     /// 右键菜单最后一次操作结果
     last_context_menu_result: Option<String>,
 }
@@ -47,14 +46,11 @@ impl EguiApp {
         Self::configure_styles(&cc.egui_ctx);
 
         // 加载配置中的窗口位置
-        let (about_window_pos, shortcuts_window_pos) = if let Ok(state) = service.get_state() {
-            let about_pos = state.config.viewer.about_window_pos
-                .map(|p| egui::pos2(p.x, p.y));
-            let shortcuts_pos = state.config.viewer.shortcuts_window_pos
-                .map(|p| egui::pos2(p.x, p.y));
-            (about_pos, shortcuts_pos)
+        let about_window_pos = if let Ok(state) = service.get_state() {
+            state.config.viewer.about_window_pos
+                .map(|p| egui::pos2(p.x, p.y))
         } else {
-            (None, None)
+            None
         };
 
         Self {
@@ -62,15 +58,14 @@ impl EguiApp {
             viewer_widget: ViewerWidget::default(),
             gallery_widget: GalleryWidget::default(),
             info_panel: InfoPanel::new(),
+            shortcuts_help_panel: ShortcutsHelpPanel::new(),
             show_about: false,
-            show_shortcuts: false,
             pending_files: Vec::new(),
             drag_hovering: false,
             current_texture: None,
             current_texture_data: None,
             current_image_path: None,
             about_window_pos,
-            shortcuts_window_pos,
             clipboard_manager: ClipboardManager::new(),
             last_context_menu_result: None,
         }
@@ -219,14 +214,9 @@ impl EguiApp {
 
     /// 处理快捷键
     fn handle_shortcuts(&mut self, ctx: &Context) {
-        // ? 键 - 快捷键帮助
-        let question_pressed = ctx.input(|i| {
-            i.events
-                .iter()
-                .any(|e| matches!(e, egui::Event::Text(text) if text == "?"))
-        });
-        if question_pressed {
-            self.show_shortcuts = !self.show_shortcuts;
+        // 让快捷键帮助面板处理 ? 键和 Esc 键
+        if self.shortcuts_help_panel.handle_input(ctx) {
+            return;
         }
 
         // G 键 - 切换视图（v0.2.0 兼容：画廊→查看器时打开选中图片）
@@ -526,53 +516,7 @@ impl EguiApp {
 
     /// 渲染快捷键帮助
     fn render_shortcuts_help(&mut self, ctx: &Context) {
-        if !self.show_shortcuts {
-            return;
-        }
-
-        let mut window = egui::Window::new("快捷键帮助")
-            .collapsible(false)
-            .resizable(false)
-            .default_size([300.0, 400.0]);
-        
-        // 如果有保存的位置，使用它
-        if let Some(pos) = self.shortcuts_window_pos {
-            window = window.current_pos(pos);
-        }
-        
-        let response = window.show(ctx, |ui| {
-            ui.label("文件操作:");
-            ui.label("  Ctrl+O - 打开文件");
-            ui.separator();
-
-            ui.label("导航:");
-            ui.label("  ← → - 上一张/下一张");
-            ui.label("  G - 切换画廊/查看器");
-            ui.separator();
-
-            ui.label("缩放:");
-            ui.label("  Ctrl++ - 放大");
-            ui.label("  Ctrl+- - 缩小");
-            ui.label("  Ctrl+0 - 重置缩放");
-            ui.label("  鼠标滚轮 - 缩放");
-            ui.separator();
-
-            ui.label("其他:");
-            ui.label("  F - 显示/隐藏文件信息面板");
-            ui.label("  F11 - 全屏");
-            ui.label("  ? - 显示此帮助");
-            ui.label("  Esc - 退出全屏/返回");
-            ui.separator();
-
-            if ui.button("关闭").clicked() {
-                self.show_shortcuts = false;
-            }
-        });
-
-        // 保存窗口位置
-        if let Some(inner) = response {
-            self.shortcuts_window_pos = Some(inner.response.rect.left_top());
-        }
+        self.shortcuts_help_panel.ui(ctx);
     }
 
     /// 渲染信息面板 (F-104)
@@ -818,7 +762,7 @@ impl EguiApp {
 
                 Self::hover_menu_button(ui, "帮助", |ui| {
                     if ui.button("快捷键帮助 (?)").clicked() {
-                        self.show_shortcuts = !self.show_shortcuts;
+                        self.shortcuts_help_panel.toggle();
                         ui.close_menu();
                     }
                     if ui.button("关于").clicked() {
@@ -971,15 +915,11 @@ impl eframe::App for EguiApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        // 保存主窗口位置和子窗口位置到配置
+        // 保存主窗口位置到配置
         let _ = self.service.update_state(|state| {
             // 从当前保存的位置更新配置
             if let Some(pos) = self.about_window_pos {
                 state.config.viewer.about_window_pos = 
-                    Some(crate::core::domain::Position::new(pos.x, pos.y));
-            }
-            if let Some(pos) = self.shortcuts_window_pos {
-                state.config.viewer.shortcuts_window_pos = 
                     Some(crate::core::domain::Position::new(pos.x, pos.y));
             }
             let _ = self.service.config_use_case.save_config(&state.config);
