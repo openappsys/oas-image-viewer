@@ -64,11 +64,6 @@ impl ViewerWidget {
             }
         }
 
-        // 处理右键菜单 - 与 v0.2.0 一致
-        // 使用 response.context_menu 来触发右键菜单显示
-        // 菜单内容由父组件（app.rs）通过注册回调来处理
-        let right_clicked = response.secondary_clicked();
-        
         // 渲染图像或占位符
         if let Some(ref image) = state.current_image {
             self.render_image(ui, image, state, rect, &response, settings, texture);
