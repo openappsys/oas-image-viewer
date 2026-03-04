@@ -2,7 +2,7 @@
 
 use crate::core::domain::ViewerSettings;
 use crate::core::use_cases::ViewState;
-use egui::{Color32, Rect, Sense, Ui, Vec2, PointerButton};
+use egui::{Color32, Rect, Sense, Ui, Vec2};
 
 /// 查看器组件
 #[derive(Default)]
@@ -51,31 +51,15 @@ impl ViewerWidget {
         let mut mouse_pos: Option<egui::Pos2> = None;
         
         if response.hovered() && !self.dragging {
-            // 处理普通滚轮缩放
+            // 处理滚轮缩放 - 同时处理普通滚轮和鼠标中键滚轮
+            // 修复：不再区分鼠标中键（button_down检查的是按住状态，不是滚动状态）
+            // 直接使用 scroll_delta，鼠标中键滚动时 scroll_delta 同样会被设置
             let scroll_delta = ui.input(|i| i.scroll_delta.y);
             if scroll_delta != 0.0 {
                 // 与 v0.2.0 相同的连续缩放公式
                 zoom_factor = 1.0 + scroll_delta * 0.001;
                 // 获取鼠标位置
                 mouse_pos = ui.input(|i| i.pointer.hover_pos());
-            }
-            
-            // 处理鼠标中键滚轮缩放（兼容 v0.2.0）
-            let middle_scroll = ui.input(|i| {
-                // 检查鼠标中键（滚轮按钮）是否按下，并获取垂直滚动增量
-                if i.pointer.button_down(PointerButton::Middle) {
-                    Some(i.scroll_delta.y)
-                } else {
-                    None
-                }
-            });
-            
-            if let Some(middle_scroll) = middle_scroll {
-                if middle_scroll != 0.0 {
-                    // 鼠标中键滚动也做缩放处理
-                    zoom_factor = 1.0 + middle_scroll * 0.001;
-                    mouse_pos = ui.input(|i| i.pointer.hover_pos());
-                }
             }
         }
 

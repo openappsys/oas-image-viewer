@@ -65,16 +65,14 @@ impl ImageSource for FsImageSource {
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_secs());
 
-        // 尝试加载图像获取尺寸
-        let format = Image::detect_format(path);
-        let (width, height) = if format.is_supported() {
-            match self.load_image_data(path) {
-                Ok((w, h, _)) => (w, h),
-                Err(_) => (0, 0),
-            }
-        } else {
-            (0, 0)
+        // 尝试加载图像获取尺寸和格式（使用内容检测，而非仅依赖扩展名）
+        let (width, height) = match self.load_image_data(path) {
+            Ok((w, h, _)) => (w, h),
+            Err(_) => (0, 0),
         };
+
+        // 始终使用扩展名检测格式（更可靠）
+        let format = Image::detect_format(path);
 
         Ok(ImageMetadata {
             width,

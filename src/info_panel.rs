@@ -226,10 +226,19 @@ impl InfoPanel {
         if !self.visible {
             return false;
         }
-        
-        let mut should_close = false;
 
         let panel_width = self.width;
+
+        // 使用 egui 存储来追踪关闭按钮点击状态
+        let close_btn_id = egui::Id::new("info_panel_close_btn");
+        
+        // 检查上一帧是否有关闭按钮点击
+        let was_close_clicked = ctx.data(|d| d.get_temp::<bool>(close_btn_id)).unwrap_or(false);
+        ctx.data_mut(|d| d.insert_temp(close_btn_id, false));
+
+        // 预先提取需要的数据，避免借用冲突
+        let current_info = self.current_info.clone();
+        let loading_exif = self.loading_exif;
 
         SidePanel::right("info_panel")
             .resizable(true)
@@ -247,7 +256,8 @@ impl InfoPanel {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("×").clicked() {
                             self.hide();
-                            should_close = true;
+                            // 存储点击状态供下一帧读取
+                            ctx.data_mut(|d| d.insert_temp(close_btn_id, true));
                         }
                     });
                 });
@@ -258,8 +268,8 @@ impl InfoPanel {
                 ScrollArea::vertical()
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
-                        if let Some(ref info) = self.current_info {
-                            self.render_info_content(ui, info);
+                        if let Some(ref info) = current_info {
+                            Self::render_info_content_static(ui, info, loading_exif);
                         } else {
                             ui.vertical_centered(|ui| {
                                 ui.add_space(50.0);
@@ -270,12 +280,12 @@ impl InfoPanel {
                     });
             });
             
-        should_close
+        was_close_clicked
     }
 
-    /// 渲染信息内容
-    fn render_info_content(&self, ui: &mut egui::Ui, info: &ImageInfo) {
-        // 文件信息部分
+    /// 渲染信息内容（静态版本，避免借用冲突）
+    fn render_info_content_static(ui: &mut egui::Ui, info: &ImageInfo, loading_exif: bool) {
+        // 文件信息部分 - egui 会自动保持展开/折叠状态
         ui.collapsing("📁 文件信息", |ui| {
             render_label_value(ui, "文件名:", &info.file_name);
             render_label_value(ui, "路径:", &format_path(&info.path));
@@ -305,25 +315,21 @@ impl InfoPanel {
 
         // EXIF信息部分
         ui.collapsing("📷 EXIF 信息", |ui| {
-            if self.loading_exif {
+            if loading_exif {
                 ui.horizontal(|ui| {
                     ui.spinner();
                     ui.label(RichText::new("正在加载EXIF数据...").color(Color32::GRAY).size(12.0));
                 });
             } else if let Some(ref exif) = info.exif {
-                self.render_exif_content(ui, exif);
+                Self::render_exif_content_static(ui, exif);
             } else {
                 ui.label(RichText::new("无EXIF数据").color(Color32::GRAY).size(12.0));
             }
         });
     }
 
-    /// 渲染EXIF内容
-    fn render_exif_content(
-        &self,
-        ui: &mut egui::Ui,
-        exif: &ExifData,
-    ) {
+    /// 渲染EXIF内容（静态版本）
+    fn render_exif_content_static(ui: &mut egui::Ui, exif: &ExifData) {
         // 相机信息
         if exif.camera_make.is_some() || exif.camera_model.is_some() {
             let camera = format_camera_info(exif.camera_make.as_deref(), exif.camera_model.as_deref());

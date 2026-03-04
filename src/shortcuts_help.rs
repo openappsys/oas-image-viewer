@@ -143,14 +143,17 @@ impl ShortcutsHelpPanel {
     pub fn handle_input(&mut self, ctx: &Context) -> bool {
         // 检查 ? 字符输入（通过 Text 事件）
         // ? 需要 Shift+/，所以要检查 Shift 修饰键
+        // 修复：在一个闭包内完成所有检查，避免 ctx.input() 调用两次导致状态不一致
         let question_pressed = ctx.input(|i| {
-            i.events.iter().any(|e| {
+            let shift_pressed = i.modifiers.shift;
+            let question_typed = i.events.iter().any(|e| {
                 if let egui::Event::Text(text) = e {
-                    text == "?" 
+                    text == "?"
                 } else {
                     false
                 }
-            }) && ctx.input(|i| i.modifiers.shift)
+            });
+            shift_pressed && question_typed
         });
 
         if question_pressed {

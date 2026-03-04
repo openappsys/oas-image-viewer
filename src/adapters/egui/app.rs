@@ -611,14 +611,13 @@ impl EguiApp {
     fn render_info_panel(&mut self, ctx: &Context) {
         // 同步配置中的 show_info_panel 状态
         if let Ok(state) = self.service.get_state() {
-            // 程序启动时强制隐藏信息面板（即使配置为true）
-            // 用户按 F 键时再切换显示
             let config_visible = state.config.viewer.show_info_panel;
-            
-            // 只有在用户已打开过图片后才根据配置显示
             let has_image = state.view.current_image.is_some();
+            let is_viewer_mode = state.view.view_mode == ViewMode::Viewer;
             
-            let should_show = config_visible && has_image;
+            // 修复问题4: 切换到图库模式时隐藏面板
+            // 只有在查看器模式下才显示信息面板
+            let should_show = config_visible && has_image && is_viewer_mode;
             
             if should_show != self.info_panel.is_visible() {
                 if should_show {
@@ -628,6 +627,7 @@ impl EguiApp {
                 }
             }
             
+            // 修复问题5: 切换图片时更新信息
             // 只在图片路径改变时才更新信息面板（避免每帧重复加载EXIF）
             if let Some(ref image) = state.view.current_image {
                 let new_path = image.path().to_path_buf();
@@ -640,7 +640,12 @@ impl EguiApp {
                     );
                 }
             } else {
-                self.current_image_path = None;
+                // 修复问题1: 当没有图片时清除路径跟踪
+                // 这样当打开新图片时能正确检测到路径变化
+                if self.current_image_path.is_some() {
+                    self.current_image_path = None;
+                    self.info_panel.clear();
+                }
             }
         }
         
@@ -954,6 +959,9 @@ impl eframe::App for EguiApp {
         // 获取当前纹理引用
         let texture_ref = self.current_texture.as_ref();
 
+        // 渲染信息面板（在 CentralPanel 之前渲染，确保在顶层）
+        self.render_info_panel(ctx);
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let state = self.service.get_state().unwrap_or_default();
 
@@ -1071,9 +1079,6 @@ impl eframe::App for EguiApp {
 
         // 渲染快捷键帮助
         self.render_shortcuts_help(ctx);
-        
-        // 渲染信息面板 (F-104)
-        self.render_info_panel(ctx);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
