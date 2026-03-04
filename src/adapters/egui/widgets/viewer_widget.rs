@@ -119,14 +119,13 @@ impl ViewerWidget {
             let center = rect.center() + Vec2::new(state.offset.x, state.offset.y);
             let image_rect = Rect::from_center_size(center, scaled_size);
 
-            // 修复问题3: 使用 clip_rect 限制图像渲染范围，防止遮挡信息面板
-            let clip_rect = ui.clip_rect();
-            let final_image_rect = image_rect.intersect(clip_rect);
+            // 设置裁剪区域（与 v0.2.0 一致），避免图片溢出到信息面板
+            ui.set_clip_rect(rect);
 
-            // 渲染图像纹理（在裁剪区域内）
+            // 渲染图像纹理
             ui.painter().image(
                 texture_handle.id(),
-                final_image_rect,
+                image_rect,
                 Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1.0, 1.0)),
                 Color32::WHITE,
             );
