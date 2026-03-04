@@ -936,8 +936,8 @@ impl EguiApp {
 
 impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        // 每帧禁用 UI 缩放，确保 Ctrl++ 只缩放图片而不是整个界面
-        ctx.set_pixels_per_point(1.0);
+        // 注意：不要每帧调用 set_pixels_per_point()，这会导致菜单抖动
+        // set_pixels_per_point 应该在应用初始化时配置，而不是每帧
 
         // 初始化画廊缩略图加载器（与 v0.2.0 一致）
         self.gallery_widget.init(ctx);
@@ -956,13 +956,11 @@ impl eframe::App for EguiApp {
         let mut viewer_actions: (bool, f32, Option<egui::Pos2>, Option<egui::Vec2>) = 
             (false, 1.0, None, None);
 
-        // 渲染信息面板（在 CentralPanel 之前渲染，确保在顶层）
-        // 注意：这里需要在获取 texture_ref 之前调用，避免借用冲突
-        self.render_info_panel(ctx);
-
-        // 获取当前纹理引用（在 render_info_panel 之后，避免借用冲突）
+        // 获取当前纹理引用
         let texture_ref = self.current_texture.as_ref();
 
+        // 修复问题3: 信息面板被遮挡 - 先渲染 CentralPanel，再渲染信息面板
+        // 这样信息面板会在上层显示，不会被图片遮挡
         egui::CentralPanel::default().show(ctx, |ui| {
             let state = self.service.get_state().unwrap_or_default();
 
@@ -1059,6 +1057,10 @@ impl eframe::App for EguiApp {
                     .open_image(&path, &mut state.view, Some(win_w), Some(win_h), fit_to_window);
             });
         }
+        
+        // 修复问题3: 信息面板被遮挡 - 在 CentralPanel 之后渲染信息面板
+        // 这样信息面板会在上层显示，不会被图片遮挡
+        self.render_info_panel(ctx);
         
         // 渲染右键菜单（仅在查看器模式下）
         if let Ok(state) = self.service.get_state() {

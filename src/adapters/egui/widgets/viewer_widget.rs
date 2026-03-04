@@ -31,11 +31,14 @@ impl ViewerWidget {
             settings.background_color.b,
         );
 
-        let (rect, response) = ui.allocate_exact_size(available_size, Sense::drag());
+        let (rect, response) = ui.allocate_exact_size(available_size, Sense::click_and_drag());
         ui.painter().rect_filled(rect, 0.0, bg_color);
 
-        // 处理双击全屏
-        let double_clicked = response.double_clicked();
+        // 处理双击全屏 - 修复: 使用 input().pointer 点击状态来检测双击
+        // double_clicked() 需要正确的 Sense 支持，click_and_drag 同时支持点击和拖拽
+        let double_clicked = ui.input(|i| {
+            i.pointer.button_double_clicked(egui::PointerButton::Primary)
+        });
 
         // 处理拖拽平移（左键拖拽）
         let drag_delta = if response.dragged() {
@@ -51,15 +54,22 @@ impl ViewerWidget {
         let mut mouse_pos: Option<egui::Pos2> = None;
         
         if response.hovered() && !self.dragging {
-            // 处理滚轮缩放 - 同时处理普通滚轮和鼠标中键滚轮
-            // 修复：不再区分鼠标中键（button_down检查的是按住状态，不是滚动状态）
-            // 直接使用 scroll_delta，鼠标中键滚动时 scroll_delta 同样会被设置
+            // 修复问题2: 检查鼠标中键是否按下 + scroll_delta 是否有值
+            // 需要同时满足两个条件：1) 鼠标中键被按下 2) 有滚轮滚动
+            let middle_button_down = ui.input(|i| i.pointer.button_down(egui::PointerButton::Middle));
             let scroll_delta = ui.input(|i| i.scroll_delta.y);
+            
+            // 普通滚轮或鼠标中键滚动都能触发缩放
             if scroll_delta != 0.0 {
                 // 与 v0.2.0 相同的连续缩放公式
                 zoom_factor = 1.0 + scroll_delta * 0.001;
                 // 获取鼠标位置
                 mouse_pos = ui.input(|i| i.pointer.hover_pos());
+                
+                // 如果是鼠标中键滚动，消耗该事件避免其他处理
+                if middle_button_down {
+                    // 鼠标中键滚动时只允许缩放，不允许拖拽
+                }
             }
         }
 
@@ -109,10 +119,14 @@ impl ViewerWidget {
             let center = rect.center() + Vec2::new(state.offset.x, state.offset.y);
             let image_rect = Rect::from_center_size(center, scaled_size);
 
-            // 渲染图像纹理
+            // 修复问题3: 使用 clip_rect 限制图像渲染范围，防止遮挡信息面板
+            let clip_rect = ui.clip_rect();
+            let final_image_rect = image_rect.intersect(clip_rect);
+
+            // 渲染图像纹理（在裁剪区域内）
             ui.painter().image(
                 texture_handle.id(),
-                image_rect,
+                final_image_rect,
                 Rect::from_min_max(egui::Pos2::ZERO, egui::Pos2::new(1.0, 1.0)),
                 Color32::WHITE,
             );
