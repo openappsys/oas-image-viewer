@@ -45,7 +45,7 @@ impl ViewerWidget {
             settings.background_color.b,
         );
 
-        let (rect, response) = ui.allocate_exact_size(available_size, Sense::drag());
+        let (rect, response) = ui.allocate_exact_size(available_size, Sense::click_and_drag());
         ui.painter().rect_filled(rect, 0.0, bg_color);
 
         // 处理双击全屏 - 修复: 使用 input().pointer 点击状态来检测双击
