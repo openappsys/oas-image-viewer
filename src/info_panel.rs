@@ -3,7 +3,7 @@
 //! 显示图片的详细信息，包括文件信息、图片属性和EXIF元数据。
 //! 支持异步加载EXIF数据，不阻塞UI。
 
-use egui::{Color32, Context, Frame, RichText, ScrollArea, SidePanel};
+use egui::{Color32, Context, Frame, RichText, ScrollArea, SidePanel, Widget};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
@@ -476,7 +476,9 @@ impl Default for InfoPanel {
 fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
     ui.horizontal(|ui| {
         ui.label(RichText::new(label).size(13.0).color(Color32::LIGHT_GRAY).strong());
-        ui.label(RichText::new(value).size(13.0).color(Color32::WHITE));
+        egui::Label::new(RichText::new(value).size(13.0).color(Color32::WHITE))
+            .wrap(true)
+            .ui(ui);
     });
 }
 
