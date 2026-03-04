@@ -958,6 +958,7 @@ impl eframe::App for EguiApp {
         // 渲染 CentralPanel（图片区域）
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut state = self.service.get_state().unwrap_or_default();
+            eprintln!("[DEBUG] CentralPanel: view_mode={:?}", state.view.view_mode);
 
             match state.view.view_mode {
                 ViewMode::Gallery => {
