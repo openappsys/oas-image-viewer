@@ -46,6 +46,7 @@ impl ViewerWidget {
             // 与 v0.2.0 一致：直接在当前帧更新 offset
             state.offset.x += response.drag_delta().x;
             state.offset.y += response.drag_delta().y;
+            eprintln!("[DEBUG] Drag: offset={},{}", state.offset.x, state.offset.y);
             response.drag_delta()
         } else {
             self.dragging = false;
