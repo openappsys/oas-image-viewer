@@ -16,8 +16,6 @@ pub struct InfoPanel {
     current_info: Option<ImageInfo>,
     exif_receiver: Option<Receiver<ExifData>>,
     loading_exif: bool,
-    /// EXIF 加载开始时间，用于超时检测
-    exif_load_start: Option<std::time::Instant>,
 }
 
 /// 图像信息数据结构
@@ -79,7 +77,6 @@ impl InfoPanel {
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
-            exif_load_start: None,
         }
     }
 
@@ -91,7 +88,6 @@ impl InfoPanel {
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
-            exif_load_start: None,
         }
     }
 
@@ -145,7 +141,6 @@ impl InfoPanel {
 
         self.current_info = Some(info);
         self.loading_exif = true;
-        self.exif_load_start = Some(std::time::Instant::now()); // 记录开始时间
 
         // 异步加载EXIF数据
         self.load_exif_async(path);
@@ -181,17 +176,6 @@ impl InfoPanel {
 
     /// 检查并接收异步加载的EXIF数据
     fn check_exif_receiver(&mut self) {
-        // 检查是否超时（3秒）
-        if let Some(start) = self.exif_load_start {
-            if start.elapsed().as_secs() > 3 {
-                warn!("EXIF加载超时");
-                self.loading_exif = false;
-                self.exif_receiver = None;
-                self.exif_load_start = None;
-                return;
-            }
-        }
-        
         if let Some(receiver) = &self.exif_receiver {
             match receiver.try_recv() {
                 Ok(exif_data) => {
@@ -200,7 +184,6 @@ impl InfoPanel {
                     }
                     self.loading_exif = false;
                     self.exif_receiver = None;
-                    self.exif_load_start = None;
                     debug!("EXIF数据加载完成");
                 }
                 Err(std::sync::mpsc::TryRecvError::Empty) => {
@@ -210,7 +193,6 @@ impl InfoPanel {
                     // 通道断开，加载失败
                     self.loading_exif = false;
                     self.exif_receiver = None;
-                    self.exif_load_start = None;
                     warn!("EXIF加载通道断开");
                 }
             }
@@ -218,30 +200,21 @@ impl InfoPanel {
     }
 
     /// 渲染信息面板
-    /// 返回 true 如果用户点击了关闭按钮
-    pub fn ui(&mut self, ctx: &Context) -> bool {
+    pub fn ui(&mut self, ctx: &Context) {
         // 检查是否有新的EXIF数据
         self.check_exif_receiver();
 
         if !self.visible {
-            return false;
+            return;
         }
 
-        let _panel_width = self.width;
-        
-        // 修复问题4: 使用局部变量来追踪关闭按钮点击，而不是 ctx.data()
-        // 这样可以正确检测当前帧的点击事件
-        let mut close_clicked = false;
-
-        // 预先提取需要的数据，避免借用冲突
-        let current_info = self.current_info.clone();
-        let loading_exif = self.loading_exif;
+        let panel_width = self.width;
 
         SidePanel::right("info_panel")
             .resizable(true)
-            .min_width(250.0)
-            .max_width(450.0)
-            .default_width(300.0)
+            .min_width(200.0)
+            .max_width(400.0)
+            .default_width(panel_width)
             .frame(Frame::side_top_panel(&ctx.style()).fill(Color32::from_rgba_premultiplied(35, 35, 40, 240)))
             .show(ctx, |ui| {
                 // 更新宽度
@@ -253,8 +226,6 @@ impl InfoPanel {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("×").clicked() {
                             self.hide();
-                            // 直接设置局部变量，在当前帧立即生效
-                            close_clicked = true;
                         }
                     });
                 });
@@ -265,8 +236,8 @@ impl InfoPanel {
                 ScrollArea::vertical()
                     .auto_shrink([false; 2])
                     .show(ui, |ui| {
-                        if let Some(ref info) = current_info {
-                            Self::render_info_content_static(ui, info, loading_exif);
+                        if let Some(ref info) = self.current_info {
+                            self.render_info_content(ui, info);
                         } else {
                             ui.vertical_centered(|ui| {
                                 ui.add_space(50.0);
@@ -276,58 +247,65 @@ impl InfoPanel {
                         }
                     });
             });
-            
-        close_clicked
     }
 
-    /// 渲染信息内容（支持折叠/展开）
-    /// 修复问题5: 使用 ui.collapsing() 恢复折叠功能
-    fn render_info_content_static(ui: &mut egui::Ui, info: &ImageInfo, loading_exif: bool) {
-        // 文件信息部分 - 可折叠
+    /// 渲染信息内容
+    fn render_info_content(&self, ui: &mut egui::Ui, info: &ImageInfo) {
+        // 文件信息部分
         ui.collapsing("📁 文件信息", |ui| {
-            render_label_value(ui, "文件名:", &info.file_name);
-            render_label_value(ui, "路径:", &format_path(&info.path));
-            render_label_value(ui, "大小:", &format_file_size(info.file_size));
-            if let Some(ref time) = info.modified_time {
-                render_label_value(ui, "修改时间:", time);
-            }
+            ui.indent("file_info", |ui| {
+                render_label_value(ui, "文件名:", &info.file_name);
+                render_label_value(ui, "路径:", &format_path(&info.path));
+                render_label_value(ui, "大小:", &format_file_size(info.file_size));
+                if let Some(ref time) = info.modified_time {
+                    render_label_value(ui, "修改时间:", time);
+                }
+            });
         });
 
         ui.add_space(8.0);
 
-        // 图像信息部分 - 可折叠
-        ui.collapsing("🖼 图像信息", |ui| {
-            render_label_value(ui, "格式:", &info.format);
-            render_label_value(ui, "尺寸:", &format!("{} x {} 像素", info.width, info.height));
-            let mp = (info.width as f64 * info.height as f64) / 1_000_000.0;
-            render_label_value(ui, "百万像素:", &format!("{:.2} MP", mp));
-            if let Some(depth) = info.bit_depth {
-                render_label_value(ui, "位深度:", &format!("{} bit", depth));
-            }
-            if let Some(ref space) = info.color_space {
-                render_label_value(ui, "色彩空间:", space);
-            }
+        // 图像信息部分
+        ui.collapsing("🖼️ 图像信息", |ui| {
+            ui.indent("image_info", |ui| {
+                render_label_value(ui, "格式:", &info.format);
+                render_label_value(ui, "尺寸:", &format!("{} x {} 像素", info.width, info.height));
+                let mp = (info.width as f64 * info.height as f64) / 1_000_000.0;
+                render_label_value(ui, "百万像素:", &format!("{:.2} MP", mp));
+                if let Some(depth) = info.bit_depth {
+                    render_label_value(ui, "位深度:", &format!("{} bit", depth));
+                }
+                if let Some(ref space) = info.color_space {
+                    render_label_value(ui, "色彩空间:", space);
+                }
+            });
         });
 
         ui.add_space(8.0);
 
-        // EXIF信息部分 - 可折叠
+        // EXIF信息部分
         ui.collapsing("📷 EXIF 信息", |ui| {
-            if loading_exif {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label(RichText::new("正在加载EXIF数据...").color(Color32::GRAY).size(12.0));
-                });
-            } else if let Some(ref exif) = info.exif {
-                Self::render_exif_content_static(ui, exif);
-            } else {
-                ui.label(RichText::new("无EXIF数据").color(Color32::GRAY).size(12.0));
-            }
+            ui.indent("exif_info", |ui| {
+                if self.loading_exif {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label(RichText::new("正在加载EXIF数据...").color(Color32::GRAY).size(12.0));
+                    });
+                } else if let Some(ref exif) = info.exif {
+                    self.render_exif_content(ui, exif);
+                } else {
+                    ui.label(RichText::new("无EXIF数据").color(Color32::GRAY).size(12.0));
+                }
+            });
         });
     }
 
-    /// 渲染EXIF内容（静态版本）
-    fn render_exif_content_static(ui: &mut egui::Ui, exif: &ExifData) {
+    /// 渲染EXIF内容
+    fn render_exif_content(
+        &self,
+        ui: &mut egui::Ui,
+        exif: &ExifData,
+    ) {
         // 相机信息
         if exif.camera_make.is_some() || exif.camera_model.is_some() {
             let camera = format_camera_info(exif.camera_make.as_deref(), exif.camera_model.as_deref());
