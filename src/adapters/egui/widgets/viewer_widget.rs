@@ -15,7 +15,7 @@ pub struct ViewerWidget {
 
 impl ViewerWidget {
     /// 渲染查看器
-    /// 返回 (是否双击全屏, 缩放因子, 鼠标位置, 拖拽偏移量)
+    /// 返回 (是否双击全屏, 缩放因子, 鼠标位置, 拖拽偏移量, 是否触发右键菜单)
     /// 缩放因子: 1.0 表示无变化, >1.0 放大, <1.0 缩小
     pub fn ui(
         &mut self,
@@ -23,7 +23,7 @@ impl ViewerWidget {
         state: &ViewState,
         settings: &ViewerSettings,
         texture: Option<&(String, egui::TextureHandle)>,
-    ) -> (bool, f32, Option<egui::Pos2>, Option<Vec2>) {
+    ) -> (bool, f32, Option<egui::Pos2>, Option<Vec2>, bool) {
         let available_size = ui.available_size();
         let bg_color = Color32::from_rgb(
             settings.background_color.r,
@@ -64,8 +64,17 @@ impl ViewerWidget {
             }
         }
 
+        // 处理右键菜单触发信号（初始化为 false）
+        let mut context_menu_triggered = false;
+        
         // 渲染图像或占位符
         if let Some(ref image) = state.current_image {
+            // 处理右键菜单 - 与 v0.2.0 一致（需要克隆 response，因为它会被移动）
+            response.clone().context_menu(|_ui| {
+                // 菜单内容由父组件处理
+            });
+            context_menu_triggered = true;
+            
             self.render_image(ui, image, state, rect, &response, settings, texture);
         } else {
             // 无图像占位符
@@ -85,7 +94,7 @@ impl ViewerWidget {
         self.render_dimensions_indicator(ui, rect, state);
         
         let drag_offset = if drag_delta != Vec2::ZERO { Some(drag_delta) } else { None };
-        (double_clicked, zoom_factor, mouse_pos, drag_offset)
+        (double_clicked, zoom_factor, mouse_pos, drag_offset, context_menu_triggered)
     }
 
     /// 渲染图像

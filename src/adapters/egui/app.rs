@@ -953,8 +953,8 @@ impl eframe::App for EguiApp {
 
         // 渲染主内容（先于菜单栏，确保菜单在顶层）
         let mut clicked_image: Option<PathBuf> = None;
-        let mut viewer_actions: (bool, f32, Option<egui::Pos2>, Option<egui::Vec2>) = 
-            (false, 1.0, None, None);
+        let mut viewer_actions: (bool, f32, Option<egui::Pos2>, Option<egui::Vec2>, bool) = 
+            (false, 1.0, None, None, false);
 
         // 渲染菜单栏（与 v0.2.0 一致：在 CentralPanel 之前）
         self.render_menu_bar(ctx);
@@ -986,7 +986,7 @@ impl eframe::App for EguiApp {
         });
         
         // 处理查看器动作（双击全屏、滚轮缩放、拖拽平移）
-        let (double_clicked, zoom_factor, mouse_pos, drag_offset) = viewer_actions;
+        let (double_clicked, zoom_factor, mouse_pos, drag_offset, _) = viewer_actions;
         
         // 处理双击全屏
         if double_clicked {
