@@ -956,11 +956,13 @@ impl eframe::App for EguiApp {
         let mut viewer_actions: (bool, f32, Option<egui::Pos2>, Option<egui::Vec2>) = 
             (false, 1.0, None, None);
 
-        // 获取当前纹理引用
+        // 渲染菜单栏（与 v0.2.0 一致：在 CentralPanel 之前）
+        self.render_menu_bar(ctx);
+
+        // 获取当前纹理引用（在菜单栏之后）
         let texture_ref = self.current_texture.as_ref();
 
-        // 修复问题3: 信息面板被遮挡 - 先渲染 CentralPanel，再渲染信息面板
-        // 这样信息面板会在上层显示，不会被图片遮挡
+        // 渲染 CentralPanel（图片区域）
         egui::CentralPanel::default().show(ctx, |ui| {
             let state = self.service.get_state().unwrap_or_default();
 
@@ -1058,10 +1060,7 @@ impl eframe::App for EguiApp {
             });
         }
         
-        // 渲染菜单栏（最先渲染，确保在顶层，不被其他面板遮挡）
-        self.render_menu_bar(ctx);
-        
-        // 渲染信息面板（在菜单栏之后渲染，位置在图片右侧）
+        // 渲染信息面板（在 CentralPanel 之后，确保在图片上层）
         self.render_info_panel(ctx);
         
         // 渲染右键菜单（仅在查看器模式下）
