@@ -40,10 +40,10 @@ impl ViewerWidget {
             i.pointer.button_double_clicked(egui::PointerButton::Primary)
         });
 
-        // 处理拖拽平移（左键拖拽）
+        // 处理拖拽平移（左键拖拽）- 使用 response.drag_delta() 与 v0.2.0 一致
         let drag_delta = if response.dragged() {
             self.dragging = true;
-            ui.input(|i| i.pointer.delta())
+            response.drag_delta()
         } else {
             self.dragging = false;
             Vec2::ZERO
