@@ -957,7 +957,7 @@ impl eframe::App for EguiApp {
 
         // 渲染 CentralPanel（图片区域）
         egui::CentralPanel::default().show(ctx, |ui| {
-            let state = self.service.get_state().unwrap_or_default();
+            let mut state = self.service.get_state().unwrap_or_default();
 
             match state.view.view_mode {
                 ViewMode::Gallery => {
@@ -968,18 +968,17 @@ impl eframe::App for EguiApp {
                     }
                 }
                 ViewMode::Viewer => {
-                    // 需要可变state来在同帧内更新offset
-                    let mut state = self.service.get_state().unwrap_or_default();
                     viewer_actions = self.viewer_widget.ui(
                         ui,
                         &mut state.view,
                         &state.config.viewer,
                         texture_ref,
                     );
-                    // 同步回state
-                    let _ = self.service.update_state(|s| *s = state);
                 }
             }
+            
+            // 同步所有状态更改
+            let _ = self.service.update_state(|s| *s = state);
         });
         
         // 处理查看器动作（双击全屏、滚轮缩放、拖拽平移）
