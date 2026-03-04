@@ -12,11 +12,11 @@ rust-version = "1.93"
 
 [dependencies]
 # GUI framework
-eframe = { version = "0.24", features = ["default"] }
-egui = "0.24"
+eframe = { version = "0.33", features = ["default"] }
+egui = "0.33"
 
 # Image decoding
-image = { version = "0.24", default-features = false, features = [
+image = { version = "0.25", default-features = false, features = [
     "png",
     "jpeg",
     "gif",
@@ -27,7 +27,7 @@ image = { version = "0.24", default-features = false, features = [
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Logging
 tracing = "0.1"
@@ -36,32 +36,32 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Configuration
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "1.0"
 
 # System directories
-directories = "5.0"
+directories = "6.0"
 
 # File dialogs - use default backend selection
-rfd = { version = "0.12", default-features = false, features = ["xdg-portal"] }
+rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
 
 # Font support for CJK characters
-font-kit = "0.11"
+font-kit = "0.14"
 
 # Utility
 parking_lot = "0.12"
-rayon = "1.8"
+rayon = "1.11"
 # EXIF metadata reading
-kamadak-exif = "0.5"
+kamadak-exif = "0.6"
 chrono = "0.4"
 # Clipboard support
-arboard = "3.3"
+arboard = "3.6"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "windef"] }
 
 [dev-dependencies]
 # Testing
-tempfile = "3.8"
+tempfile = "3.26"
 
 [profile.release]
 opt-level = 3

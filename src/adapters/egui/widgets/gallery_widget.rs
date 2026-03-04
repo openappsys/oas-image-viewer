@@ -106,7 +106,7 @@ impl GalleryWidget {
 
             // 选中边框
             if is_selected {
-                painter.rect_stroke(rect, 4.0, egui::Stroke::new(2.0, Color32::WHITE));
+                painter.rect_stroke(rect, 4.0, egui::Stroke::new(2.0, Color32::WHITE), egui::StrokeKind::Outside);
             }
 
             // 尝试渲染缩略图

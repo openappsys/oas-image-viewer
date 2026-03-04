@@ -51,7 +51,7 @@ impl ViewerWidget {
 
         // 处理滚轮缩放 - 直接修改 state
         if hovered && !self.dragging {
-            let scroll_delta = ui.input(|i| i.scroll_delta.y);
+            let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
             if scroll_delta != 0.0 {
                 let zoom_factor = 1.0 + scroll_delta * 0.001;
                 let current_scale = state.scale.value();
@@ -93,7 +93,7 @@ impl ViewerWidget {
                     let path = image.path();
                     let _ = self.clipboard.copy_image_from_file(path);
                 }
-                ui.close_menu();
+                ui.close();
             }
 
             // 复制文件路径
@@ -106,7 +106,7 @@ impl ViewerWidget {
                     let path = image.path();
                     let _ = self.clipboard.copy_image_path(path);
                 }
-                ui.close_menu();
+                ui.close();
             }
 
             ui.separator();
@@ -118,7 +118,7 @@ impl ViewerWidget {
                     let path = image.path();
                     let _ = ClipboardManager::show_in_folder(path);
                 }
-                ui.close_menu();
+                ui.close();
             }
         });
         

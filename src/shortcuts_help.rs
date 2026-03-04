@@ -50,7 +50,7 @@ impl ShortcutsHelpPanel {
         }
 
         // 创建半透明背景遮罩
-        let screen_rect = ctx.screen_rect();
+        let screen_rect = ctx.viewport_rect();
         let painter = ctx.layer_painter(egui::LayerId::new(
             egui::Order::Background,
             "shortcuts_help_bg".into(),
@@ -75,7 +75,7 @@ impl ShortcutsHelpPanel {
                 egui::Frame::window(&ctx.style())
                     .fill(Color32::from_rgb(40, 40, 45))
                     .stroke(egui::Stroke::new(1.0, Color32::from_rgb(80, 80, 90)))
-                    .rounding(egui::Rounding::same(8.0)),
+                    .corner_radius(egui::CornerRadius::same(8))
             )
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {

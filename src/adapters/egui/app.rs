@@ -75,11 +75,11 @@ impl EguiApp {
     fn configure_styles(ctx: &Context) {
         let mut style = (*ctx.style()).clone();
         style.spacing.item_spacing = egui::vec2(8.0, 8.0);
-        style.spacing.window_margin = egui::Margin::same(10.0);
+        style.spacing.window_margin = egui::Margin::same(10);
         style.spacing.button_padding = egui::vec2(12.0, 8.0);
-        style.visuals.widgets.inactive.rounding = egui::Rounding::same(4.0);
-        style.visuals.widgets.hovered.rounding = egui::Rounding::same(4.0);
-        style.visuals.widgets.active.rounding = egui::Rounding::same(4.0);
+        style.visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(4);
+        style.visuals.widgets.hovered.corner_radius = egui::CornerRadius::same(4);
+        style.visuals.widgets.active.corner_radius = egui::CornerRadius::same(4);
         ctx.set_style(style);
     }
 
@@ -107,7 +107,7 @@ impl EguiApp {
     /// 处理待处理文件
     fn process_pending_files(&mut self, ctx: &Context) {
         // 获取窗口尺寸用于计算适应窗口的缩放
-        let rect = ctx.screen_rect();
+        let rect = ctx.viewport_rect();
         let win_w = rect.width();
         let win_h = rect.height();
         
@@ -149,9 +149,7 @@ impl EguiApp {
         ctx: &Context,
         path: &std::path::Path,
     ) -> anyhow::Result<(egui::TextureHandle, usize, usize, Vec<u8>)> {
-        use image::io::Reader as ImageReader;
-        
-        let img = ImageReader::open(path)?
+        let img = image::ImageReader::open(path)?
             .with_guessed_format()?
             .decode()?;
         
@@ -268,7 +266,7 @@ impl EguiApp {
                     self.load_and_set_image(ctx, &path);
                     
                     // 获取窗口尺寸
-                    let rect = ctx.screen_rect();
+                    let rect = ctx.viewport_rect();
                     let win_w = rect.width();
                     let win_h = rect.height();
                     let fit_to_window = self.service.get_state()
@@ -313,7 +311,7 @@ impl EguiApp {
                             // 加载纹理和数据
                             self.load_and_set_image(ctx, &path);
                             // 获取窗口尺寸
-                            let rect = ctx.screen_rect();
+                        let rect = ctx.viewport_rect();
                             let win_w = rect.width();
                             let win_h = rect.height();
                             let fit_to_window = state.config.viewer.fit_to_window;
@@ -348,7 +346,7 @@ impl EguiApp {
                             // 加载纹理和数据
                             self.load_and_set_image(ctx, &path);
                             // 获取窗口尺寸
-                            let rect = ctx.screen_rect();
+                            let rect = ctx.viewport_rect();
                             let win_w = rect.width();
                             let win_h = rect.height();
                             let fit_to_window = state.config.viewer.fit_to_window;
@@ -393,7 +391,7 @@ impl EguiApp {
         }
 
         // Ctrl++ 放大 - 使用 v0.2.0 的 zoom_step (1.25)
-        if ctx.input(|i| i.key_pressed(egui::Key::PlusEquals) && i.modifiers.ctrl) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Plus) && i.modifiers.ctrl) {
             let _ = self.service.update_state(|state| {
                 if !state.view.user_zoomed {
                     state.view.scale = crate::core::domain::Scale::new(
@@ -438,7 +436,7 @@ impl EguiApp {
         if ctx.input(|i| i.key_pressed(egui::Key::Num0) && i.modifiers.ctrl) {
             let _ = self.service.update_state(|state| {
                 // 获取窗口尺寸
-                let rect = ctx.screen_rect();
+                let rect = ctx.viewport_rect();
                 let win_w = rect.width();
                 let win_h = rect.height();
                 
@@ -483,7 +481,7 @@ impl EguiApp {
             return;
         }
 
-        let screen_rect = ctx.screen_rect();
+        let screen_rect = ctx.viewport_rect();
 
         // 获取拖拽预览文本
         let text = if let Some(preview) = Self::get_drag_preview_text(ctx) {
@@ -509,6 +507,7 @@ impl EguiApp {
                     screen_rect.shrink(2.0),
                     4.0,
                     egui::Stroke::new(4.0, egui::Color32::from_rgb(52, 152, 219)),
+                    egui::StrokeKind::Outside,
                 );
 
                 // 内边框（与 v0.2.0 一致）
@@ -516,6 +515,7 @@ impl EguiApp {
                     screen_rect.shrink(8.0),
                     4.0,
                     egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 180, 230)),
+                    egui::StrokeKind::Outside,
                 );
 
                 let center = screen_rect.center();
@@ -669,7 +669,7 @@ impl EguiApp {
         let active_menu = ui.data(|d| d.get_temp::<Id>(active_menu_id));
         let is_menu_open = active_menu == Some(menu_id);
 
-        let menu_btn = egui::menu::menu_button(ui, title, |ui| {
+        let menu_btn = ui.menu_button(title, |ui| {
             add_contents(ui);
         });
 
@@ -705,11 +705,11 @@ impl EguiApp {
         }
 
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
+            ui.horizontal(|ui| {
                 Self::hover_menu_button(ui, "文件", |ui| {
                     if ui.button("打开... (Ctrl+O)").clicked() {
                         self.handle_open_dialog();
-                        ui.close_menu();
+                        ui.close();
                     }
                     ui.separator();
                     if ui.button("退出").clicked() {
@@ -722,20 +722,20 @@ impl EguiApp {
                         let _ = self.service.update_state(|state| {
                             state.view.view_mode = ViewMode::Gallery;
                         });
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button("查看器").clicked() {
                         let _ = self.service.update_state(|state| {
                             state.view.view_mode = ViewMode::Viewer;
                         });
-                        ui.close_menu();
+                        ui.close();
                     }
                     ui.separator();
                     if ui.button("全屏切换 (F11)").clicked() {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
                             !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
                         ));
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
 
@@ -755,7 +755,7 @@ impl EguiApp {
                                     let path = image.path().to_path_buf();
                                     self.load_and_set_image(ctx, &path);
                                     // 获取窗口尺寸
-                                    let rect = ctx.screen_rect();
+                                    let rect = ctx.viewport_rect();
                                     let win_w = rect.width();
                                     let win_h = rect.height();
                                     let fit_to_window = state.config.viewer.fit_to_window;
@@ -765,7 +765,7 @@ impl EguiApp {
                                 }
                             }
                         }
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button("下一张 (右箭头)").clicked() {
                         let mut new_index: Option<usize> = None;
@@ -782,7 +782,7 @@ impl EguiApp {
                                     let path = image.path().to_path_buf();
                                     self.load_and_set_image(ctx, &path);
                                     // 获取窗口尺寸
-                                    let rect = ctx.screen_rect();
+                                    let rect = ctx.viewport_rect();
                                     let win_w = rect.width();
                                     let win_h = rect.height();
                                     let fit_to_window = state.config.viewer.fit_to_window;
@@ -792,7 +792,7 @@ impl EguiApp {
                                 }
                             }
                         }
-                        ui.close_menu();
+                        ui.close();
                     }
                     ui.separator();
                     if ui.button("放大 (Ctrl++)").clicked() {
@@ -802,7 +802,7 @@ impl EguiApp {
                                 .view_use_case
                                 .zoom_in(&mut state.view, 1.25, max);
                         });
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button("缩小 (Ctrl+-)").clicked() {
                         let _ = self.service.update_state(|state| {
@@ -811,13 +811,13 @@ impl EguiApp {
                                 .view_use_case
                                 .zoom_out(&mut state.view, 1.25, min);
                         });
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button("重置缩放 (Ctrl+0)").clicked() {
                         // Ctrl+0 = 适应窗口
                         let _ = self.service.update_state(|state| {
                             // 获取窗口尺寸
-                            let rect = ctx.screen_rect();
+                            let rect = ctx.viewport_rect();
                             let win_w = rect.width();
                             let win_h = rect.height();
                             
@@ -840,18 +840,18 @@ impl EguiApp {
                                 state.view.user_zoomed = true;
                             }
                         });
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
 
                 Self::hover_menu_button(ui, "帮助", |ui| {
                     if ui.button("快捷键帮助 (?)").clicked() {
                         self.shortcuts_help_panel.toggle();
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button("关于").clicked() {
                         self.show_about = true;
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
             });
@@ -951,7 +951,7 @@ impl eframe::App for EguiApp {
             self.load_and_set_image(ctx, path);
             
             // 获取窗口尺寸
-            let rect = ctx.screen_rect();
+            let rect = ctx.viewport_rect();
             let win_w = rect.width();
             let win_h = rect.height();
             let fit_to_window = self.service.get_state()
@@ -1001,7 +1001,7 @@ impl eframe::App for EguiApp {
                                             Some(format!("复制失败: {}", e));
                                     }
                                 }
-                                ui.close_menu();
+                                ui.close();
                             }
                         });
 
@@ -1018,7 +1018,7 @@ impl eframe::App for EguiApp {
                                             Some(format!("复制失败: {}", e));
                                     }
                                 }
-                                ui.close_menu();
+                                ui.close();
                             }
                         });
 
@@ -1027,7 +1027,7 @@ impl eframe::App for EguiApp {
                         // 在文件夹中显示
                         if ui.button("📁 在文件夹中显示").clicked() {
                             let _ = ClipboardManager::show_in_folder(&path);
-                            ui.close_menu();
+                            ui.close();
                         }
 
                         // 显示上次操作结果

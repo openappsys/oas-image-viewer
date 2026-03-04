@@ -477,7 +477,7 @@ fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
     ui.horizontal(|ui| {
         ui.label(RichText::new(label).size(13.0).color(Color32::LIGHT_GRAY).strong());
         egui::Label::new(RichText::new(value).size(13.0).color(Color32::WHITE))
-            .wrap(true)
+            .wrap()
             .ui(ui);
     });
 }

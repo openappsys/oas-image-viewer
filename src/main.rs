@@ -206,7 +206,7 @@ fn run_app() -> Result<()> {
             cc.egui_ctx.set_pixels_per_point(1.0);
             setup_fonts(&cc.egui_ctx);
             log_to_file("字体设置完成");
-            Box::new(EguiApp::new(cc, service_clone))
+            Ok(Box::new(EguiApp::new(cc, service_clone)))
         }),
     )
     .map_err(|e| {
@@ -252,7 +252,7 @@ fn setup_fonts(ctx: &egui::Context) {
                 Ok(font_data) => {
                     fonts.font_data.insert(
                         "chinese_font".to_owned(),
-                        egui::FontData::from_owned(font_data),
+                        std::sync::Arc::new(egui::FontData::from_owned(font_data)),
                     );
                     fonts
                         .families
