@@ -242,9 +242,9 @@ impl InfoPanel {
 
         SidePanel::right("info_panel")
             .resizable(true)
-            .min_width(200.0)
-            .max_width(400.0)
-            .default_width(panel_width)
+            .min_width(250.0)
+            .max_width(450.0)
+            .default_width(300.0)
             .frame(Frame::side_top_panel(&ctx.style()).fill(Color32::from_rgba_premultiplied(35, 35, 40, 240)))
             .show(ctx, |ui| {
                 // 更新宽度
