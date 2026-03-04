@@ -929,6 +929,13 @@ impl EguiApp {
 
 impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        // 简单的日志函数
+        fn log_update(msg: &str) {
+            let _ = std::fs::write("update-debug.log", msg);
+        }
+        
+        log_update("update() called");
+        
         // 注意：不要每帧调用 set_pixels_per_point()，这会导致菜单抖动
         // set_pixels_per_point 应该在应用初始化时配置，而不是每帧
 
