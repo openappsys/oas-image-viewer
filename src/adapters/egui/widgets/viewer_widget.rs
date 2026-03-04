@@ -55,11 +55,16 @@ impl ViewerWidget {
         });
 
         // 处理拖拽平移（左键拖拽）- 与 v0.2.0 一致：在同一帧内更新 offset
-        let drag_delta = if response.dragged() {
+        let dragged = response.dragged();
+        let hovered = response.hovered();
+        log_debug(&format!("drag: dragged={}, hovered={}", dragged, hovered));
+        
+        let drag_delta = if dragged {
             self.dragging = true;
             // 与 v0.2.0 一致：直接在当前帧更新 offset
             state.offset.x += response.drag_delta().x;
             state.offset.y += response.drag_delta().y;
+            log_debug(&format!("drag_offset: x={}, y={}", state.offset.x, state.offset.y));
             response.drag_delta()
         } else {
             self.dragging = false;
@@ -70,7 +75,7 @@ impl ViewerWidget {
         let mut zoom_factor = 1.0;
         let mut mouse_pos: Option<egui::Pos2> = None;
         
-        if response.hovered() && !self.dragging {
+        if hovered && !self.dragging {
             // 与 v0.2.0 一致：直接使用 scroll_delta，不区分普通滚轮还是中键滚轮
             let scroll_delta = ui.input(|i| i.scroll_delta.y);
             if scroll_delta != 0.0 {
