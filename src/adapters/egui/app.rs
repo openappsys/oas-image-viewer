@@ -4,6 +4,7 @@
 //! 将 core 状态转换为 egui 显示
 
 use eframe::Frame;
+use egui::menu::{self, BarState};
 use egui::Context;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -714,8 +715,15 @@ impl EguiApp {
         }
 
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("文件", |ui| {
+            // 使用 menu::bar 替代 MenuBar
+            menu::bar(ui, |ui| {
+                let bar_id = ui.id();
+                let mut bar_state = BarState::load(ctx, bar_id);
+
+                // 文件菜单 - 使用 bar_menu 支持悬停切换
+                let file_btn = egui::Button::new("文件");
+                let file_resp = ui.add(file_btn);
+                bar_state.bar_menu(&file_resp, |ui| {
                     if ui.button("打开... (Ctrl+O)").clicked() {
                         self.handle_open_dialog();
                         ui.close();
@@ -726,7 +734,10 @@ impl EguiApp {
                     }
                 });
 
-                ui.menu_button("视图", |ui| {
+                // 视图菜单
+                let view_btn = egui::Button::new("视图");
+                let view_resp = ui.add(view_btn);
+                bar_state.bar_menu(&view_resp, |ui| {
                     if ui.button("图库").clicked() {
                         let _ = self.service.update_state(|state| {
                             state.view.view_mode = ViewMode::Gallery;
@@ -748,7 +759,10 @@ impl EguiApp {
                     }
                 });
 
-                ui.menu_button("图片", |ui| {
+                // 图片菜单
+                let img_btn = egui::Button::new("图片");
+                let img_resp = ui.add(img_btn);
+                bar_state.bar_menu(&img_resp, |ui| {
                     if ui.button("上一张 (左箭头)").clicked() {
                         let mut new_index: Option<usize> = None;
                         let _ = self.service.update_state(|state| {
@@ -757,13 +771,11 @@ impl EguiApp {
                                 crate::core::domain::NavigationDirection::Previous,
                             );
                         });
-                        // 导航后加载选中的图片
                         if let Some(index) = new_index {
                             if let Ok(state) = self.service.get_state() {
                                 if let Some(image) = state.gallery.gallery.get_image(index) {
                                     let path = image.path().to_path_buf();
                                     self.load_and_set_image(ctx, &path);
-                                    // 获取窗口尺寸
                                     let rect = ctx.viewport_rect();
                                     let win_w = rect.width();
                                     let win_h = rect.height();
@@ -790,13 +802,11 @@ impl EguiApp {
                                 crate::core::domain::NavigationDirection::Next,
                             );
                         });
-                        // 导航后加载选中的图片
                         if let Some(index) = new_index {
                             if let Ok(state) = self.service.get_state() {
                                 if let Some(image) = state.gallery.gallery.get_image(index) {
                                     let path = image.path().to_path_buf();
                                     self.load_and_set_image(ctx, &path);
-                                    // 获取窗口尺寸
                                     let rect = ctx.viewport_rect();
                                     let win_w = rect.width();
                                     let win_h = rect.height();
@@ -835,24 +845,17 @@ impl EguiApp {
                         ui.close();
                     }
                     if ui.button("重置缩放 (Ctrl+0)").clicked() {
-                        // Ctrl+0 = 适应窗口
                         let _ = self.service.update_state(|state| {
-                            // 获取窗口尺寸
                             let rect = ctx.viewport_rect();
                             let win_w = rect.width();
                             let win_h = rect.height();
-
-                            // 获取当前图像尺寸
                             if let Some(ref image) = state.view.current_image {
                                 let img_w = image.metadata().width;
                                 let img_h = image.metadata().height;
-
-                                // 计算适应窗口的缩放比例
                                 let fit_scale =
                                     crate::core::use_cases::ViewImageUseCase::calculate_fit_scale(
                                         img_w, img_h, win_w, win_h,
                                     );
-
                                 state.view.scale = crate::core::domain::Scale::new(
                                     fit_scale,
                                     state.config.viewer.min_scale,
@@ -866,7 +869,10 @@ impl EguiApp {
                     }
                 });
 
-                ui.menu_button("帮助", |ui| {
+                // 帮助菜单
+                let help_btn = egui::Button::new("帮助");
+                let help_resp = ui.add(help_btn);
+                bar_state.bar_menu(&help_resp, |ui| {
                     if ui.button("快捷键帮助 (?)").clicked() {
                         self.shortcuts_help_panel.toggle();
                         ui.close();
@@ -876,6 +882,8 @@ impl EguiApp {
                         ui.close();
                     }
                 });
+
+                bar_state.store(ctx, bar_id);
             });
         });
     }
