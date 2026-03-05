@@ -221,6 +221,7 @@ impl InfoPanel {
             .frame(
                 Frame::side_top_panel(&ctx.style())
                     .fill(ctx.style().visuals.panel_fill.linear_multiply(0.95))
+                    .inner_margin(egui::Margin::same(8)),
             )
             .show(ctx, |ui| {
                 // 更新宽度（限制在最小和最大之间）
@@ -229,7 +230,12 @@ impl InfoPanel {
 
                 // 标题栏
                 ui.horizontal(|ui| {
-                    ui.heading("📋 图像信息");
+                    // 用 frame 包裹标题，使其与按钮高度一致
+                    egui::Frame::new()
+                        .outer_margin(egui::Margin { left: 0, right: 0, top: 8, bottom: 0 })
+                        .show(ui, |ui| {
+                            ui.label(egui::RichText::new("📋 图像信息").size(16.0));
+                        });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("×").clicked() {
                             self.hide();
