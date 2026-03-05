@@ -3,7 +3,7 @@
 //! 显示图片的详细信息，包括文件信息、图片属性和EXIF元数据。
 //! 支持异步加载EXIF数据，不阻塞UI。
 
-use egui::{Color32, Context, Frame, RichText, ScrollArea, SidePanel, Widget};
+use egui::{Context, Frame, RichText, ScrollArea, SidePanel, Widget};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
@@ -220,8 +220,7 @@ impl InfoPanel {
             .default_width(panel_width)
             .frame(
                 Frame::side_top_panel(&ctx.style())
-                    //.fill(ctx.style().visuals.panel_fill)
-                    .fill(Color32::from_rgba_premultiplied(35, 35, 40, 240))
+                    .fill(ctx.style().visuals.panel_fill)
             )
             .show(ctx, |ui| {
                 // 更新宽度（限制在最小和最大之间）
