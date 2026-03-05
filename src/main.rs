@@ -11,11 +11,11 @@ use eframe::NativeOptions;
 use tracing::{info, warn};
 
 use image_viewer::adapters::egui::EguiApp;
+use image_viewer::core::domain::Image;
 use image_viewer::core::ports::{AppConfig, Storage};
 use image_viewer::core::use_cases::{
     ImageViewerService, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase,
 };
-use image_viewer::core::domain::Image;
 use image_viewer::infrastructure::{FsImageSource, JsonStorage};
 
 fn main() {
@@ -26,7 +26,8 @@ fn main() {
         if let Ok(mut file) = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("image-viewer-error.log") {
+            .open("image-viewer-error.log")
+        {
             let _ = file.write_all(msg.as_bytes());
         }
         // 尝试显示错误（Windows 可能看不到）
@@ -35,10 +36,8 @@ fn main() {
 
     // 初始化日志到文件
     let _ = std::fs::write("image-viewer.log", ""); // 清空或创建日志文件
-    
-    tracing_subscriber::fmt()
-        .with_env_filter("debug")
-        .init();
+
+    tracing_subscriber::fmt().with_env_filter("debug").init();
 
     log_to_file("=== 程序启动 ===");
     log_to_file(&format!("版本: v{}", env!("CARGO_PKG_VERSION")));
@@ -52,7 +51,8 @@ fn main() {
 }
 
 fn log_to_file(msg: &str) {
-    let line = format!("[{}] {}\n", 
+    let line = format!(
+        "[{}] {}\n",
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -62,7 +62,8 @@ fn log_to_file(msg: &str) {
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("image-viewer.log") {
+        .open("image-viewer.log")
+    {
         let _ = file.write_all(line.as_bytes());
     }
 }
@@ -89,7 +90,7 @@ fn run_app() -> Result<()> {
     info!("[STEP 3] 创建图像源...");
     log_to_file("[STEP 3] 创建图像源");
     let image_source = Arc::new(FsImageSource::new());
-    
+
     info!("[STEP 4] 创建存储...");
     log_to_file("[STEP 4] 创建存储");
     let storage: Arc<dyn Storage> = match JsonStorage::new() {
@@ -122,7 +123,7 @@ fn run_app() -> Result<()> {
             AppConfig::default()
         }
     };
-    
+
     // 创建用例
     info!("[STEP 6] 创建用例...");
     log_to_file("[STEP 6] 创建用例");
@@ -166,10 +167,16 @@ fn run_app() -> Result<()> {
                     path.clone(),
                 );
                 state.gallery.gallery.add_image(image);
-                
+
                 // 初始加载时使用默认窗口大小（稍后会被实际窗口大小覆盖）
                 let fit_to_window = state.config.viewer.fit_to_window;
-                let _ = service.view_use_case.open_image(path, &mut state.view, None, None, fit_to_window);
+                let _ = service.view_use_case.open_image(
+                    path,
+                    &mut state.view,
+                    None,
+                    None,
+                    fit_to_window,
+                );
             }
         });
     }

@@ -6,12 +6,12 @@
 //! - adapters: UI 适配器
 
 pub mod adapters;
-pub mod core;
-pub mod infrastructure;
-pub mod utils;
-pub mod info_panel;
 pub mod clipboard;
+pub mod core;
+pub mod info_panel;
+pub mod infrastructure;
 pub mod shortcuts_help;
+pub mod utils;
 
 // 保持向后兼容的重新导出
 pub use core::domain;

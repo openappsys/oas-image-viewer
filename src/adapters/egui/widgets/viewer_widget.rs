@@ -112,7 +112,8 @@ impl ViewerWidget {
             ui.separator();
 
             // 在文件夹中显示
-            let show_in_folder_btn = ui.add_enabled(has_image, egui::Button::new("📁 在文件夹中显示"));
+            let show_in_folder_btn =
+                ui.add_enabled(has_image, egui::Button::new("📁 在文件夹中显示"));
             if show_in_folder_btn.clicked() {
                 if let Some(ref image) = state.current_image {
                     let path = image.path();
@@ -121,7 +122,7 @@ impl ViewerWidget {
                 ui.close();
             }
         });
-        
+
         if let Some(ref image) = state.current_image {
             self.render_image(ui, image, state, rect, settings, texture);
         } else {

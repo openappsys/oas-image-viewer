@@ -106,7 +106,12 @@ impl GalleryWidget {
 
             // 选中边框
             if is_selected {
-                painter.rect_stroke(rect, 4.0, egui::Stroke::new(2.0, Color32::WHITE), egui::StrokeKind::Outside);
+                painter.rect_stroke(
+                    rect,
+                    4.0,
+                    egui::Stroke::new(2.0, Color32::WHITE),
+                    egui::StrokeKind::Outside,
+                );
             }
 
             // 尝试渲染缩略图
@@ -143,7 +148,8 @@ impl GalleryWidget {
                 );
 
                 // 如果正在加载，显示加载提示
-                if index < self.thumbnail_cache.loading.len() && self.thumbnail_cache.loading[index] {
+                if index < self.thumbnail_cache.loading.len() && self.thumbnail_cache.loading[index]
+                {
                     painter.text(
                         rect.center() + Vec2::new(0.0, 20.0),
                         egui::Align2::CENTER_CENTER,

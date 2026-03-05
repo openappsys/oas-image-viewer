@@ -109,14 +109,10 @@ impl ClipboardManager {
     }
 
     /// 从文件路径复制图片到剪贴板
-    pub fn copy_image_from_file(
-        &mut self,
-        path: &Path,
-    ) -> Result<()> {
+    pub fn copy_image_from_file(&mut self, path: &Path) -> Result<()> {
         // 从文件读取
-        let img = image::open(path).map_err(|e| {
-            ClipboardError::InvalidImage(format!("无法打开图片: {}", e))
-        })?;
+        let img = image::open(path)
+            .map_err(|e| ClipboardError::InvalidImage(format!("无法打开图片: {}", e)))?;
 
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();

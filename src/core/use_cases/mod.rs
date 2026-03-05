@@ -62,7 +62,7 @@ impl ViewImageUseCase {
     }
 
     /// 打开图像
-    /// 
+    ///
     /// # Arguments
     /// * `path` - 图像文件路径
     /// * `state` - 视图状态
@@ -93,18 +93,18 @@ impl ViewImageUseCase {
         image.set_metadata(metadata.clone());
 
         state.current_image = Some(image);
-        
+
         // 根据 fit_to_window 设置计算缩放比例
         if fit_to_window {
             if let (Some(win_w), Some(win_h)) = (window_width, window_height) {
                 let img_w = metadata.width as f32;
                 let img_h = metadata.height as f32;
-                
+
                 // 计算适应窗口的缩放比例（保持宽高比）
                 let scale_x = win_w / img_w;
                 let scale_y = win_h / img_h;
                 let fit_scale = scale_x.min(scale_y).min(1.0); // 不超过原始尺寸
-                
+
                 // 使用默认值作为范围限制
                 state.scale = Scale::new(fit_scale, 0.1, 20.0);
             } else {
@@ -113,7 +113,7 @@ impl ViewImageUseCase {
         } else {
             state.scale.reset();
         }
-        
+
         state.offset.reset();
         state.user_zoomed = false;
         state.view_mode = ViewMode::Viewer;
@@ -179,13 +179,13 @@ impl ViewImageUseCase {
     }
 
     /// 根据窗口尺寸计算适应窗口的缩放比例
-    /// 
+    ///
     /// # Arguments
     /// * `image_width` - 图像宽度
     /// * `image_height` - 图像高度
     /// * `window_width` - 窗口宽度
     /// * `window_height` - 窗口高度
-    /// 
+    ///
     /// # Returns
     /// 适应窗口的缩放比例（不超过1.0，保持宽高比）
     pub fn calculate_fit_scale(
@@ -196,7 +196,7 @@ impl ViewImageUseCase {
     ) -> f32 {
         let img_w = image_width as f32;
         let img_h = image_height as f32;
-        
+
         // 计算适应窗口的缩放比例（保持宽高比）
         let scale_x = window_width / img_w;
         let scale_y = window_height / img_h;
@@ -444,7 +444,7 @@ impl ImageViewerService {
         } else {
             self.config_use_case.load_config()?
         };
-        
+
         let mut state = self
             .state
             .lock()

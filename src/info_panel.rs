@@ -218,9 +218,10 @@ impl InfoPanel {
             .min_width(200.0)
             .max_width(400.0)
             .default_width(panel_width)
-            .frame(Frame::side_top_panel(&ctx.style()).fill(Color32::from_rgba_premultiplied(
-                35, 35, 40, 240,
-            )))
+            .frame(
+                Frame::side_top_panel(&ctx.style())
+                    .fill(Color32::from_rgba_premultiplied(35, 35, 40, 240)),
+            )
             .show(ctx, |ui| {
                 // 更新宽度（限制在最小和最大之间）
                 let new_width = ui.available_width();
@@ -249,7 +250,11 @@ impl InfoPanel {
                             ui.vertical_centered(|ui| {
                                 ui.add_space(50.0);
                                 ui.label(RichText::new("未选择图像").color(Color32::GRAY));
-                                ui.label(RichText::new("打开图像以查看详细信息").color(Color32::GRAY).size(12.0));
+                                ui.label(
+                                    RichText::new("打开图像以查看详细信息")
+                                        .color(Color32::GRAY)
+                                        .size(12.0),
+                                );
                             });
                         }
                     });
@@ -279,7 +284,11 @@ impl InfoPanel {
             .default_open(true)
             .show(ui, |ui| {
                 render_label_value(ui, "格式:", &info.format);
-                render_label_value(ui, "尺寸:", &format!("{} x {} 像素", info.width, info.height));
+                render_label_value(
+                    ui,
+                    "尺寸:",
+                    &format!("{} x {} 像素", info.width, info.height),
+                );
                 let mp = (info.width as f64 * info.height as f64) / 1_000_000.0;
                 render_label_value(ui, "百万像素:", &format!("{:.2} MP", mp));
                 if let Some(depth) = info.bit_depth {
@@ -299,7 +308,11 @@ impl InfoPanel {
                 if self.loading_exif {
                     ui.horizontal(|ui| {
                         ui.spinner();
-                        ui.label(RichText::new("正在加载EXIF数据...").color(Color32::GRAY).size(12.0));
+                        ui.label(
+                            RichText::new("正在加载EXIF数据...")
+                                .color(Color32::GRAY)
+                                .size(12.0),
+                        );
                     });
                 } else if let Some(ref exif) = info.exif {
                     self.render_exif_content(ui, exif);
@@ -310,14 +323,11 @@ impl InfoPanel {
     }
 
     /// 渲染EXIF内容
-    fn render_exif_content(
-        &self,
-        ui: &mut egui::Ui,
-        exif: &ExifData,
-    ) {
+    fn render_exif_content(&self, ui: &mut egui::Ui, exif: &ExifData) {
         // 相机信息
         if exif.camera_make.is_some() || exif.camera_model.is_some() {
-            let camera = format_camera_info(exif.camera_make.as_deref(), exif.camera_model.as_deref());
+            let camera =
+                format_camera_info(exif.camera_make.as_deref(), exif.camera_model.as_deref());
             render_label_value(ui, "相机:", &camera);
         }
 
@@ -404,14 +414,17 @@ impl InfoPanel {
             match field.tag {
                 Tag::DateTime | Tag::DateTimeOriginal => {
                     if exif_data.date_time.is_none() {
-                        exif_data.date_time = Some(field.display_value().with_unit(&exif).to_string());
+                        exif_data.date_time =
+                            Some(field.display_value().with_unit(&exif).to_string());
                     }
                 }
                 Tag::Make => {
-                    exif_data.camera_make = Some(field.display_value().with_unit(&exif).to_string());
+                    exif_data.camera_make =
+                        Some(field.display_value().with_unit(&exif).to_string());
                 }
                 Tag::Model => {
-                    exif_data.camera_model = Some(field.display_value().with_unit(&exif).to_string());
+                    exif_data.camera_model =
+                        Some(field.display_value().with_unit(&exif).to_string());
                 }
                 Tag::LensModel => {
                     exif_data.lens_model = Some(field.display_value().with_unit(&exif).to_string());
@@ -425,16 +438,20 @@ impl InfoPanel {
                     exif_data.aperture = Some(field.display_value().with_unit(&exif).to_string());
                 }
                 Tag::ExposureTime => {
-                    exif_data.shutter_speed = Some(field.display_value().with_unit(&exif).to_string());
+                    exif_data.shutter_speed =
+                        Some(field.display_value().with_unit(&exif).to_string());
                 }
                 Tag::FocalLength => {
-                    exif_data.focal_length = Some(field.display_value().with_unit(&exif).to_string());
+                    exif_data.focal_length =
+                        Some(field.display_value().with_unit(&exif).to_string());
                 }
                 Tag::GPSLatitude => {
-                    exif_data.gps_latitude = Some(field.display_value().with_unit(&exif).to_string());
+                    exif_data.gps_latitude =
+                        Some(field.display_value().with_unit(&exif).to_string());
                 }
                 Tag::GPSLongitude => {
-                    exif_data.gps_longitude = Some(field.display_value().with_unit(&exif).to_string());
+                    exif_data.gps_longitude =
+                        Some(field.display_value().with_unit(&exif).to_string());
                 }
                 _ => {}
             }
@@ -476,7 +493,12 @@ impl Default for InfoPanel {
 /// 渲染标签-值对
 fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
     ui.horizontal(|ui| {
-        ui.label(RichText::new(label).size(13.0).color(Color32::LIGHT_GRAY).strong());
+        ui.label(
+            RichText::new(label)
+                .size(13.0)
+                .color(Color32::LIGHT_GRAY)
+                .strong(),
+        );
         egui::Label::new(RichText::new(value).size(13.0).color(Color32::WHITE))
             .wrap()
             .ui(ui);
@@ -700,7 +722,10 @@ mod tests {
 
     #[test]
     fn test_format_camera_info_model_only() {
-        assert_eq!(format_camera_info(None, Some("iPhone 14 Pro")), "iPhone 14 Pro");
+        assert_eq!(
+            format_camera_info(None, Some("iPhone 14 Pro")),
+            "iPhone 14 Pro"
+        );
     }
 
     #[test]
@@ -815,7 +840,7 @@ mod additional_tests {
             gps_latitude: Some("39° 54' 15\" N".to_string()),
             gps_longitude: Some("116° 24' 25\" E".to_string()),
         };
-        
+
         assert!(exif.date_time.is_some());
         assert!(exif.camera_model.is_some());
         assert_eq!(exif.iso, Some(100));
@@ -828,7 +853,7 @@ mod additional_tests {
             iso: Some(400),
             ..Default::default()
         };
-        
+
         let info = ImageInfo {
             path: PathBuf::from("/test/photo.jpg"),
             file_name: "photo.jpg".to_string(),
@@ -841,7 +866,7 @@ mod additional_tests {
             color_space: Some("sRGB".to_string()),
             exif: Some(exif),
         };
-        
+
         assert_eq!(info.file_size, 2048);
         assert_eq!(info.width, 4000);
         assert_eq!(info.height, 3000);
@@ -899,10 +924,10 @@ mod additional_tests {
         let (sender, receiver) = channel::<ExifData>();
         panel.exif_receiver = Some(receiver);
         drop(sender); // 立即丢弃发送者
-        
+
         // 第一次调用应该处理断开连接
         panel.check_exif_receiver();
-        
+
         assert!(!panel.loading_exif);
         assert!(panel.exif_receiver.is_none());
     }
@@ -913,10 +938,10 @@ mod additional_tests {
         let (_sender, receiver) = channel::<ExifData>();
         panel.exif_receiver = Some(receiver);
         panel.loading_exif = true;
-        
+
         // 没有发送数据，应该保持 loading 状态
         panel.check_exif_receiver();
-        
+
         assert!(panel.loading_exif);
         assert!(panel.exif_receiver.is_some());
     }
@@ -928,15 +953,15 @@ mod additional_tests {
         panel.exif_receiver = Some(receiver);
         panel.loading_exif = true;
         panel.current_info = Some(ImageInfo::default());
-        
+
         let exif = ExifData {
             camera_model: Some("Test".to_string()),
             ..Default::default()
         };
         sender.send(exif).unwrap();
-        
+
         panel.check_exif_receiver();
-        
+
         assert!(!panel.loading_exif);
         assert!(panel.exif_receiver.is_none());
         assert!(panel.current_info.as_ref().unwrap().exif.is_some());
@@ -946,7 +971,7 @@ mod additional_tests {
     fn test_info_panel_width_persistence() {
         let mut panel = InfoPanel::new();
         assert_eq!(panel.width, 280.0);
-        
+
         // 模拟宽度改变（实际在UI中发生）
         panel.width = 300.0;
         assert_eq!(panel.width, 300.0);
@@ -956,7 +981,7 @@ mod additional_tests {
     fn test_multiple_info_panel_instances() {
         let panel1 = InfoPanel::with_visibility(true);
         let panel2 = InfoPanel::with_visibility(false);
-        
+
         assert!(panel1.is_visible());
         assert!(!panel2.is_visible());
     }
@@ -975,7 +1000,7 @@ mod additional_tests {
             color_space: None,
             exif: None,
         };
-        
+
         assert!(info.modified_time.is_none());
         assert!(info.bit_depth.is_none());
         assert!(info.color_space.is_none());

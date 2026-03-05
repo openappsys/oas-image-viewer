@@ -72,7 +72,7 @@ impl ShortcutsHelpPanel {
                 egui::Frame::window(&ctx.style())
                     .fill(Color32::from_rgb(40, 40, 45))
                     .stroke(egui::Stroke::new(1.0, Color32::from_rgb(80, 80, 90)))
-                    .corner_radius(egui::CornerRadius::same(8))
+                    .corner_radius(egui::CornerRadius::same(8)),
             )
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
@@ -88,7 +88,10 @@ impl ShortcutsHelpPanel {
                     render_shortcut_category(
                         ui,
                         "📁 文件",
-                        &[("Ctrl + O", "打开图像/文件夹"), ("Esc", "退出全屏 / 关闭面板")],
+                        &[
+                            ("Ctrl + O", "打开图像/文件夹"),
+                            ("Esc", "退出全屏 / 关闭面板"),
+                        ],
                     );
 
                     ui.add_space(8.0);
