@@ -745,183 +745,271 @@ impl EguiApp {
     }
 
     /// 渲染菜单栏
+    /// 渲染菜单栏（支持悬停切换）
     fn render_menu_bar(&mut self, ctx: &Context) {
-        // 全屏时不显示菜单
         let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
         if is_fullscreen {
             return;
         }
 
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                // 文件菜单
-                ui.menu_button("文件", |ui| {
-                    if ui.button("打开... (Ctrl+O)").clicked() {
-                        self.handle_open_dialog();
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui.button("退出").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                });
+            // 设置菜单栏样式：高亮颜色和紧凑间距
+            ui.style_mut().visuals.widgets.active.weak_bg_fill =
+                egui::Color32::from_rgb(52, 152, 219); // 蓝色高亮
+            ui.style_mut().visuals.widgets.hovered.weak_bg_fill =
+                egui::Color32::from_rgb(100, 180, 230); // 浅蓝色悬停
+            ui.style_mut().spacing.button_padding = egui::vec2(12.0, 6.0); // 紧凑按钮
 
-                // 视图菜单
-                ui.menu_button("视图", |ui| {
-                    if ui.button("图库").clicked() {
-                        let _ = self.service.update_state(|state| {
-                            state.view.view_mode = ViewMode::Gallery;
-                        });
-                        ui.close();
-                    }
-                    if ui.button("查看器").clicked() {
-                        let _ = self.service.update_state(|state| {
-                            state.view.view_mode = ViewMode::Viewer;
-                        });
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui.button("全屏切换 (F11)").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
-                            !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
-                        ));
-                        ui.close();
-                    }
-                });
+            ui.horizontal(|ui| {
+                // 状态管理：哪个菜单是打开的
+                let open_menu_id = ui.id().with("open_menu");
+                let mut open_menu: Option<usize> = ui.ctx().data(|d| d.get_temp(open_menu_id));
 
-                // 图片菜单
-                ui.menu_button("图片", |ui| {
-                    if ui.button("上一张 (左箭头)").clicked() {
-                        let mut new_index: Option<usize> = None;
-                        let _ = self.service.update_state(|state| {
-                            new_index = self.service.navigate_use_case.navigate(
-                                &mut state.gallery,
-                                crate::core::domain::NavigationDirection::Previous,
-                            );
-                        });
-                        if let Some(index) = new_index {
-                            if let Ok(state) = self.service.get_state() {
-                                if let Some(image) = state.gallery.gallery.get_image(index) {
-                                    let path = image.path().to_path_buf();
-                                    self.load_and_set_image(ctx, &path);
-                                    let rect = ctx.viewport_rect();
-                                    let win_w = rect.width();
-                                    let win_h = rect.height();
-                                    let fit_to_window = state.config.viewer.fit_to_window;
-                                    let _ = self.service.update_state(|state| {
-                                        let _ = self.service.view_use_case.open_image(
-                                            &path,
-                                            &mut state.view,
-                                            Some(win_w),
-                                            Some(win_h),
-                                            fit_to_window,
-                                        );
-                                    });
+                let menus = ["文件", "视图", "图片", "帮助"];
+                let mut responses: Vec<egui::Response> = Vec::new();
+
+                // 第一遍：添加所有按钮（高亮当前打开的菜单）
+                for (idx, title) in menus.iter().enumerate() {
+                    let button = if open_menu == Some(idx) {
+                        egui::Button::new(*title).selected(true) // 选项B：高亮当前选中
+                    } else {
+                        egui::Button::new(*title)
+                    };
+                    responses.push(ui.add(button));
+                }
+
+                // 第二遍：处理交互（点击和悬停）
+                let mut new_open = open_menu;
+                for (idx, response) in responses.iter().enumerate() {
+                    // 点击：切换菜单
+                    if response.clicked() {
+                        new_open = if open_menu == Some(idx) {
+                            None
+                        } else {
+                            Some(idx)
+                        };
+                    }
+                    // 悬停：如果其他菜单已打开，切换到此菜单
+                    if response.hovered() && open_menu.is_some() && open_menu != Some(idx) {
+                        new_open = Some(idx);
+                    }
+                }
+
+                // 更新状态
+                if new_open != open_menu {
+                    open_menu = new_open;
+                    ui.ctx().data_mut(|d| {
+                        if let Some(idx) = open_menu {
+                            d.insert_temp(open_menu_id, idx);
+                        } else {
+                            d.remove_temp::<usize>(open_menu_id);
+                        }
+                    });
+                }
+
+                // 第三遍：显示打开的菜单
+                if let Some(idx) = open_menu {
+                    if let Some(button) = responses.get(idx) {
+                        let popup_id = ui.id().with(format!("popup_{}", idx));
+                        let anchor = egui::PopupAnchor::from(button.rect);
+                        let layer_id =
+                            egui::LayerId::new(egui::Order::Foreground, popup_id.with("layer"));
+
+                        let mut should_close = false;
+
+                        egui::Popup::new(popup_id, ui.ctx().clone(), anchor, layer_id)
+                            .kind(egui::PopupKind::Menu)
+                            .show(|ui| {
+                                ui.set_min_width(160.0);
+                                let clicked = match idx {
+                                    0 => self.render_file_menu(ui, ctx),
+                                    1 => self.render_view_menu(ui, ctx),
+                                    2 => self.render_image_menu(ui, ctx),
+                                    3 => self.render_help_menu(ui, ctx),
+                                    _ => false,
+                                };
+                                if clicked {
+                                    should_close = true;
                                 }
+                            });
+
+                        // 检测 ESC 键关闭
+                        if ui.ctx().input(|i| i.key_pressed(egui::Key::Escape)) {
+                            should_close = true;
+                        }
+
+                        // 检测点击菜单栏外部关闭
+                        let pointer_pos = ui.ctx().input(|i| i.pointer.interact_pos());
+                        let menu_bar_rect = ui.min_rect();
+                        if ui.ctx().input(|i| i.pointer.any_click()) {
+                            if let Some(pos) = pointer_pos {
+                                let in_menu_bar = menu_bar_rect.contains(pos);
+                                // 获取 popup 的 rect 来检测是否在菜单内点击
+                                let popup_response = ui.ctx().read_response(popup_id);
+                                let in_popup =
+                                    popup_response.map_or(false, |r| r.rect.contains(pos));
+                                if !in_menu_bar && !in_popup {
+                                    should_close = true;
+                                }
+                            } else {
+                                // 点击了但没有指针位置（可能是外部）
+                                should_close = true;
                             }
                         }
-                        ui.close();
-                    }
-                    if ui.button("下一张 (右箭头)").clicked() {
-                        let mut new_index: Option<usize> = None;
-                        let _ = self.service.update_state(|state| {
-                            new_index = self.service.navigate_use_case.navigate(
-                                &mut state.gallery,
-                                crate::core::domain::NavigationDirection::Next,
-                            );
-                        });
-                        if let Some(index) = new_index {
-                            if let Ok(state) = self.service.get_state() {
-                                if let Some(image) = state.gallery.gallery.get_image(index) {
-                                    let path = image.path().to_path_buf();
-                                    self.load_and_set_image(ctx, &path);
-                                    let rect = ctx.viewport_rect();
-                                    let win_w = rect.width();
-                                    let win_h = rect.height();
-                                    let fit_to_window = state.config.viewer.fit_to_window;
-                                    let _ = self.service.update_state(|state| {
-                                        let _ = self.service.view_use_case.open_image(
-                                            &path,
-                                            &mut state.view,
-                                            Some(win_w),
-                                            Some(win_h),
-                                            fit_to_window,
-                                        );
-                                    });
-                                }
-                            }
-                        }
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui.button("放大 (Ctrl++)").clicked() {
-                        let _ = self.service.update_state(|state| {
-                            let max = state.config.viewer.max_scale;
-                            self.service
-                                .view_use_case
-                                .zoom_in(&mut state.view, 1.25, max);
-                        });
-                        ui.close();
-                    }
-                    if ui.button("缩小 (Ctrl+-)").clicked() {
-                        let _ = self.service.update_state(|state| {
-                            let min = state.config.viewer.min_scale;
-                            self.service
-                                .view_use_case
-                                .zoom_out(&mut state.view, 1.25, min);
-                        });
-                        ui.close();
-                    }
-                    if ui.button("重置缩放 (Ctrl+0)").clicked() {
-                        let _ = self.service.update_state(|state| {
-                            let rect = ctx.viewport_rect();
-                            let win_w = rect.width();
-                            let win_h = rect.height();
-                            if let Some(ref image) = state.view.current_image {
-                                let img_w = image.metadata().width;
-                                let img_h = image.metadata().height;
-                                let fit_scale =
-                                    crate::core::use_cases::ViewImageUseCase::calculate_fit_scale(
-                                        img_w, img_h, win_w, win_h,
-                                    );
-                                state.view.scale = crate::core::domain::Scale::new(
-                                    fit_scale,
-                                    state.config.viewer.min_scale,
-                                    state.config.viewer.max_scale,
-                                );
-                                state.view.offset = crate::core::domain::Position::default();
-                                state.view.user_zoomed = true;
-                            }
-                        });
-                        ui.close();
-                    }
-                    if ui.button("1:1 原始尺寸 (Ctrl+1)").clicked() {
-                        let _ = self.service.update_state(|state| {
-                            state.view.scale = crate::core::domain::Scale::new(
-                                1.0,
-                                state.config.viewer.min_scale,
-                                state.config.viewer.max_scale,
-                            );
-                            state.view.offset = crate::core::domain::Position::default();
-                            state.view.user_zoomed = true;
-                        });
-                        ui.close();
-                    }
-                });
 
-                // 帮助菜单
-                ui.menu_button("帮助", |ui| {
-                    if ui.button("快捷键帮助 (?)").clicked() {
-                        self.shortcuts_help_panel.toggle();
-                        ui.close();
+                        if should_close {
+                            ui.ctx().data_mut(|d| {
+                                d.remove_temp::<usize>(open_menu_id);
+                            });
+                        }
                     }
-                    if ui.button("关于").clicked() {
-                        self.show_about = true;
-                        ui.close();
-                    }
-                });
+                }
             });
         });
+    }
+
+    /// 文件菜单
+    fn render_file_menu(&mut self, ui: &mut egui::Ui, ctx: &Context) -> bool {
+        let mut clicked = false;
+        if ui.button("打开... (Ctrl+O)").clicked() {
+            self.handle_open_dialog();
+            clicked = true;
+        }
+        ui.separator();
+        if ui.button("退出").clicked() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            clicked = true;
+        }
+        clicked
+    }
+
+    /// 视图菜单
+    fn render_view_menu(&mut self, ui: &mut egui::Ui, ctx: &Context) -> bool {
+        let mut clicked = false;
+        if ui.button("图库").clicked() {
+            let _ = self
+                .service
+                .update_state(|s| s.view.view_mode = ViewMode::Gallery);
+            clicked = true;
+        }
+        if ui.button("查看器").clicked() {
+            let _ = self
+                .service
+                .update_state(|s| s.view.view_mode = ViewMode::Viewer);
+            clicked = true;
+        }
+        ui.separator();
+        if ui.button("全屏切换 (F11)").clicked() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
+                !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
+            ));
+            clicked = true;
+        }
+        clicked
+    }
+
+    /// 图片菜单
+    fn render_image_menu(&mut self, ui: &mut egui::Ui, ctx: &Context) -> bool {
+        let mut clicked = false;
+        if ui.button("上一张 (左箭头)").clicked() {
+            let mut idx = None;
+            let _ = self.service.update_state(|s| {
+                idx = self.service.navigate_use_case.navigate(
+                    &mut s.gallery,
+                    crate::core::domain::NavigationDirection::Previous,
+                )
+            });
+            if let Some(i) = idx {
+                if let Ok(s) = self.service.get_state() {
+                    if let Some(img) = s.gallery.gallery.get_image(i) {
+                        let p = img.path().to_path_buf();
+                        self.load_and_set_image(ctx, &p);
+                    }
+                }
+            }
+            clicked = true;
+        }
+        if ui.button("下一张 (右箭头)").clicked() {
+            let mut idx = None;
+            let _ = self.service.update_state(|s| {
+                idx = self.service.navigate_use_case.navigate(
+                    &mut s.gallery,
+                    crate::core::domain::NavigationDirection::Next,
+                )
+            });
+            if let Some(i) = idx {
+                if let Ok(s) = self.service.get_state() {
+                    if let Some(img) = s.gallery.gallery.get_image(i) {
+                        let p = img.path().to_path_buf();
+                        self.load_and_set_image(ctx, &p);
+                    }
+                }
+            }
+            clicked = true;
+        }
+        ui.separator();
+        if ui.button("放大 (Ctrl++)").clicked() {
+            let _ = self.service.update_state(|s| {
+                let m = s.config.viewer.max_scale;
+                self.service.view_use_case.zoom_in(&mut s.view, 1.25, m);
+            });
+            clicked = true;
+        }
+        if ui.button("缩小 (Ctrl+-)").clicked() {
+            let _ = self.service.update_state(|s| {
+                let m = s.config.viewer.min_scale;
+                self.service.view_use_case.zoom_out(&mut s.view, 1.25, m);
+            });
+            clicked = true;
+        }
+        if ui.button("重置缩放 (Ctrl+0)").clicked() {
+            let _ = self.service.update_state(|s| {
+                let r = ctx.viewport_rect();
+                if let Some(ref img) = s.view.current_image {
+                    let fs = crate::core::use_cases::ViewImageUseCase::calculate_fit_scale(
+                        img.metadata().width,
+                        img.metadata().height,
+                        r.width(),
+                        r.height(),
+                    );
+                    s.view.scale = crate::core::domain::Scale::new(
+                        fs,
+                        s.config.viewer.min_scale,
+                        s.config.viewer.max_scale,
+                    );
+                    s.view.offset = crate::core::domain::Position::default();
+                    s.view.user_zoomed = true;
+                }
+            });
+            clicked = true;
+        }
+        if ui.button("1:1 原始尺寸 (Ctrl+1)").clicked() {
+            let _ = self.service.update_state(|s| {
+                s.view.scale = crate::core::domain::Scale::new(
+                    1.0,
+                    s.config.viewer.min_scale,
+                    s.config.viewer.max_scale,
+                );
+                s.view.offset = crate::core::domain::Position::default();
+                s.view.user_zoomed = true;
+            });
+            clicked = true;
+        }
+        clicked
+    }
+
+    /// 帮助菜单
+    fn render_help_menu(&mut self, ui: &mut egui::Ui, _ctx: &Context) -> bool {
+        let mut clicked = false;
+        if ui.button("快捷键帮助 (?)").clicked() {
+            self.shortcuts_help_panel.toggle();
+            clicked = true;
+        }
+        if ui.button("关于").clicked() {
+            self.show_about = true;
+            clicked = true;
+        }
+        clicked
     }
 }
 
