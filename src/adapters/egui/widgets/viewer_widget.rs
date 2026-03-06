@@ -99,7 +99,7 @@ impl ViewerWidget {
             // 复制文件路径
             let copy_path_btn = ui.add_enabled(
                 has_image && clipboard_available,
-                egui::Button::new("📂 复制文件路径"),
+                egui::Button::new("📋 复制文件路径"),
             );
             if copy_path_btn.clicked() {
                 if let Some(ref image) = state.current_image {
@@ -130,7 +130,7 @@ impl ViewerWidget {
             ui.painter().text(
                 rect.center(),
                 egui::Align2::CENTER_CENTER,
-                "未选择图像\n按 Ctrl+O 打开图像或从图库中选择\n也可以直接拖拽图像到窗口",
+                "🖼 未选择图像\n按 Ctrl+O 打开图像或从图库中选择\n也可以直接拖拽图像到窗口",
                 egui::FontId::proportional(16.0),
                 Color32::GRAY,
             );

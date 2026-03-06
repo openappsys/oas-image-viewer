@@ -4,7 +4,6 @@
 //! 将 core 状态转换为 egui 显示
 
 use eframe::Frame;
-use egui::menu::{self, BarState};
 use egui::Context;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -539,7 +538,7 @@ impl EguiApp {
                             self.load_and_set_image(ctx, &image_path);
 
                             // 打开图片
-                            let _ = self.service.update_state(|mut state| {
+                            let _ = self.service.update_state(|state| {
                                 let _ = self.service.view_use_case.open_image(
                                     &image_path,
                                     &mut state.view,
@@ -754,15 +753,9 @@ impl EguiApp {
         }
 
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
-            // 使用 menu::bar 替代 MenuBar
-            menu::bar(ui, |ui| {
-                let bar_id = ui.id();
-                let mut bar_state = BarState::load(ctx, bar_id);
-
-                // 文件菜单 - 使用 bar_menu 支持悬停切换
-                let file_btn = egui::Button::new("文件");
-                let file_resp = ui.add(file_btn);
-                bar_state.bar_menu(&file_resp, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
+                // 文件菜单
+                ui.menu_button("文件", |ui| {
                     if ui.button("打开... (Ctrl+O)").clicked() {
                         self.handle_open_dialog();
                         ui.close();
@@ -774,9 +767,7 @@ impl EguiApp {
                 });
 
                 // 视图菜单
-                let view_btn = egui::Button::new("视图");
-                let view_resp = ui.add(view_btn);
-                bar_state.bar_menu(&view_resp, |ui| {
+                ui.menu_button("视图", |ui| {
                     if ui.button("图库").clicked() {
                         let _ = self.service.update_state(|state| {
                             state.view.view_mode = ViewMode::Gallery;
@@ -799,9 +790,7 @@ impl EguiApp {
                 });
 
                 // 图片菜单
-                let img_btn = egui::Button::new("图片");
-                let img_resp = ui.add(img_btn);
-                bar_state.bar_menu(&img_resp, |ui| {
+                ui.menu_button("图片", |ui| {
                     if ui.button("上一张 (左箭头)").clicked() {
                         let mut new_index: Option<usize> = None;
                         let _ = self.service.update_state(|state| {
@@ -906,12 +895,22 @@ impl EguiApp {
                         });
                         ui.close();
                     }
+                    if ui.button("1:1 原始尺寸 (Ctrl+1)").clicked() {
+                        let _ = self.service.update_state(|state| {
+                            state.view.scale = crate::core::domain::Scale::new(
+                                1.0,
+                                state.config.viewer.min_scale,
+                                state.config.viewer.max_scale,
+                            );
+                            state.view.offset = crate::core::domain::Position::default();
+                            state.view.user_zoomed = true;
+                        });
+                        ui.close();
+                    }
                 });
 
                 // 帮助菜单
-                let help_btn = egui::Button::new("帮助");
-                let help_resp = ui.add(help_btn);
-                bar_state.bar_menu(&help_resp, |ui| {
+                ui.menu_button("帮助", |ui| {
                     if ui.button("快捷键帮助 (?)").clicked() {
                         self.shortcuts_help_panel.toggle();
                         ui.close();
@@ -921,8 +920,6 @@ impl EguiApp {
                         ui.close();
                     }
                 });
-
-                bar_state.store(ctx, bar_id);
             });
         });
     }

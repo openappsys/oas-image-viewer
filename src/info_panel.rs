@@ -232,7 +232,12 @@ impl InfoPanel {
                 ui.horizontal(|ui| {
                     // 用 frame 包裹标题，使其与按钮高度一致
                     egui::Frame::new()
-                        .outer_margin(egui::Margin { left: 0, right: 0, top: 8, bottom: 0 })
+                        .outer_margin(egui::Margin {
+                            left: 0,
+                            right: 0,
+                            top: 8,
+                            bottom: 0,
+                        })
                         .show(ui, |ui| {
                             ui.label(egui::RichText::new("📋 图像信息").size(16.0));
                         });

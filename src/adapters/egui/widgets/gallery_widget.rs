@@ -2,7 +2,7 @@
 
 use crate::adapters::egui::thumbnail_loader::ThumbnailCache;
 use crate::core::use_cases::GalleryState;
-use egui::{Color32, Response, Ui, Vec2};
+use egui::{Color32, Response, Sense, Ui, Vec2};
 
 /// 画廊组件
 pub struct GalleryWidget {
@@ -30,11 +30,25 @@ impl GalleryWidget {
         let available_width = ui.available_width();
         let mut clicked_index: Option<usize> = None;
 
+        // 如果没有图片，显示空状态提示
+        let image_count = state.gallery.images().len();
+        if image_count == 0 {
+            let available_size = ui.available_size();
+            let (rect, _) = ui.allocate_exact_size(available_size, Sense::click());
+            ui.painter().text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                "🖼 暂无图片\n\n按 Ctrl+O 打开图片或拖拽图片到窗口",
+                egui::FontId::proportional(18.0),
+                Color32::GRAY,
+            );
+            return None;
+        }
+
         // 计算每行项目数
         self.items_per_row = state.layout.calculate_items_per_row(available_width);
 
         // 调整缩略图缓存大小
-        let image_count = state.gallery.images().len();
         self.thumbnail_cache.resize(image_count);
 
         // 处理异步加载的缩略图结果
