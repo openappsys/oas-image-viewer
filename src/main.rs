@@ -210,7 +210,7 @@ fn run_app() -> Result<()> {
         native_options,
         Box::new(move |cc| {
             log_to_file("UI 初始化回调");
-            cc.egui_ctx.set_pixels_per_point(1.0);
+            // cc.egui_ctx.set_pixels_per_point(1.0);
             setup_fonts(&cc.egui_ctx);
             log_to_file("字体设置完成");
             Ok(Box::new(EguiApp::new(cc, service_clone)))
