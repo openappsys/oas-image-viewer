@@ -1,8 +1,9 @@
 //! Viewer Widget - 查看器 UI 组件
 
-use crate::clipboard::ClipboardManager;
+use crate::adapters::clipboard::ClipboardManager;
 use crate::core::domain::Scale;
 use crate::core::domain::ViewerSettings;
+use crate::core::ports::ClipboardPort;
 use crate::core::use_cases::ViewState;
 use egui::{Color32, Rect, Sense, Ui, Vec2};
 
@@ -104,7 +105,7 @@ impl ViewerWidget {
             if copy_path_btn.clicked() {
                 if let Some(ref image) = state.current_image {
                     let path = image.path();
-                    let _ = self.clipboard.copy_image_path(path);
+                    let _ = self.clipboard.copy_path(path);
                 }
                 ui.close();
             }
@@ -117,7 +118,7 @@ impl ViewerWidget {
             if show_in_folder_btn.clicked() {
                 if let Some(ref image) = state.current_image {
                     let path = image.path();
-                    let _ = ClipboardManager::show_in_folder(path);
+                    let _ = ClipboardPort::show_in_folder(&self.clipboard, path);
                 }
                 ui.close();
             }

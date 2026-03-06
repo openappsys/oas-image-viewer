@@ -57,7 +57,7 @@ pub struct AppConfig {
 /// UI 端口
 ///
 /// 负责与用户界面的交互
-pub trait UiPort: Send + Sync {
+pub trait UiPort {
     /// 请求更新显示
     fn request_repaint(&self);
 
@@ -190,8 +190,10 @@ mod tests {
 
     #[test]
     fn test_app_config_with_last_directory() {
-        let mut config = AppConfig::default();
-        config.last_opened_directory = Some(PathBuf::from("/home/user/images"));
+        let config = AppConfig {
+            last_opened_directory: Some(PathBuf::from("/home/user/images")),
+            ..AppConfig::default()
+        };
         assert_eq!(
             config.last_opened_directory,
             Some(PathBuf::from("/home/user/images"))

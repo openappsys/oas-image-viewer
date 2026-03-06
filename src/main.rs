@@ -16,7 +16,7 @@ use image_viewer::core::ports::{AppConfig, Storage};
 use image_viewer::core::use_cases::{
     ImageViewerService, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase,
 };
-use image_viewer::infrastructure::{FsImageSource, JsonStorage};
+use image_viewer::{FsImageSource, JsonStorage};
 
 fn main() {
     // 设置 panic 钩子，捕获 panic 信息
@@ -97,7 +97,7 @@ fn run_app() -> Result<()> {
         Ok(s) => {
             info!("存储初始化成功");
             log_to_file("存储初始化成功");
-            Arc::new(s.with_debounce())
+            Arc::new(JsonStorage::with_debounce(s))
         }
         Err(e) => {
             warn!("创建存储失败: {}. 使用临时存储。", e);

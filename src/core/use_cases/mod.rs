@@ -78,7 +78,8 @@ impl ViewImageUseCase {
         fit_to_window: bool,
     ) -> Result<()> {
         if !self.image_source.is_supported(path) {
-            return Err(CoreError::InvalidImageFormat(
+            return Err(CoreError::technical(
+                "INVALID_IMAGE_FORMAT",
                 path.to_string_lossy().to_string(),
             ));
         }
@@ -240,10 +241,10 @@ impl NavigateGalleryUseCase {
         if state.gallery.select_image(index) {
             Ok(true)
         } else {
-            Err(CoreError::NavigationError(format!(
-                "Invalid index: {}",
-                index
-            )))
+            Err(CoreError::technical(
+                "NAVIGATION_ERROR",
+                format!("Invalid index: {}", index),
+            ))
         }
     }
 
@@ -448,7 +449,7 @@ impl ImageViewerService {
         let mut state = self
             .state
             .lock()
-            .map_err(|_| CoreError::ConfigError("Lock poisoned".to_string()))?;
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))?;
         state.config = config;
         state.gallery.layout = state.config.gallery;
         Ok(())
@@ -458,7 +459,7 @@ impl ImageViewerService {
     pub fn get_state(&self) -> Result<AppState> {
         self.state
             .lock()
-            .map_err(|_| CoreError::ConfigError("Lock poisoned".to_string()))
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
             .map(|s| s.clone())
     }
 
@@ -467,7 +468,7 @@ impl ImageViewerService {
         let mut state = self
             .state
             .lock()
-            .map_err(|_| CoreError::ConfigError("Lock poisoned".to_string()))?;
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))?;
         f(&mut state);
         Ok(())
     }
@@ -476,7 +477,7 @@ impl ImageViewerService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::domain::{ImageFormat, ImageMetadata};
+    use crate::core::domain::ImageMetadata;
 
     #[test]
     fn test_view_state_default() {
@@ -968,13 +969,14 @@ mod tests {
         }
 
         let use_case = ViewImageUseCase::new(Arc::new(MockImageSource), Arc::new(MockStorage));
-        let mut state = ViewState::default();
-
         // 模拟有图片状态
-        state.current_image = Some(Image::new("1", "/test.png"));
-        state.scale.zoom_in(2.0, 10.0);
-        state.offset.translate(100.0, 100.0);
-        state.user_zoomed = true;
+        let mut state = ViewState {
+            current_image: Some(Image::new("1", "/test.png")),
+            scale: Scale::new(2.0, 0.1, 10.0),
+            offset: Position::new(100.0, 100.0),
+            user_zoomed: true,
+            ..ViewState::default()
+        };
 
         use_case.close_image(&mut state);
 

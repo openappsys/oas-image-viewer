@@ -5,6 +5,7 @@ use std::sync::Arc;
 use rayon::ThreadPool;
 
 /// 后台任务线程池
+#[allow(dead_code)]
 pub struct ThreadPoolManager {
     pool: Arc<ThreadPool>,
 }
@@ -31,6 +32,7 @@ impl ThreadPoolManager {
     }
 
     /// 获取线程池
+    #[allow(dead_code)]
     pub fn pool(&self) -> &ThreadPool {
         &self.pool
     }

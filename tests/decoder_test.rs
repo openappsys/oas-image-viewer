@@ -75,7 +75,7 @@ fn test_decode_from_memory_error() {
 /// 测试从内存解码空数据
 #[test]
 fn test_decode_from_memory_empty() {
-    let empty_data: Vec<u8> = vec![];
+    let empty_data: Vec<u8> = Vec::new();
     let result = image::load_from_memory(&empty_data);
     assert!(result.is_err());
 }

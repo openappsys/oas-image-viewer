@@ -6,14 +6,17 @@
 //! - adapters: UI 适配器
 
 pub mod adapters;
-pub mod clipboard;
 pub mod core;
-pub mod info_panel;
-pub mod infrastructure;
-pub mod shortcuts_help;
-pub mod utils;
+pub(crate) mod infrastructure;
+pub(crate) mod utils;
+
+// 从 infrastructure 重新导出需要的类型
+pub use infrastructure::{FsImageSource, JsonStorage};
 
 // 保持向后兼容的重新导出
+pub use adapters::clipboard;
+pub use adapters::info_panel;
+pub use adapters::shortcuts_help;
 pub use core::domain;
 pub use core::ports;
 pub use core::use_cases;

@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
+use crate::utils::threading::ThreadPoolManager;
+
 /// 文件系统图像源实现
 pub struct FsImageSource;
 
@@ -22,8 +24,10 @@ pub struct JsonStorage {
 }
 
 /// 异步文件系统图像源
+#[allow(dead_code)]
 pub struct AsyncFsImageSource {
     inner: FsImageSource,
+    thread_pool: ThreadPoolManager,
 }
 
 impl FsImageSource {
@@ -46,12 +50,16 @@ impl Default for FsImageSource {
 impl ImageSource for FsImageSource {
     fn load_metadata(&self, path: &Path) -> Result<ImageMetadata> {
         if !path.exists() {
-            return Err(CoreError::ImageNotFound(path.to_string_lossy().to_string()));
+            return Err(CoreError::technical(
+                "IMAGE_NOT_FOUND",
+                path.to_string_lossy().to_string(),
+            ));
         }
 
         // 获取文件信息
-        let metadata = std::fs::metadata(path)
-            .map_err(|e| CoreError::StorageError(format!("Failed to read metadata: {}", e)))?;
+        let metadata = std::fs::metadata(path).map_err(|e| {
+            CoreError::technical("STORAGE_ERROR", format!("Failed to read metadata: {}", e))
+        })?;
 
         let file_size = metadata.len();
         let modified_at = metadata
@@ -92,11 +100,15 @@ impl ImageSource for FsImageSource {
             Ok(img) => img,
             Err(_e) => {
                 // 备用方法：从内存加载
-                let data = std::fs::read(path)
-                    .map_err(|e| CoreError::StorageError(format!("Failed to read file: {}", e)))?;
+                let data = std::fs::read(path).map_err(|e| {
+                    CoreError::technical("STORAGE_ERROR", format!("Failed to read file: {}", e))
+                })?;
 
                 image::load_from_memory(&data).map_err(|e| {
-                    CoreError::InvalidImageFormat(format!("Failed to decode image: {}", e))
+                    CoreError::technical(
+                        "INVALID_IMAGE_FORMAT",
+                        format!("Failed to decode image: {}", e),
+                    )
                 })?
             }
         };
@@ -111,14 +123,16 @@ impl ImageSource for FsImageSource {
 
     fn scan_directory(&self, path: &Path) -> Result<Vec<PathBuf>> {
         if !path.is_dir() {
-            return Err(CoreError::StorageError(format!(
-                "Not a directory: {}",
-                path.display()
-            )));
+            return Err(CoreError::technical(
+                "STORAGE_ERROR",
+                format!("Not a directory: {}", path.display()),
+            ));
         }
 
         let mut images: Vec<PathBuf> = std::fs::read_dir(path)
-            .map_err(|e| CoreError::StorageError(format!("Failed to read directory: {}", e)))?
+            .map_err(|e| {
+                CoreError::technical("STORAGE_ERROR", format!("Failed to read directory: {}", e))
+            })?
             .filter_map(|e| e.ok())
             .map(|e| e.path())
             .filter(|p| self.is_supported(p))
@@ -147,8 +161,9 @@ impl ImageSource for FsImageSource {
         }
 
         // 需要缩放，使用 image crate
-        let img = image::open(path)
-            .map_err(|e| CoreError::InvalidImageFormat(format!("Failed to open: {}", e)))?;
+        let img = image::open(path).map_err(|e| {
+            CoreError::technical("INVALID_IMAGE_FORMAT", format!("Failed to open: {}", e))
+        })?;
 
         let resized = img.resize(max_size, max_size, image::imageops::FilterType::Lanczos3);
 
@@ -172,8 +187,12 @@ impl JsonStorage {
         // 记录配置目录到日志文件
         Self::log_debug(&format!("配置目录: {:?}", config_dir));
 
-        std::fs::create_dir_all(&config_dir)
-            .map_err(|e| CoreError::StorageError(format!("Failed to create config dir: {}", e)))?;
+        std::fs::create_dir_all(&config_dir).map_err(|e| {
+            CoreError::technical(
+                "STORAGE_ERROR",
+                format!("Failed to create config dir: {}", e),
+            )
+        })?;
 
         let config_path = config_dir.join("config.toml");
 
@@ -210,7 +229,9 @@ impl JsonStorage {
     /// 获取配置目录
     fn config_dir() -> Result<PathBuf> {
         let proj_dirs = directories::ProjectDirs::from("com", "imageviewer", "image-viewer")
-            .ok_or_else(|| CoreError::StorageError("Failed to get project dirs".to_string()))?;
+            .ok_or_else(|| {
+                CoreError::technical("STORAGE_ERROR", "Failed to get project dirs".to_string())
+            })?;
         Ok(proj_dirs.config_dir().to_path_buf())
     }
 
@@ -250,16 +271,19 @@ impl JsonStorage {
 
     /// 保存配置到文件
     fn save_to_file(path: &Path, config: &AppConfig) -> Result<()> {
-        let json = toml::to_string_pretty(config)
-            .map_err(|e| CoreError::StorageError(format!("Failed to serialize: {}", e)))?;
+        let json = toml::to_string_pretty(config).map_err(|e| {
+            CoreError::technical("STORAGE_ERROR", format!("Failed to serialize: {}", e))
+        })?;
 
         // 原子写入
         let temp_path = path.with_extension("toml.tmp");
-        std::fs::write(&temp_path, json)
-            .map_err(|e| CoreError::StorageError(format!("Failed to write: {}", e)))?;
+        std::fs::write(&temp_path, json).map_err(|e| {
+            CoreError::technical("STORAGE_ERROR", format!("Failed to write: {}", e))
+        })?;
 
-        std::fs::rename(&temp_path, path)
-            .map_err(|e| CoreError::StorageError(format!("Failed to rename: {}", e)))?;
+        std::fs::rename(&temp_path, path).map_err(|e| {
+            CoreError::technical("STORAGE_ERROR", format!("Failed to rename: {}", e))
+        })?;
 
         Ok(())
     }
@@ -267,10 +291,11 @@ impl JsonStorage {
     /// 从文件加载配置
     fn load_from_file(path: &Path) -> Result<AppConfig> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| CoreError::StorageError(format!("Failed to read: {}", e)))?;
+            .map_err(|e| CoreError::technical("STORAGE_ERROR", format!("Failed to read: {}", e)))?;
 
-        let config: AppConfig = toml::from_str(&content)
-            .map_err(|e| CoreError::StorageError(format!("Failed to parse: {}", e)))?;
+        let config: AppConfig = toml::from_str(&content).map_err(|e| {
+            CoreError::technical("STORAGE_ERROR", format!("Failed to parse: {}", e))
+        })?;
 
         Ok(config)
     }
@@ -302,8 +327,9 @@ impl Storage for JsonStorage {
 
     fn request_save(&self, config: &AppConfig) -> Result<()> {
         if let Some(ref tx) = self.save_tx {
-            tx.send(config.clone())
-                .map_err(|_| CoreError::StorageError("Save channel closed".to_string()))?;
+            tx.send(config.clone()).map_err(|_| {
+                CoreError::technical("STORAGE_ERROR", "Save channel closed".to_string())
+            })?;
             Ok(())
         } else {
             self.save_config(config)
@@ -313,9 +339,20 @@ impl Storage for JsonStorage {
 
 impl AsyncFsImageSource {
     /// 创建新的异步图像源
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             inner: FsImageSource::new(),
+            thread_pool: ThreadPoolManager::default(),
+        }
+    }
+
+    /// 使用指定线程数的异步图像源
+    #[allow(dead_code)]
+    pub fn with_threads(num_threads: usize) -> Self {
+        Self {
+            inner: FsImageSource::new(),
+            thread_pool: ThreadPoolManager::new(num_threads),
         }
     }
 }
@@ -353,7 +390,7 @@ impl AsyncImageSource for AsyncFsImageSource {
         let path = path.to_path_buf();
         let inner = FsImageSource::new();
 
-        thread::spawn(move || {
+        self.thread_pool.spawn(move || {
             let metadata = inner.load_metadata(&path);
             let result = metadata.map(|m| {
                 let mut image = Image::new(
@@ -379,7 +416,7 @@ impl AsyncImageSource for AsyncFsImageSource {
         let path = path.to_path_buf();
         let inner = FsImageSource::new();
 
-        thread::spawn(move || {
+        self.thread_pool.spawn(move || {
             let result = inner
                 .generate_thumbnail(&path, max_size)
                 .map(|(_, _, data)| data);
@@ -454,9 +491,8 @@ mod tests {
 
     #[test]
     fn test_rfd_file_dialog() {
-        let dialog = RfdFileDialog::new();
+        let _dialog = RfdFileDialog::new();
         // 只是测试能创建
-        drop(dialog);
     }
 
     // =========================================================================
@@ -464,15 +500,15 @@ mod tests {
     // =========================================================================
 
     #[test]
+    #[allow(unused_variables)]
     fn test_fs_image_source_new() {
         let source = FsImageSource::new();
-        drop(source);
     }
 
     #[test]
+    #[allow(unused_variables)]
     fn test_fs_image_source_default() {
         let source: FsImageSource = Default::default();
-        drop(source);
     }
 
     #[test]
@@ -555,14 +591,12 @@ mod tests {
 
     #[test]
     fn test_rfd_file_dialog_new() {
-        let dialog = RfdFileDialog::new();
-        drop(dialog);
+        let _dialog = RfdFileDialog::new();
     }
 
     #[test]
     fn test_rfd_file_dialog_default() {
-        let dialog: RfdFileDialog = Default::default();
-        drop(dialog);
+        let _dialog: RfdFileDialog = Default::default();
     }
 
     #[test]

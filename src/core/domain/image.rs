@@ -526,7 +526,7 @@ mod tests {
 
     #[test]
     fn test_image_format_variants() {
-        let formats = vec![
+        let formats = [
             ImageFormat::Png,
             ImageFormat::Jpeg,
             ImageFormat::Gif,

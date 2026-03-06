@@ -1,8 +1,12 @@
 //! 剪贴板操作模块 - 提供图片和文本的复制功能
 
 use arboard::{Clipboard, ImageData};
+use parking_lot::Mutex;
 use std::path::Path;
 use tracing::{debug, error, info};
+
+use crate::core::ports::ClipboardPort;
+use crate::core::Result as CoreResult;
 
 /// 剪贴板操作结果
 pub type Result<T> = std::result::Result<T, ClipboardError>;
@@ -27,9 +31,15 @@ impl std::fmt::Display for ClipboardError {
 
 impl std::error::Error for ClipboardError {}
 
+impl From<ClipboardError> for crate::core::CoreError {
+    fn from(e: ClipboardError) -> Self {
+        crate::core::CoreError::technical("STORAGE_ERROR", e.to_string())
+    }
+}
+
 /// 剪贴板管理器
 pub struct ClipboardManager {
-    clipboard: Option<Clipboard>,
+    clipboard: Option<Mutex<Clipboard>>,
 }
 
 impl ClipboardManager {
@@ -39,7 +49,7 @@ impl ClipboardManager {
             Ok(clipboard) => {
                 debug!("剪贴板初始化成功");
                 Self {
-                    clipboard: Some(clipboard),
+                    clipboard: Some(Mutex::new(clipboard)),
                 }
             }
             Err(e) => {
@@ -49,19 +59,15 @@ impl ClipboardManager {
         }
     }
 
-    /// 检查剪贴板是否可用
-    pub fn is_available(&self) -> bool {
-        self.clipboard.is_some()
-    }
-
     /// 复制文本到剪贴板
-    pub fn copy_text(&mut self, text: &str) -> Result<()> {
+    pub fn copy_text(&self, text: &str) -> Result<()> {
         let clipboard = self
             .clipboard
-            .as_mut()
+            .as_ref()
             .ok_or_else(|| ClipboardError::FailedToAccess("剪贴板不可用".to_string()))?;
 
         clipboard
+            .lock()
             .set_text(text)
             .map_err(|e| ClipboardError::FailedToCopy(e.to_string()))?;
 
@@ -69,19 +75,11 @@ impl ClipboardManager {
         Ok(())
     }
 
-    /// 复制图片路径到剪贴板
-    pub fn copy_image_path(&mut self, path: &Path) -> Result<()> {
-        let path_str = path.to_string_lossy().to_string();
-        self.copy_text(&path_str)?;
-        info!("图片路径已复制: {:?}", path);
-        Ok(())
-    }
-
     /// 复制图片数据到剪贴板
-    pub fn copy_image(&mut self, image_data: &[u8], width: usize, height: usize) -> Result<()> {
+    pub fn copy_image_data(&self, image_data: &[u8], width: usize, height: usize) -> Result<()> {
         let clipboard = self
             .clipboard
-            .as_mut()
+            .as_ref()
             .ok_or_else(|| ClipboardError::FailedToAccess("剪贴板不可用".to_string()))?;
 
         // 确保数据长度正确
@@ -101,6 +99,7 @@ impl ClipboardManager {
         };
 
         clipboard
+            .lock()
             .set_image(image_data)
             .map_err(|e| ClipboardError::FailedToCopy(e.to_string()))?;
 
@@ -109,7 +108,7 @@ impl ClipboardManager {
     }
 
     /// 从文件路径复制图片到剪贴板
-    pub fn copy_image_from_file(&mut self, path: &Path) -> Result<()> {
+    pub fn copy_image_from_file(&self, path: &Path) -> Result<()> {
         // 从文件读取
         let img = image::open(path)
             .map_err(|e| ClipboardError::InvalidImage(format!("无法打开图片: {}", e)))?;
@@ -118,16 +117,42 @@ impl ClipboardManager {
         let (width, height) = rgba.dimensions();
         let data = rgba.into_raw();
 
-        self.copy_image(&data, width as usize, height as usize)
+        self.copy_image_data(&data, width as usize, height as usize)
+    }
+}
+
+impl ClipboardPort for ClipboardManager {
+    fn copy_image(&self, width: usize, height: usize, data: &[u8]) -> CoreResult<()> {
+        self.copy_image_data(data, width, height)
+            .map_err(|e| e.into())
     }
 
-    /// 在文件管理器中显示文件
-    pub fn show_in_folder(path: &Path) -> Result<()> {
+    fn copy_path(&self, path: &Path) -> CoreResult<()> {
+        let path_str = path.to_string_lossy().to_string();
+        self.copy_text(&path_str)
+            .map_err(|e| -> crate::core::CoreError { e.into() })?;
+        info!("图片路径已复制: {:?}", path);
+        Ok(())
+    }
+
+    fn is_available(&self) -> bool {
+        self.clipboard.is_some()
+    }
+
+    fn show_in_folder(&self, path: &Path) -> CoreResult<()> {
+        Self::show_in_folder_impl(path).map_err(|e| e.into())
+    }
+}
+
+impl ClipboardManager {
+    /// 在文件管理器中显示文件（内部实现）
+    fn show_in_folder_impl(path: &Path) -> Result<()> {
         #[cfg(target_os = "macos")]
         {
             use std::process::Command;
+            let path_str = path.to_string_lossy();
             Command::new("open")
-                .args(["-R", &path.to_string_lossy().to_string()])
+                .args(["-R", path_str.as_ref()])
                 .spawn()
                 .map_err(|e| ClipboardError::FailedToCopy(format!("无法打开文件夹: {}", e)))?;
         }
@@ -163,7 +188,7 @@ impl ClipboardManager {
         {
             use std::process::Command;
             Command::new("explorer")
-                .args(["/select,", &path.to_string_lossy().to_string()])
+                .args(["/select,", &path.to_string_lossy().as_ref()])
                 .spawn()
                 .map_err(|e| ClipboardError::FailedToCopy(format!("无法打开文件夹: {}", e)))?;
         }
@@ -176,5 +201,24 @@ impl ClipboardManager {
 impl Default for ClipboardManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clipboard_manager_new() {
+        let manager = ClipboardManager::new();
+        // 在某些环境（如 CI）中剪贴板可能不可用
+        // 但不应该 panic
+        let _ = manager.is_available();
+    }
+
+    #[test]
+    fn test_clipboard_manager_default() {
+        let manager: ClipboardManager = Default::default();
+        let _ = manager.is_available();
     }
 }

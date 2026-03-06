@@ -3,6 +3,7 @@
 //! 显示图片的详细信息，包括文件信息、图片属性和EXIF元数据。
 //! 支持异步加载EXIF数据，不阻塞UI。
 
+use crate::utils::format_file_size;
 use egui::{Context, Frame, RichText, ScrollArea, SidePanel, Widget};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
@@ -520,24 +521,6 @@ fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
     });
 }
 
-/// 格式化文件大小
-fn format_file_size(size: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-
-    if size == 0 {
-        return "0 B".to_string();
-    }
-
-    let exp = (size as f64).log(1024.0).min(UNITS.len() as f64 - 1.0) as usize;
-    let size = size as f64 / 1024f64.powi(exp as i32);
-
-    if exp == 0 {
-        format!("{:.0} {}", size, UNITS[exp])
-    } else {
-        format!("{:.2} {}", size, UNITS[exp])
-    }
-}
-
 /// 格式化路径（截断长路径）
 fn format_path(path: &Path) -> String {
     let path_str = path.display().to_string();
@@ -838,8 +821,6 @@ mod tests {
 #[cfg(test)]
 mod additional_tests {
     use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_exif_data_full() {

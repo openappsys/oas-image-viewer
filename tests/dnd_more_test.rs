@@ -127,7 +127,7 @@ fn test_drag_preview_text_logic() {
 /// 测试排序行为
 #[test]
 fn test_image_sorting() {
-    let mut paths = vec![
+    let mut paths = [
         std::path::PathBuf::from("z.png"),
         std::path::PathBuf::from("a.png"),
         std::path::PathBuf::from("m.png"),

@@ -8,14 +8,14 @@ use egui::Context;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::adapters::clipboard::ClipboardManager;
 use crate::adapters::egui::widgets::{GalleryWidget, ViewerWidget};
-use crate::clipboard::ClipboardManager;
-use crate::core::domain::{NavigationDirection, ViewMode};
+use crate::adapters::info_panel::InfoPanel;
+use crate::adapters::shortcuts_help::ShortcutsHelpPanel;
+use crate::core::domain::{is_image_file, NavigationDirection, ViewMode};
 use crate::core::ports::AppConfig;
-use crate::core::ports::FileDialogPort;
+use crate::core::ports::{ClipboardPort, FileDialogPort, UiPort};
 use crate::core::use_cases::{AppState, GalleryState, ImageViewerService, ViewState};
-use crate::info_panel::InfoPanel;
-use crate::shortcuts_help::ShortcutsHelpPanel;
 
 /// Egui 应用程序适配器
 pub struct EguiApp {
@@ -779,8 +779,7 @@ impl EguiApp {
                                 let in_menu_bar = menu_bar_rect.contains(pos);
                                 // 获取 popup 的 rect 来检测是否在菜单内点击
                                 let popup_response = ui.ctx().read_response(popup_id);
-                                let in_popup =
-                                    popup_response.map_or(false, |r| r.rect.contains(pos));
+                                let in_popup = popup_response.is_some_and(|r| r.rect.contains(pos));
                                 if !in_menu_bar && !in_popup {
                                     should_close = true;
                                 }
@@ -946,6 +945,39 @@ impl EguiApp {
     }
 }
 
+impl UiPort for EguiApp {
+    fn request_repaint(&self) {
+        // 重绘请求通过 egui context 处理
+    }
+
+    fn show_error(&self, message: &str) {
+        tracing::error!("UI错误: {}", message);
+        // 错误显示在 update 循环中通过 last_context_menu_result 处理
+    }
+
+    fn show_status(&self, message: &str) {
+        tracing::info!("UI状态: {}", message);
+        // 状态显示在 update 循环中处理
+    }
+
+    fn toggle_fullscreen(&self) {
+        // 全屏切换在 update 中通过 frame 处理
+    }
+
+    fn is_fullscreen(&self) -> bool {
+        false // 状态在 update 中维护
+    }
+
+    fn exit(&self) {
+        // 退出在 update 中通过 frame 处理
+    }
+
+    fn window_size(&self) -> (f32, f32) {
+        // 从配置获取默认大小
+        (1200.0, 800.0)
+    }
+}
+
 impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         // 强制统一所有布局参数，解决浅色/暗色间距不一致问题
@@ -1073,9 +1105,16 @@ impl eframe::App for EguiApp {
                                 let copy_result = if let Some((width, height, ref data)) =
                                     self.current_texture_data
                                 {
-                                    self.clipboard_manager.copy_image(data, width, height)
+                                    self.clipboard_manager.copy_image(width, height, data)
                                 } else {
-                                    self.clipboard_manager.copy_image_from_file(&path)
+                                    self.clipboard_manager.copy_image_from_file(&path).map_err(
+                                        |e| {
+                                            crate::core::CoreError::technical(
+                                                "STORAGE_ERROR",
+                                                e.to_string(),
+                                            )
+                                        },
+                                    )
                                 };
 
                                 match copy_result {
@@ -1095,7 +1134,7 @@ impl eframe::App for EguiApp {
                         // 复制文件路径
                         ui.add_enabled_ui(has_image && clipboard_available, |ui| {
                             if ui.button("📂 复制文件路径").clicked() {
-                                match self.clipboard_manager.copy_image_path(&path) {
+                                match ClipboardPort::copy_path(&self.clipboard_manager, &path) {
                                     Ok(_) => {
                                         self.last_context_menu_result =
                                             Some("路径已复制".to_string());
@@ -1113,7 +1152,7 @@ impl eframe::App for EguiApp {
 
                         // 在文件夹中显示
                         if ui.button("📁 在文件夹中显示").clicked() {
-                            let _ = ClipboardManager::show_in_folder(&path);
+                            let _ = ClipboardPort::show_in_folder(&self.clipboard_manager, &path);
                             ui.close();
                         }
 
@@ -1154,12 +1193,6 @@ impl eframe::App for EguiApp {
     }
 }
 
-/// 检查文件是否为图像
-fn is_image_file(path: &std::path::Path) -> bool {
-    use crate::core::domain::Image;
-    Image::detect_format(path).is_supported()
-}
-
 /// 提供默认状态
 impl Default for AppState {
     fn default() -> Self {
@@ -1172,13 +1205,4 @@ impl Default for AppState {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_is_image_file() {
-        assert!(is_image_file(std::path::Path::new("test.png")));
-        assert!(is_image_file(std::path::Path::new("test.jpg")));
-        assert!(!is_image_file(std::path::Path::new("test.txt")));
-    }
-}
+mod tests {}
