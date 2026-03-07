@@ -185,18 +185,91 @@ jobs:
         cd dist
         ${{ matrix.archive_cmd }} ..\image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.${{ matrix.archive_ext }} image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}\
     
-    - name: Create DMG (macOS)
+    - name: Create .app bundle and DMG (macOS)
       if: runner.os == 'macOS'
       run: |
-        mkdir -p dist/dmg
-        cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/dmg/
-        cp README.md LICENSE dist/dmg/
-        create-dmg \
-          --volname "Image Viewer ${{ needs.changelog.outputs.version }}" \
-          --window-size 800 400 \
-          --icon-size 100 \
-          "image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.dmg" \
-          dist/dmg/ 2>/dev/null || echo "DMG creation skipped"
+        VERSION="${{ needs.changelog.outputs.version }}"
+        APP_NAME="Image Viewer"
+        APP_BUNDLE="Image Viewer.app"
+        
+        # 1. 创建 .app bundle 结构
+        mkdir -p "$APP_BUNDLE/Contents/MacOS"
+        mkdir -p "$APP_BUNDLE/Contents/Resources"
+        
+        # 2. 复制二进制文件到 MacOS/ 目录
+        cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$APP_BUNDLE/Contents/MacOS/"
+        chmod +x "$APP_BUNDLE/Contents/MacOS/${{ matrix.binary_name }}"
+        
+        # 3. 创建 Info.plist
+        cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleName</key>
+            <string>Image Viewer</string>
+            <key>CFBundleDisplayName</key>
+            <string>Image Viewer</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.imageviewer.app</string>
+            <key>CFBundleVersion</key>
+            <string>$VERSION</string>
+            <key>CFBundleShortVersionString</key>
+            <string>$VERSION</string>
+            <key>CFBundleExecutable</key>
+            <string>${{ matrix.binary_name }}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleSupportedPlatforms</key>
+            <array>
+                <string>MacOSX</string>
+            </array>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.11</string>
+            <key>LSUIElement</key>
+            <false/>
+        </dict>
+        </plist>
+        EOF
+        
+        # 4. 复制图标（如果有 icon.icns）
+        if [ -f "assets/icon.icns" ]; then
+          cp assets/icon.icns "$APP_BUNDLE/Contents/Resources/"
+        fi
+        
+        # 5. 创建 PkgInfo
+        echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
+        
+        # 6. 创建 DMG 布局目录
+        mkdir -p dist/dmg_staging
+        cp -r "$APP_BUNDLE" dist/dmg_staging/
+        
+        # 7. 创建 Applications 软链接
+        ln -s /Applications dist/dmg_staging/Applications
+        
+        # 8. 复制 README 和 LICENSE（可选）
+        cp README.md LICENSE dist/dmg_staging/ 2>/dev/null || true
+        
+        # 9. 使用 create-dmg 创建 DMG
+        if command -v create-dmg &> /dev/null; then
+          create-dmg \
+            --volname "$APP_NAME $VERSION" \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --app-drop-link 600 185 \
+            --icon "$APP_BUNDLE" 200 185 \
+            --eula LICENSE \
+            "image-viewer-${VERSION}-${{ matrix.name }}.dmg" \
+            dist/dmg_staging/
+        else
+          # 备选：使用 hdiutil
+          hdiutil create -volname "$APP_NAME $VERSION" \
+            -srcfolder dist/dmg_staging \
+            -ov -format UDZO \
+            "image-viewer-${VERSION}-${{ matrix.name }}.dmg"
+        fi
+        
+        echo "✅ DMG created: image-viewer-${VERSION}-${{ matrix.name }}.dmg"
       continue-on-error: true
     
     - name: Create AppImage (Linux x86_64)
