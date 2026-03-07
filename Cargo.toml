@@ -1,11 +1,11 @@
 [package]
-name = "image-viewer"
+name = "oas-image-viewer"
 version = "0.3.0"
 edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 description = "A modern image viewer built with Rust and egui"
 license = "MIT"
-repository = "https://github.com/yourusername/image-viewer"
+repository = "https://github.com/openappsys/oas-image-viewer"
 keywords = ["image", "viewer", "gui", "egui"]
 categories = ["graphics", "multimedia::images"]
 rust-version = "1.93"

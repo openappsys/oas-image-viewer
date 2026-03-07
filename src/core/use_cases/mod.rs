@@ -1234,7 +1234,7 @@ mod tests {
 
     // ImageViewerService 测试
     #[test]
-    fn test_image_viewer_service_new() {
+    fn test_oas_image_viewer_service_new() {
         struct MockImageSource;
         impl ImageSource for MockImageSource {
             fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {
@@ -1282,7 +1282,7 @@ mod tests {
     }
 
     #[test]
-    fn test_image_viewer_service_update_state() {
+    fn test_oas_image_viewer_service_update_state() {
         struct MockImageSource;
         impl ImageSource for MockImageSource {
             fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {

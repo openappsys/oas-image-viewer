@@ -2,7 +2,7 @@
 
 一个使用 Rust 和 egui 构建的现代化、高性能图片查看器。
 
-[![CI](https://github.com/yourusername/image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/image-viewer/actions/workflows/ci.yml)
+[![CI](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [English Documentation](README.md)
@@ -118,7 +118,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/image-viewer.git
+git clone git@github.com:openappsys/oas-image-viewer.git
 cd image-viewer
 
 # 构建 release 版本
@@ -130,7 +130,7 @@ cargo build --release
 
 ### 预构建二进制文件
 
-从 [Releases](https://github.com/yourusername/image-viewer/releases) 页面下载预构建的二进制文件。
+从 [Releases](https://github.com/openappsys/oas-image-viewer/releases) 页面下载预构建的二进制文件。
 
 #### ⚠️ 安全提示（首次运行）
 
@@ -212,9 +212,9 @@ image-viewer /path/to/images/
 
 配置文件位置（平台特定）：
 
-- **Linux**: `~/.config/image-viewer/config.toml`
+- **Linux**: `~/.config/oas-image-viewer/config.toml`
 - **macOS**: `~/Library/Application Support/com.imageviewer.image-viewer/config.toml`
-- **Windows**: `%APPDATA%\image-viewer\config\config.toml`
+- **Windows**: `%APPDATA%\oas-image-viewer\config\config.toml`
 
 ### 配置示例
 

@@ -212,7 +212,7 @@ impl JsonStorage {
         if let Ok(mut file) = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
-            .open("image-viewer.log")
+            .open("oas-image-viewer.log")
         {
             let _ = file.write_all(line.as_bytes());
         }
@@ -228,7 +228,7 @@ impl JsonStorage {
 
     /// 获取配置目录
     fn config_dir() -> Result<PathBuf> {
-        let proj_dirs = directories::ProjectDirs::from("com", "imageviewer", "image-viewer")
+        let proj_dirs = directories::ProjectDirs::from("com", "imageviewer", "oas-image-viewer")
             .ok_or_else(|| {
                 CoreError::technical("STORAGE_ERROR", "Failed to get project dirs".to_string())
             })?;

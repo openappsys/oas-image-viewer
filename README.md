@@ -2,7 +2,7 @@
 
 A modern, high-performance image viewer built with Rust and egui.
 
-[![CI](https://github.com/yourusername/image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/image-viewer/actions/workflows/ci.yml)
+[![CI](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [中文文档](README.zh-CN.md)
@@ -91,19 +91,19 @@ Core Library Layer (core/)
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/image-viewer.git
+git clone git@github.com:openappsys/oas-image-viewer.git
 cd image-viewer
 
 # Build release version
 cargo build --release
 
 # Run
-./target/release/image-viewer
+./target/release/oas-image-viewer
 ```
 
 ### Pre-built Binaries
 
-Download pre-built binaries from the [Releases](https://github.com/yourusername/image-viewer/releases) page.
+Download pre-built binaries from the [Releases](https://github.com/openappsys/oas-image-viewer/releases) page.
 
 #### ⚠️ Security Notice (First Run)
 
@@ -134,8 +134,8 @@ Since the current version is not code-signed yet, the system may show security w
 **Linux:**
 ```bash
 # Grant execute permission and run
-chmod +x ./image-viewer
-./image-viewer
+chmod +x ./oas-image-viewer
+./oas-image-viewer
 ```
 
 > 💡 **Recommended**: Use AppImage format, no installation needed, double-click to run
@@ -192,8 +192,8 @@ image-viewer --help
 
 Configuration file location:
 - **Windows**: `%APPDATA%\image-viewer\config.toml`
-- **macOS**: `~/Library/Application Support/image-viewer/config.toml`
-- **Linux**: `~/.config/image-viewer/config.toml`
+- **macOS**: `~/Library/Application Support/oas-image-viewer/config.toml`
+- **Linux**: `~/.config/oas-image-viewer/config.toml`
 
 Example configuration:
 ```toml
@@ -322,8 +322,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 💬 [Discussions](https://github.com/yourusername/image-viewer/discussions)
-- 🐛 [Issues](https://github.com/yourusername/image-viewer/issues)
+- 💬 [Discussions](https://github.com/openappsys/oas-image-viewer/discussions)
+- 🐛 [Issues](https://github.com/openappsys/oas-image-viewer/issues)
 - 📧 Email: your.email@example.com
 
 ---

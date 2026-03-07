@@ -10,13 +10,13 @@ use anyhow::Result;
 use eframe::NativeOptions;
 use tracing::{info, warn};
 
-use image_viewer::adapters::egui::EguiApp;
-use image_viewer::core::domain::Image;
-use image_viewer::core::ports::{AppConfig, Storage};
-use image_viewer::core::use_cases::{
+use oas_image_viewer::adapters::egui::EguiApp;
+use oas_image_viewer::core::domain::Image;
+use oas_image_viewer::core::ports::{AppConfig, Storage};
+use oas_image_viewer::core::use_cases::{
     ImageViewerService, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase,
 };
-use image_viewer::{FsImageSource, JsonStorage};
+use oas_image_viewer::{FsImageSource, JsonStorage};
 
 fn main() {
     // 设置 panic 钩子，捕获 panic 信息
@@ -26,7 +26,7 @@ fn main() {
         if let Ok(mut file) = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("image-viewer-error.log")
+            .open("oas-image-viewer-error.log")
         {
             let _ = file.write_all(msg.as_bytes());
         }
@@ -35,7 +35,7 @@ fn main() {
     }));
 
     // 初始化日志到文件
-    let _ = std::fs::write("image-viewer.log", ""); // 清空或创建日志文件
+    let _ = std::fs::write("oas-image-viewer.log", ""); // 清空或创建日志文件
 
     tracing_subscriber::fmt().with_env_filter("debug").init();
 
@@ -62,7 +62,7 @@ fn log_to_file(msg: &str) {
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("image-viewer.log")
+        .open("oas-image-viewer.log")
     {
         let _ = file.write_all(line.as_bytes());
     }
@@ -102,7 +102,7 @@ fn run_app() -> Result<()> {
         Err(e) => {
             warn!("创建存储失败: {}. 使用临时存储。", e);
             log_to_file(&format!("存储初始化失败: {}", e));
-            let temp_path = std::env::temp_dir().join("image-viewer-temp-config.json");
+            let temp_path = std::env::temp_dir().join("oas-image-viewer-temp-config.json");
             log_to_file(&format!("使用临时路径: {:?}", temp_path));
             Arc::new(JsonStorage::from_path(temp_path))
         }

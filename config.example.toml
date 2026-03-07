@@ -3,9 +3,9 @@
 # This is an example configuration file. Copy this to your platform-specific
 # config directory and modify as needed:
 #
-# - Linux: ~/.config/image-viewer/config.toml
-# - macOS: ~/Library/Application Support/com.imageviewer.image-viewer/config.toml
-# - Windows: %APPDATA%\image-viewer\config.toml
+# - Linux: ~/.config/oas-image-viewer/config.toml
+# - macOS: ~/Library/Application Support/com.imageviewer.oas-image-viewer/config.toml
+# - Windows: %APPDATA%\oas-image-viewer\config.toml
 
 [window]
 # Window dimensions (will be restored on restart)
