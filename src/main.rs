@@ -5,7 +5,6 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-
 use anyhow::Result;
 use eframe::NativeOptions;
 use tracing::{info, warn};
@@ -273,6 +272,7 @@ fn setup_fonts(ctx: &egui::Context) {
                         .push("chinese_font".to_owned());
                     info!("已加载中文字体: {}", font_path);
                     font_loaded = true;
+                    oas_image_viewer::set_chinese_supported(true);
                     break;
                 }
                 Err(_) => continue,
@@ -281,7 +281,8 @@ fn setup_fonts(ctx: &egui::Context) {
     }
 
     if !font_loaded {
-        warn!("未加载中文字体，菜单在某些系统上可能显示为方块");
+        warn!("未找到中文字体，界面将使用英文显示");
+        info!("使用 egui 默认字体 (40KB)，仅支持英文显示");
     }
 
     ctx.set_fonts(fonts);

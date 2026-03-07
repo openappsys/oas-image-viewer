@@ -5,6 +5,30 @@
 //! - infrastructure: 技术实现
 //! - adapters: UI 适配器
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// 全局标志：是否支持中文字体显示
+static CHINESE_FONT_SUPPORTED: AtomicBool = AtomicBool::new(false);
+
+/// 设置中文字体支持状态（由 main.rs 在初始化时调用）
+pub fn set_chinese_supported(supported: bool) {
+    CHINESE_FONT_SUPPORTED.store(supported, Ordering::Relaxed);
+}
+
+/// 检查是否支持中文字体显示
+pub fn is_chinese_supported() -> bool {
+    CHINESE_FONT_SUPPORTED.load(Ordering::Relaxed)
+}
+
+/// 获取当前界面语言应该使用的文本
+pub fn ui_text<'a>(chinese: &'a str, english: &'a str) -> &'a str {
+    if is_chinese_supported() {
+        chinese
+    } else {
+        english
+    }
+}
+
 pub mod adapters;
 pub mod core;
 pub(crate) mod infrastructure;

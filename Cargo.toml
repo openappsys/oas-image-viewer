@@ -27,7 +27,6 @@ image = { version = "0.25", default-features = false, features = [
 
 # Error handling
 anyhow = "1.0"
-thiserror = "2.0"
 
 # Logging
 tracing = "0.1"
@@ -43,9 +42,6 @@ directories = "6.0"
 
 # File dialogs - use default backend selection
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
-
-# Font support for CJK characters
-font-kit = "0.14"
 
 # Utility
 parking_lot = "0.12"
@@ -72,3 +68,12 @@ strip = true
 [profile.dev]
 opt-level = 1
 debug = true
+
+# 进一步优化包大小
+[profile.release-minimal]
+inherits = "release"
+opt-level = "z"      # 优化大小而非速度
+lto = "fat"          # 更激进的LTO
+codegen-units = 1
+strip = true
+panic = "abort"      # 移除panic处理代码
