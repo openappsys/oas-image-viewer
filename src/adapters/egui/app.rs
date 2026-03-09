@@ -164,6 +164,25 @@ impl EguiApp {
             self.handle_reset_zoom();
         }
     }
+
+    fn save_window_position(&mut self, ctx: &Context) {
+        let rect = ctx.viewport_rect();
+        let current_pos = egui::pos2(rect.left_top().x, rect.left_top().y);
+
+        // 只在窗口停止移动时保存（位置变化后）
+        if self.last_saved_window_pos != Some(current_pos) {
+            self.last_saved_window_pos = Some(current_pos);
+            let _ = self.service.update_state(|state| {
+                state.config.window.x = Some(current_pos.x);
+                state.config.window.y = Some(current_pos.y);
+            });
+            // 使用 request_save 启用防抖（500ms延迟）
+            if let Ok(state) = self.service.get_state() {
+                let _ = self.service.config_use_case.request_save(&state.config);
+            }
+        }
+    }
+
     fn handle_enter(&mut self, ctx: &Context) {
         if !ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
             return;
@@ -227,6 +246,7 @@ impl eframe::App for EguiApp {
             style.spacing.button_padding = egui::vec2(12.0, 8.0);
         });
 
+        self.save_window_position(ctx);
         self.gallery_widget.init(ctx);
         self.process_pending_files(ctx);
         self.handle_shortcuts(ctx);

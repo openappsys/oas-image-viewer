@@ -2,6 +2,8 @@
 //!
 //! 这些类型表示领域中的数值概念，具有不变性和验证
 
+use std::path::PathBuf;
+
 /// 缩放比例值对象
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Scale {
@@ -588,4 +590,15 @@ mod tests {
         let settings = ViewerSettings::default();
         assert!(!settings.show_info_panel);
     }
+}
+
+/// 应用配置数据结构
+///
+/// 这是应用级别的配置，聚合了窗口、画廊、查看器等配置
+#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+pub struct AppConfig {
+    pub window: WindowState,
+    pub gallery: GalleryLayout,
+    pub viewer: ViewerSettings,
+    pub last_opened_directory: Option<PathBuf>,
 }

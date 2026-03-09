@@ -8,6 +8,6 @@ pub mod types;
 pub use errors::{Boundary, ConfigError, GalleryError, UnavailableReason, ViewError};
 pub use image::{is_image_file, Gallery, Image, ImageFormat, ImageMetadata};
 pub use types::{
-    Color, Dimensions, DisplayMode, GalleryLayout, NavigationDirection, Position, Scale, ViewMode,
-    ViewerSettings, WindowState,
+    AppConfig, Color, Dimensions, DisplayMode, GalleryLayout, NavigationDirection, Position, Scale,
+    ViewMode, ViewerSettings, WindowState,
 };

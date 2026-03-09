@@ -26,6 +26,7 @@ pub struct EguiApp {
     pub(crate) current_image_path: Option<PathBuf>,
     pub(crate) about_window_pos: Option<egui::Pos2>,
     pub(crate) last_context_menu_result: Option<String>,
+    pub(crate) last_saved_window_pos: Option<egui::Pos2>,
 }
 
 impl EguiApp {
@@ -37,6 +38,15 @@ impl EguiApp {
             .ok()
             .and_then(|state| state.config.viewer.about_window_pos)
             .map(|p| egui::pos2(p.x, p.y));
+
+        let last_saved_window_pos = service.get_state().ok().and_then(|state| {
+            let w = &state.config.window;
+            if w.x.is_some() && w.y.is_some() {
+                Some(egui::pos2(w.x.unwrap(), w.y.unwrap()))
+            } else {
+                None
+            }
+        });
 
         Self {
             service,
@@ -53,6 +63,7 @@ impl EguiApp {
             about_window_pos,
             clipboard_manager: ClipboardManager::new(),
             last_context_menu_result: None,
+            last_saved_window_pos,
         }
     }
 

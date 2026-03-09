@@ -3,9 +3,12 @@
 //! Core 层通过这些接口与外部世界交互
 //! 实现依赖倒置原则：Core 层定义接口，外层实现接口
 
-use crate::core::domain::{GalleryLayout, Image, ImageMetadata, ViewerSettings, WindowState};
+use crate::core::domain::{Image, ImageMetadata};
 use crate::core::Result;
 use std::path::{Path, PathBuf};
+
+// 重新导出 AppConfig，保持向后兼容
+pub use crate::core::domain::AppConfig;
 
 /// 图像数据源端口
 ///
@@ -43,15 +46,6 @@ pub trait Storage: Send + Sync {
 
     /// 配置变更时调用（支持防抖）
     fn request_save(&self, config: &AppConfig) -> Result<()>;
-}
-
-/// 应用配置数据结构
-#[derive(Debug, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
-pub struct AppConfig {
-    pub window: WindowState,
-    pub gallery: GalleryLayout,
-    pub viewer: ViewerSettings,
-    pub last_opened_directory: Option<PathBuf>,
 }
 
 /// UI 端口
@@ -148,8 +142,6 @@ mod tests {
         assert_eq!(config, cloned);
     }
 
-    // 从旧代码迁移的额外测试
-
     #[test]
     fn test_app_config_default_values() {
         let config = AppConfig::default();
@@ -221,7 +213,7 @@ mod tests {
     fn test_app_config_viewer_settings() {
         let config = AppConfig::default();
         assert!(config.viewer.fit_to_window);
-        assert!(!config.viewer.show_info_panel); // Bug 2 修复: F 键控制信息面板
+        assert!(!config.viewer.show_info_panel);
         assert!((config.viewer.min_scale - 0.1).abs() < 0.001);
         assert!((config.viewer.max_scale - 20.0).abs() < 0.001);
         assert!((config.viewer.zoom_step - 1.25).abs() < 0.001);
