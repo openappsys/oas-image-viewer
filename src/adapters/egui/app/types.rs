@@ -44,10 +44,9 @@ impl EguiApp {
 
         let last_saved_window_pos = service.get_state().ok().and_then(|state| {
             let w = &state.config.window;
-            if w.x.is_some() && w.y.is_some() {
-                Some(egui::pos2(w.x.unwrap(), w.y.unwrap()))
-            } else {
-                None
+            match (w.x, w.y) {
+                (Some(x), Some(y)) => Some(egui::pos2(x, y)),
+                _ => None,
             }
         });
 

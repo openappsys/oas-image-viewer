@@ -45,8 +45,8 @@ impl ShortcutsHelpPanel {
 
         // 获取视口大小，计算面板最大尺寸（留出边距）
         let screen_rect = ctx.viewport_rect();
-        let max_width = screen_rect.width().min(420.0).max(280.0);
-        let max_height = screen_rect.height().min(520.0).max(200.0);
+        let max_width = screen_rect.width().clamp(280.0, 420.0);
+        let max_height = screen_rect.height().clamp(200.0, 520.0);
 
         // 创建半透明背景遮罩
         let painter = ctx.layer_painter(egui::LayerId::new(
