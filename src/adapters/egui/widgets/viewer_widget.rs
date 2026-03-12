@@ -375,7 +375,7 @@ impl ViewerWidget {
                 "-".to_string()
             };
             
-            let display = format!("{}  {}  {:.1} MP  {}", truncated, dimensions, megapixels, size_str);
+            let display = format!("{}  {} / {:.1} MP  {}", truncated, dimensions, megapixels, size_str);
             (display, Some(filename.to_string()))
         } else {
             ("-".to_string(), None)

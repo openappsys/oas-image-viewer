@@ -275,42 +275,79 @@ jobs:
     - name: Create AppImage (Linux x86_64)
       if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
-        # 安装 linuxdeploy 和 appimagetool
+        set -e
+        echo "📦 Starting AppImage build..."
+        
+        # 安装 linuxdeploy
+        echo "⬇️ Downloading linuxdeploy..."
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy.AppImage
         chmod +x linuxdeploy.AppImage
         
         # 创建 AppDir 结构
+        echo "📁 Creating AppDir structure..."
         mkdir -p AppDir/usr/bin
         mkdir -p AppDir/usr/share/applications
         mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
         
         # 复制二进制文件
+        echo "📋 Copying binary..."
         cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} AppDir/usr/bin/
         
         # 创建 .desktop 文件
+        echo "📝 Creating .desktop file..."
         cat > AppDir/usr/share/applications/oas-image-viewer.desktop << 'EOF'
         [Desktop Entry]
-        Name=Image Viewer
+        Name=OAS Image Viewer
         Exec=oas-image-viewer
         Icon=oas-image-viewer
         Type=Application
         Categories=Graphics;Viewer;
-        Comment=Simple and fast image viewer
+        Comment=A modern image viewer with gallery and viewer modes
+        Terminal=false
         EOF
         
-        # 复制图标（如果有）或使用默认
-        touch AppDir/usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png
+        # 复制图标（如果有）
+        if [ -f "assets/icon.png" ]; then
+          cp assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png
+        else
+          touch AppDir/usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png
+        fi
         
         # 创建 AppRun 链接
-        ln -s usr/bin/oas-image-viewer AppDir/AppRun
+        ln -sf usr/bin/oas-image-viewer AppDir/AppRun
+        ln -sf usr/share/applications/oas-image-viewer.desktop AppDir/oas-image-viewer.desktop
         
         # 构建 AppImage
-        ./linuxdeploy.AppImage --appdir AppDir --output appimage
+        echo "🔨 Building AppImage..."
+        ./linuxdeploy.AppImage --appdir AppDir --output appimage || {
+          echo "❌ linuxdeploy failed"
+          exit 1
+        }
         
-        # 重命名 AppImage
-        mv OAS_Image_Viewer*.AppImage oas-image-viewer-${{ needs.changelog.outputs.version }}-linux-x86_64.AppImage || \
-        mv *.AppImage oas-image-viewer-${{ needs.changelog.outputs.version }}-linux-x86_64.AppImage
-      continue-on-error: true
+        # 找到并重命名生成的 AppImage
+        echo "🔍 Looking for generated AppImage..."
+        ls -la *.AppImage 2>/dev/null || echo "No .AppImage files in current directory"
+        
+        APPIMAGE_FILE=$(find . -maxdepth 1 -name "*.AppImage" -not -name "linuxdeploy.AppImage" | head -1)
+        if [ -z "$APPIMAGE_FILE" ]; then
+          echo "❌ No AppImage file found"
+          exit 1
+        fi
+        
+        NEW_NAME="oas-image-viewer-${{ needs.changelog.outputs.version }}-linux-x86_64.AppImage"
+        echo "✅ Found AppImage: $APPIMAGE_FILE"
+        echo "📝 Renaming to: $NEW_NAME"
+        mv "$APPIMAGE_FILE" "$NEW_NAME"
+        
+        # 验证文件存在
+        if [ -f "$NEW_NAME" ]; then
+          echo "✅ AppImage created successfully: $NEW_NAME"
+          ls -lh "$NEW_NAME"
+        else
+          echo "❌ Failed to create AppImage"
+          exit 1
+        fi
+      continue-on-error: false
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -318,8 +355,8 @@ jobs:
         name: oas-image-viewer-${{ matrix.name }}
         path: |
           oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.${{ matrix.archive_ext }}
-          oas-image-viewer-${{ needs.changelog.outputs.version }}-linux-x86_64.AppImage
-          *.dmg
+          ${{ matrix.target == 'x86_64-unknown-linux-gnu' && 'oas-image-viewer-*-linux-x86_64.AppImage' || '' }}
+          ${{ runner.os == 'macOS' && '*.dmg' || '' }}
 
   build-msi:
     name: Build MSI (Windows)
