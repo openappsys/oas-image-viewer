@@ -15,7 +15,7 @@
 - 🎨 **现代化 UI**：基于 egui 的简洁界面
 - 🔧 **可配置**：通过配置文件自定义
 - 🖥️ **跨平台**：支持 Windows、macOS、Linux
-- 🧪 **高测试覆盖**：265+ 单元测试保障质量
+- 🧪 **高测试覆盖**：380+ 单元测试保障质量
 
 ## 架构说明
 
@@ -242,16 +242,40 @@ show_info_panel = true
 oas-image-viewer/
 ├── src/
 │   ├── main.rs              # 应用程序入口点
-│   ├── config.rs            # 配置管理
-│   ├── app/                 # 核心应用逻辑 (Domain)
-│   ├── viewer/              # 图像查看器 (Application)
-│   ├── gallery/             # 图库模块 (Application)
-│   ├── decoder/             # 图像解码 (Application)
-│   ├── dnd/                 # 拖放处理 (Infrastructure)
-│   ├── clipboard/           # 剪贴板 (Infrastructure)
-│   ├── info_panel.rs        # 信息面板 (UI)
-│   ├── shortcuts_help.rs    # 快捷键帮助 (UI)
-│   └── utils/               # 工具函数 (Infrastructure)
+│   ├── lib.rs               # 库入口
+│   ├── adapters/            # 适配器层 (UI)
+│   │   ├── clipboard.rs     # 剪贴板操作
+│   │   ├── egui/            # egui 适配器
+│   │   │   ├── app.rs       # 主应用
+│   │   │   ├── app/         # 应用子模块
+│   │   │   │   ├── handlers.rs
+│   │   │   │   ├── menu.rs
+│   │   │   │   ├── render.rs
+│   │   │   │   ├── types.rs
+│   │   │   │   └── utils.rs
+│   │   │   ├── info_panel.rs      # 信息面板
+│   │   │   ├── shortcuts_help.rs  # 快捷键帮助
+│   │   │   ├── thumbnail_loader.rs # 缩略图加载
+│   │   │   └── widgets/           # UI 组件
+│   │   │       ├── gallery_widget.rs
+│   │   │       └── viewer_widget.rs
+│   │   └── info_panel.rs    # 信息面板重新导出
+│   ├── core/                # 核心层 (Domain + Use Cases)
+│   │   ├── mod.rs           # CoreError, Result
+│   │   ├── domain/          # 领域实体
+│   │   │   ├── errors.rs    # 错误类型
+│   │   │   ├── image.rs     # Image, Gallery
+│   │   │   ├── mod.rs
+│   │   │   └── types.rs     # AppConfig, ViewMode 等
+│   │   ├── ports/           # 端口接口 (traits)
+│   │   │   └── mod.rs
+│   │   └── use_cases/       # 业务用例
+│   │       └── mod.rs
+│   ├── infrastructure/      # 基础设施层
+│   │   └── mod.rs           # FsImageSource, JsonStorage
+│   └── utils/               # 工具函数
+│       ├── mod.rs
+│       └── threading.rs
 ├── tests/                   # 集成测试
 ├── assets/                  # 静态资源
 ├── .github/workflows/       # CI/CD 配置
@@ -287,11 +311,17 @@ cargo build --release
 - **rustfmt**: 一致的代码格式 (`rustfmt.toml`)
 - **clippy**: 严格规则的 linting (`.clippy.toml`)
 - **EditorConfig**: 一致的编辑器设置 (`.editorconfig`)
-- **测试覆盖**: 451+ 单元测试，核心模块覆盖率 >80%
+- **测试覆盖**: 380+ 单元测试，核心模块覆盖率 >80%
 
-## v0.3.0 新特性
+## v0.3.x 新特性
 
-### 🏗️ 架构重构
+### v0.3.1 - 修复与优化
+
+- 修复配置保存防抖处理问题
+- 优化错误日志记录
+- 修复某些情况下缩略图加载失败的问题
+
+### v0.3.0 - 架构重构
 
 - 采用 分层架构 架构设计
 - 清晰的四层架构：Domain → Application → Infrastructure → UI
@@ -299,7 +329,7 @@ cargo build --release
 
 ### 🧪 测试增强
 
-- 451+ 单元测试通过
+- 380+ 单元测试通过
 - 每个模块都包含全面的单元测试
 - 新增集成测试覆盖核心用例
 

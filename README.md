@@ -16,7 +16,7 @@ A modern, high-performance image viewer built with Rust and egui.
 - 🎨 **Modern UI**: Clean interface powered by egui
 - 🔧 **Configurable**: Customize via configuration file
 - 🖥️ **Cross-platform**: Windows, macOS, Linux support
-- 🧪 **High Test Coverage**: 265+ unit tests ensuring quality
+- 🧪 **High Test Coverage**: 380+ unit tests ensuring quality
 
 ## Architecture
 
@@ -324,7 +324,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 💬 [Discussions](https://github.com/openappsys/oas-image-viewer/discussions)
 - 🐛 [Issues](https://github.com/openappsys/oas-image-viewer/issues)
-- 📧 Email: your.email@example.com
+- 📧 Email: team@openappsys.com
 
 ---
 
