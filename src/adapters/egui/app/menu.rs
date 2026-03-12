@@ -418,7 +418,7 @@ impl EguiApp {
                 .service
                 .update_state(|s| s.view.view_mode = ViewMode::Gallery)
             {
-                eprintln!("切换到图库视图失败: {}", e);
+                tracing::error!(error = %e, "切换到图库视图失败");
             }
             clicked = true;
         }
@@ -428,7 +428,7 @@ impl EguiApp {
                 .service
                 .update_state(|s| s.view.view_mode = ViewMode::Viewer)
             {
-                eprintln!("切换到查看器视图失败: {}", e);
+                tracing::error!(error = %e, "切换到查看器视图失败");
             }
             clicked = true;
         }

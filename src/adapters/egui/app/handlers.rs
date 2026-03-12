@@ -12,18 +12,18 @@ impl EguiApp {
     pub(crate) fn handle_open_dialog(&mut self) {
         let dialog = crate::infrastructure::RfdFileDialog::new();
         if let Some(paths) = dialog.open_files() {
-            eprintln!("打开文件对话框选择了 {} 个文件", paths.len());
+            tracing::debug!(count = paths.len(), "打开文件对话框选择了文件");
             for path in paths {
                 if path.exists() {
-                    eprintln!("添加图片: {:?}", path);
+                    tracing::debug!(path = ?path, "添加图片");
                     self.add_image_to_gallery(&path);
                     self.pending_files.push(path);
                 } else {
-                    eprintln!("文件路径无效: {:?}", path);
+                    tracing::warn!(path = ?path, "文件路径无效");
                 }
             }
         } else {
-            eprintln!("文件对话框被取消或未选择文件");
+            tracing::debug!("文件对话框被取消或未选择文件");
         }
     }
 
@@ -38,7 +38,7 @@ impl EguiApp {
             let image = crate::core::domain::Image::new(file_name, path.to_path_buf());
             state.gallery.gallery.add_image(image);
         }) {
-            eprintln!("添加图片到图库失败: {}", e);
+            tracing::error!(error = %e, "添加图片到图库失败");
         }
     }
 
@@ -72,7 +72,7 @@ impl EguiApp {
                 fit_to_window,
             );
         }) {
-            eprintln!("打开图片失败: {}", e);
+            tracing::error!(error = %e, "打开图片失败");
         }
 
         self.update_texture_cache(load_result, path_str);
@@ -89,7 +89,7 @@ impl EguiApp {
                 self.current_texture_data = Some((width, height, rgba_data));
             }
             Err(e) => {
-                eprintln!("加载图片纹理失败 '{}': {}", path_str, e);
+                tracing::error!(path = %path_str, error = %e, "加载图片纹理失败");
                 self.current_texture = None;
                 self.current_texture_data = None;
             }
@@ -132,7 +132,7 @@ impl EguiApp {
                 self.current_texture_data = Some((width, height, rgba_data));
             }
             Err(e) => {
-                eprintln!("加载图片失败 '{}': {}", path.display(), e);
+                tracing::error!(path = %path.display(), error = %e, "加载图片失败");
                 self.current_texture = None;
                 self.current_texture_data = None;
             }
@@ -169,7 +169,7 @@ impl EguiApp {
 
         if let Some(first_path) = image_paths.first() {
             self.pending_files.push(first_path.to_path_buf());
-            eprintln!("拖放添加图片: {}", first_path.display());
+            tracing::debug!(path = %first_path.display(), "拖放添加图片");
         }
 
         self.drag_hovering = false;
@@ -184,7 +184,7 @@ impl EguiApp {
                 .navigate_use_case
                 .navigate(&mut state.gallery, direction);
         }) {
-            eprintln!("导航失败: {}", e);
+            tracing::error!(error = %e, "导航失败");
         }
 
         // 获取更新后的状态来读取选中的索引
@@ -233,7 +233,7 @@ impl EguiApp {
                 fit_to_window,
             );
         }) {
-            eprintln!("打开图片失败 '{}': {}", path.display(), e);
+            tracing::error!(path = %path.display(), error = %e, "打开图片失败");
         }
     }
 
@@ -245,7 +245,7 @@ impl EguiApp {
                 .view_use_case
                 .zoom_in(&mut state.view, 1.25, max);
         }) {
-            eprintln!("放大失败: {}", e);
+            tracing::error!(error = %e, "放大失败");
         }
     }
 
@@ -257,7 +257,7 @@ impl EguiApp {
                 .view_use_case
                 .zoom_out(&mut state.view, 1.25, min);
         }) {
-            eprintln!("缩小失败: {}", e);
+            tracing::error!(error = %e, "缩小失败");
         }
     }
 
@@ -266,7 +266,7 @@ impl EguiApp {
         if let Err(e) = self.service.update_state(|state| {
             self.service.view_use_case.reset_zoom(&mut state.view);
         }) {
-            eprintln!("重置缩放失败: {}", e);
+            tracing::error!(error = %e, "重置缩放失败");
         }
     }
 
@@ -278,7 +278,7 @@ impl EguiApp {
                 .view_use_case
                 .fit_to_window(&mut state.view, rect.width(), rect.height());
         }) {
-            eprintln!("适应窗口失败: {}", e);
+            tracing::error!(error = %e, "适应窗口失败");
         }
     }
 }

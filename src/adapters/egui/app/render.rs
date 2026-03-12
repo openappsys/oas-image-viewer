@@ -132,7 +132,7 @@ impl EguiApp {
             if let Err(e) = self.service.update_state(|state| {
                 state.config.viewer.show_info_panel = false;
             }) {
-                eprintln!("关闭信息面板失败: {}", e);
+                tracing::error!(error = %e, "关闭信息面板失败");
             }
         }
     }

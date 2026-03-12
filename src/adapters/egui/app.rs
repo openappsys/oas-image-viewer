@@ -52,7 +52,7 @@ impl EguiApp {
         } else if let Err(e) = self.service.update_state(|state| {
             self.service.view_use_case.toggle_view_mode(&mut state.view);
         }) {
-            eprintln!("切换视图模式失败: {}", e);
+            tracing::error!(error = %e, "切换视图模式失败");
         }
     }
 
@@ -87,7 +87,7 @@ impl EguiApp {
             if let Err(e) = self.service.update_state(|state| {
                 state.view.view_mode = ViewMode::Viewer;
             }) {
-                eprintln!("切换到查看器模式失败: {}", e);
+                tracing::error!(error = %e, "切换到查看器模式失败");
             }
             self.open_image(ctx, &selected_path, fit_to_window);
         }
@@ -124,7 +124,7 @@ impl EguiApp {
             if let Err(e) = self.service.update_state(|state| {
                 state.config.viewer.show_info_panel = !state.config.viewer.show_info_panel;
             }) {
-                eprintln!("切换信息面板失败: {}", e);
+                tracing::error!(error = %e, "切换信息面板失败");
             }
         }
     }
@@ -142,7 +142,7 @@ impl EguiApp {
                 state.view.view_mode = ViewMode::Gallery;
             }
         }) {
-            eprintln!("切换到图库模式失败: {}", e);
+            tracing::error!(error = %e, "切换到图库模式失败");
         }
     }
 
@@ -178,12 +178,12 @@ impl EguiApp {
                 state.config.window.x = Some(current_pos.x);
                 state.config.window.y = Some(current_pos.y);
             }) {
-                eprintln!("保存窗口位置失败: {}", e);
+                tracing::error!(error = %e, "保存窗口位置失败");
             }
             // 使用 request_save 启用防抖（500ms延迟）
             if let Ok(state) = self.service.get_state() {
                 if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    eprintln!("请求保存配置失败: {}", e);
+                    tracing::error!(error = %e, "请求保存配置失败");
                 }
             }
         }
@@ -253,13 +253,13 @@ impl eframe::App for EguiApp {
         });
 
         // 阶段1: 处理输入
-        let (clicked_image, double_clicked_viewer) = self.process_input(ctx);
+        self.process_input(ctx);
 
         // 阶段2: 渲染内容
         let central_response = self.render_content(ctx, _frame);
 
         // 阶段3: 处理交互
-        self.handle_interactions(ctx, clicked_image, double_clicked_viewer);
+        self.handle_interactions(ctx);
 
         // 阶段4: 渲染其他UI组件
         self.render_info_panel(ctx);
@@ -276,26 +276,24 @@ impl eframe::App for EguiApp {
                     Some(crate::core::domain::Position::new(pos.x, pos.y));
             }
             if let Err(save_err) = self.service.config_use_case.save_config(&state.config) {
-                eprintln!("保存配置失败: {}", save_err);
+                tracing::error!(error = %save_err, "保存配置失败");
             } else {
-                eprintln!("配置已保存");
+                tracing::info!("配置已保存");
             }
         }) {
-            eprintln!("更新状态失败: {}", e);
+            tracing::error!(error = %e, "更新状态失败");
         }
     }
 }
 
 impl EguiApp {
     /// 阶段1: 处理输入 - 处理所有输入相关逻辑
-    fn process_input(&mut self, ctx: &Context) -> (Option<PathBuf>, bool) {
+    fn process_input(&mut self, ctx: &Context) {
         self.save_window_position(ctx);
         self.gallery_widget.init(ctx);
         self.process_pending_files(ctx);
         self.handle_shortcuts(ctx);
         self.handle_drops(ctx);
-
-        (None, false)
     }
 
     /// 阶段2: 渲染内容 - 渲染中央面板（图库或查看器）
@@ -326,18 +324,13 @@ impl EguiApp {
             }
 
             if let Err(e) = self.service.update_state(|s| *s = state) {
-                eprintln!("更新状态失败: {}", e);
+                tracing::error!(error = %e, "更新状态失败");
             }
         })
     }
 
     /// 阶段3: 处理交互 - 处理用户交互结果
-    fn handle_interactions(
-        &mut self,
-        ctx: &Context,
-        _clicked_image: Option<PathBuf>,
-        _double_clicked_viewer: bool,
-    ) {
+    fn handle_interactions(&mut self, ctx: &Context) {
         // 处理双击全屏
         if self.pending_double_click {
             self.pending_double_click = false;
@@ -367,7 +360,7 @@ impl EguiApp {
                     fit_to_window,
                 );
             }) {
-                eprintln!("从图库打开图片失败 '{}': {}", path.display(), e);
+                tracing::error!(path = %path.display(), error = %e, "从图库打开图片失败");
             }
         }
     }

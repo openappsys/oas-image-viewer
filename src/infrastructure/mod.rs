@@ -285,25 +285,25 @@ impl JsonStorage {
             CoreError::technical("STORAGE_ERROR", format!("Failed to rename: {}", e))
         })?;
 
-        eprintln!("配置已保存到: {:?}", path);
+        tracing::info!(path = ?path, "配置已保存");
         Ok(())
     }
 
     /// 从文件加载配置
     fn load_from_file(path: &Path) -> Result<AppConfig> {
-        eprintln!("正在加载配置文件: {:?}", path);
+        tracing::info!(path = ?path, "正在加载配置文件");
 
         let content = std::fs::read_to_string(path).map_err(|e| {
-            eprintln!("读取配置文件失败: {}", e);
+            tracing::warn!(error = %e, "读取配置文件失败");
             CoreError::technical("STORAGE_ERROR", format!("Failed to read: {}", e))
         })?;
 
         let config: AppConfig = toml::from_str(&content).map_err(|e| {
-            eprintln!("解析配置文件失败: {}", e);
+            tracing::warn!(error = %e, "解析配置文件失败");
             CoreError::technical("STORAGE_ERROR", format!("Failed to parse: {}", e))
         })?;
 
-        eprintln!("配置加载成功");
+        tracing::info!("配置加载成功");
         Ok(config)
     }
 }

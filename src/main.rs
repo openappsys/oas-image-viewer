@@ -30,7 +30,7 @@ fn main() {
             let _ = file.write_all(msg.as_bytes());
         }
         // 尝试显示错误（Windows 可能看不到）
-        eprintln!("{}", msg);
+        tracing::error!("{}", msg);
     }));
 
     // 初始化日志到文件
@@ -45,7 +45,7 @@ fn main() {
     if let Err(e) = run_app() {
         let err_msg = format!("程序错误: {}", e);
         log_to_file(&err_msg);
-        eprintln!("{}", err_msg);
+        tracing::error!("{}", err_msg);
     }
 }
 
