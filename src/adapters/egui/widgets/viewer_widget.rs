@@ -365,6 +365,9 @@ impl ViewerWidget {
             let truncated = Self::truncate_filename(&filename, 20);
             let dimensions = format!("{}×{}", image.metadata().width, image.metadata().height);
             
+            // 计算百万像素 (MP)
+            let megapixels = (image.metadata().width as f64 * image.metadata().height as f64) / 1_000_000.0;
+            
             // 获取文件大小
             let size_str = if let Ok(metadata) = std::fs::metadata(image.path()) {
                 Self::format_size(metadata.len())
@@ -372,7 +375,7 @@ impl ViewerWidget {
                 "-".to_string()
             };
             
-            let display = format!("{}  {}  {}", truncated, dimensions, size_str);
+            let display = format!("{}  {}  {:.1} MP  {}", truncated, dimensions, megapixels, size_str);
             (display, Some(filename.to_string()))
         } else {
             ("-".to_string(), None)
