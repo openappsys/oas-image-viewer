@@ -36,7 +36,15 @@ fn main() {
     // 初始化日志到文件
     let _ = std::fs::write("oas-image-viewer.log", ""); // 清空或创建日志文件
 
-    tracing_subscriber::fmt().with_env_filter("debug").init();
+    // 默认只显示 INFO 及以上级别日志，可通过 RUST_LOG 环境变量覆盖
+    // 例如：RUST_LOG=debug 显示所有调试信息
+    // 例如：RUST_LOG=oas_image_viewer=debug,winit=error 自定义级别
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
 
     log_to_file("=== 程序启动 ===");
     log_to_file(&format!("版本: v{}", env!("CARGO_PKG_VERSION")));

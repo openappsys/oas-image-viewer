@@ -169,22 +169,25 @@ impl EguiApp {
     }
 
     fn save_window_position(&mut self, ctx: &Context) {
-        let rect = ctx.viewport_rect();
-        let current_pos = egui::pos2(rect.left_top().x, rect.left_top().y);
-
-        // 只在窗口停止移动时保存（位置变化后）
-        if self.last_saved_window_pos != Some(current_pos) {
-            self.last_saved_window_pos = Some(current_pos);
-            if let Err(e) = self.service.update_state(|state| {
-                state.config.window.x = Some(current_pos.x);
-                state.config.window.y = Some(current_pos.y);
-            }) {
-                tracing::error!(error = %e, "保存窗口位置失败");
-            }
-            // 使用 request_save 启用防抖（500ms延迟）
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
+        // 获取窗口在屏幕上的绝对位置
+        let outer_rect = ctx.input(|i| i.viewport().outer_rect);
+        let current_pos = outer_rect.map(|rect| rect.left_top());
+        
+        if let Some(pos) = current_pos {
+            // 只在窗口停止移动时保存（位置变化后）
+            if self.last_saved_window_pos != Some(pos) {
+                self.last_saved_window_pos = Some(pos);
+                if let Err(e) = self.service.update_state(|state| {
+                    state.config.window.x = Some(pos.x);
+                    state.config.window.y = Some(pos.y);
+                }) {
+                    tracing::error!(error = %e, "保存窗口位置失败");
+                }
+                // 使用 request_save 启用防抖（500ms延迟）
+                if let Ok(state) = self.service.get_state() {
+                    if let Err(e) = self.service.config_use_case.request_save(&state.config) {
+                        tracing::error!(error = %e, "请求保存配置失败");
+                    }
                 }
             }
         }
@@ -278,6 +281,16 @@ impl eframe::App for EguiApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        // 使用最后一次保存的窗口位置
+        if let Some(pos) = self.last_saved_window_pos {
+            if let Err(e) = self.service.update_state(|state| {
+                state.config.window.x = Some(pos.x);
+                state.config.window.y = Some(pos.y);
+            }) {
+                tracing::error!(error = %e, "更新窗口位置失败");
+            }
+        }
+        
         if let Err(e) = self.service.update_state(|state| {
             if let Some(pos) = self.about_window_pos {
                 state.config.viewer.about_window_pos =

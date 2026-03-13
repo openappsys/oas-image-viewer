@@ -335,9 +335,11 @@ impl WindowState {
 
 impl Default for WindowState {
     fn default() -> Self {
+        // 默认窗口大小：960x640，适合小屏幕笔记本
+        // 最小窗口大小限制在 400x300（在 main.rs 中设置）
         Self {
-            width: 1200.0,
-            height: 800.0,
+            width: 960.0,
+            height: 640.0,
             x: None,
             y: None,
             maximized: false,

@@ -8,7 +8,7 @@ license = "MIT"
 repository = "https://github.com/openappsys/oas-image-viewer"
 keywords = ["image", "viewer", "gui", "egui"]
 categories = ["graphics", "multimedia::images"]
-rust-version = "1.93"
+rust-version = "1.94"
 
 [dependencies]
 # GUI framework
