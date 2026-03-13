@@ -41,16 +41,19 @@ impl GalleryWidget {
     /// 返回 true 如果缩略图大小发生了变化
     pub fn handle_scroll(&mut self, ctx: &egui::Context, current_size: u32, _language: Language) -> Option<u32> {
         let ctrl_pressed = ctx.input(|i| i.modifiers.ctrl);
+        let scroll_delta = ctx.input(|i| i.raw_scroll_delta.y);
+        let smooth_delta = ctx.input(|i| i.smooth_scroll_delta.y);
+        let total_delta = if scroll_delta != 0.0 { scroll_delta } else { smooth_delta };
+
         if !ctrl_pressed {
             return None;
         }
 
-        let scroll_delta = ctx.input(|i| i.raw_scroll_delta.y);
-        if scroll_delta == 0.0 {
+        if total_delta == 0.0 {
             return None;
         }
 
-        let new_size = if scroll_delta > 0.0 {
+        let new_size = if total_delta > 0.0 {
             // 向上滚动 - 放大
             (current_size + 10).min(200)
         } else {

@@ -345,6 +345,9 @@ impl EguiApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut state = self.service.get_state().unwrap_or_default();
 
+            // 同步配置中的缩略图大小到布局
+            state.gallery.layout.thumbnail_size = state.config.gallery.thumbnail_size;
+
             match state.view.view_mode {
                 ViewMode::Gallery => {
                     if let Some(index) = self.gallery_widget.ui(ui, &state.gallery, ctx, language) {
