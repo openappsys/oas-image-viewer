@@ -43,7 +43,7 @@ const INFO_PLIST_TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 /// 获取应用 Bundle 路径
 fn get_bundle_path() -> Option<PathBuf> {
     let exe_path = std::env::current_exe().ok()?;
-    
+
     // 向上查找 .app 目录
     let mut path = exe_path.as_path();
     while let Some(parent) = path.parent() {
@@ -52,7 +52,7 @@ fn get_bundle_path() -> Option<PathBuf> {
         }
         path = parent;
     }
-    
+
     None
 }
 
@@ -67,11 +67,7 @@ pub fn get_integration_status() -> IntegrationStatus {
 /// 检查是否已设为默认图片查看器
 fn is_default_app_registered() -> bool {
     // 检查 .png 文件的默认打开方式
-    match Command::new("duti")
-        .args(["-x", ".png"
-        ])
-        .output()
-    {
+    match Command::new("duti").args(["-x", ".png"]).output() {
         Ok(output) => {
             let stdout = String::from_utf8_lossy(&output.stdout);
             stdout.contains("oas-image-viewer")
@@ -87,14 +83,16 @@ pub fn register_context_menu() -> Result<()> {
 
 /// macOS 不支持注册表方式的右键菜单，此方法返回错误
 pub fn unregister_context_menu() -> Result<()> {
-    Err(anyhow::anyhow!("macOS does not support registry-based context menu registration."))
+    Err(anyhow::anyhow!(
+        "macOS does not support registry-based context menu registration."
+    ))
 }
 
 /// 设为默认图片查看器
 pub fn set_as_default_app() -> Result<()> {
     // 尝试使用 duti 工具设置默认应用
     let bundle_id = "com.openappsys.oas-image-viewer";
-    
+
     // 支持的图片 UTIs
     let image_utis = [
         "public.png",
@@ -104,7 +102,7 @@ pub fn set_as_default_app() -> Result<()> {
         "com.compuserve.gif",
         "com.microsoft.bmp",
     ];
-    
+
     // 检查 duti 是否可用
     match Command::new("duti").arg("-v").output() {
         Ok(_) => {
@@ -115,14 +113,18 @@ pub fn set_as_default_app() -> Result<()> {
                     .output()
                     .with_context(|| format!("Failed to set default app for {}", uti))?;
             }
-            
+
             // 刷新 Launch Services 数据库
             Command::new("lsregister")
                 .arg("-f")
-                .arg(get_bundle_path().map(|p| p.to_string_lossy().to_string()).unwrap_or_default())
+                .arg(
+                    get_bundle_path()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default(),
+                )
                 .output()
                 .context("Failed to refresh Launch Services")?;
-            
+
             Ok(())
         }
         Err(_) => {
@@ -134,10 +136,12 @@ pub fn set_as_default_app() -> Result<()> {
                     .arg(&bundle_path)
                     .output()
                     .context("Failed to register app with Launch Services")?;
-                
+
                 Ok(())
             } else {
-                Err(anyhow::anyhow!("Could not find app bundle. Please run from an .app bundle."))
+                Err(anyhow::anyhow!(
+                    "Could not find app bundle. Please run from an .app bundle."
+                ))
             }
         }
     }

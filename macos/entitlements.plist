@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 允许访问用户选择的文件 -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    
+    <!-- 禁用库验证（对于 Rust 应用可能需要） -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    
+    <!-- 允许访问网络（如果需要检查更新） -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <true/>
+    
+    <!-- 允许访问用户选择的文件/文件夹 -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    
+    <!-- 允许访问图片文件夹 -->
+    <key>com.apple.security.assets.pictures.read-write</key>
+    <true/>
+    
+    <!-- 调试配置（发布时可选禁用） -->
+    <key>com.apple.security.get-task-allow</key>
+    <true/>
+</dict>
+</plist>

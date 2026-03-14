@@ -58,9 +58,12 @@ chrono = "0.4"
 # Clipboard support
 arboard = "3.6"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+
+
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "windef"] }
-winreg = "0.52"
+winreg = "0.55"
 
 [dev-dependencies]
 # Testing
@@ -84,3 +87,67 @@ lto = "fat"          # 更激进的LTO
 codegen-units = 1
 strip = true
 panic = "abort"      # 移除panic处理代码
+
+# ========================================
+# macOS 应用打包配置 (cargo-bundle)
+# ========================================
+[package.metadata.bundle]
+# 应用名称
+name = "OAS Image Viewer"
+# Bundle 标识符
+identifier = "com.openappsys.oas-image-viewer"
+# 图标路径（多尺寸支持）
+icon = [
+    "assets/icon_32x32.png",
+    "assets/icon_128x128.png",
+    "assets/icon.icns"
+]
+# Info.plist 路径
+info_plist_path = "macos/Info.plist"
+# 版本
+version = "0.3.3"
+# 版权信息
+copyright = "Copyright (c) 2024 OpenAppSys Team"
+# 应用类别
+category = "Graphics"
+# 最小 macOS 版本
+osx_minimum_system_version = "10.15"
+# 高分辨率支持
+osx_high_resolution_capable = true
+# 沙盒安全（推荐用于 App Store）
+osx_entitlements = "macos/entitlements.plist"
+
+# ========================================
+# Debian 打包配置 (cargo-deb)
+# ========================================
+[package.metadata.deb]
+name = "oas-image-viewer"
+maintainer = "OpenAppSys Team <team@openappsys.com>"
+copyright = "Copyright (c) 2024 OpenAppSys Team"
+extended-description = """\
+A modern image viewer built with Rust and egui.
+Features include gallery mode, slideshow, metadata display,
+and support for multiple image formats.
+"""
+section = "graphics"
+priority = "optional"
+assets = [
+    ["target/release/oas-image-viewer", "usr/bin/oas-image-viewer", "755"],
+    ["packaging/oas-image-viewer.desktop", "usr/share/applications/oas-image-viewer.desktop", "644"],
+    ["assets/icon_32x32.png", "usr/share/icons/hicolor/32x32/apps/oas-image-viewer.png", "644"],
+    ["assets/icon_48x48.png", "usr/share/icons/hicolor/48x48/apps/oas-image-viewer.png", "644"],
+    ["assets/icon_128x128.png", "usr/share/icons/hicolor/128x128/apps/oas-image-viewer.png", "644"],
+    ["assets/icon_256x256.png", "usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png", "644"],
+    ["README.md", "usr/share/doc/oas-image-viewer/README.md", "644"],
+    ["LICENSE", "usr/share/doc/oas-image-viewer/LICENSE", "644"],
+]
+depends = "$auto"
+
+# ========================================
+# WiX MSI 配置 (cargo-wix)
+# ========================================
+[package.metadata.wix]
+upgrade-guid = "A3F5B2C1-D4E6-7890-ABCD-EF1234567890"
+path-guid = "B4C6D3E2-F5A7-8901-BCDE-F23456789012"
+license = false
+eula = false

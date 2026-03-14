@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 static CHINESE_FONT_SUPPORTED: AtomicBool = AtomicBool::new(false);
 
 /// 中文字体路径列表（按优先级排序）
-/// 
+///
 /// 用于在桌面平台查找并加载中文字体
 pub const CHINESE_FONT_PATHS: &[&str] = &[
     // ===== macOS =====

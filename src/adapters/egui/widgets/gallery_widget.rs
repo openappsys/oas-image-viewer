@@ -1,6 +1,6 @@
 //! Gallery Widget - 画廊 UI 组件
 
-use crate::adapters::egui::i18n::{get_text, format_thumbnail_hint};
+use crate::adapters::egui::i18n::{format_thumbnail_hint, get_text};
 use crate::adapters::egui::thumbnail_loader::ThumbnailCache;
 use crate::core::domain::Language;
 use crate::core::use_cases::GalleryState;
@@ -39,11 +39,20 @@ impl GalleryWidget {
 
     /// 处理滚轮事件来调整缩略图大小
     /// 返回 true 如果缩略图大小发生了变化
-    pub fn handle_scroll(&mut self, ctx: &egui::Context, current_size: u32, _language: Language) -> Option<u32> {
+    pub fn handle_scroll(
+        &mut self,
+        ctx: &egui::Context,
+        current_size: u32,
+        _language: Language,
+    ) -> Option<u32> {
         let ctrl_pressed = ctx.input(|i| i.modifiers.ctrl);
         let scroll_delta = ctx.input(|i| i.raw_scroll_delta.y);
         let smooth_delta = ctx.input(|i| i.smooth_scroll_delta.y);
-        let total_delta = if scroll_delta != 0.0 { scroll_delta } else { smooth_delta };
+        let total_delta = if scroll_delta != 0.0 {
+            scroll_delta
+        } else {
+            smooth_delta
+        };
 
         if !ctrl_pressed {
             return None;
@@ -83,12 +92,9 @@ impl GalleryWidget {
 
         let text = format_thumbnail_hint(self.last_thumbnail_size, language);
         let screen_rect = ctx.viewport_rect();
-        
+
         // 在右下角显示提示
-        let pos = egui::pos2(
-            screen_rect.right() - 20.0,
-            screen_rect.bottom() - 20.0,
-        );
+        let pos = egui::pos2(screen_rect.right() - 20.0, screen_rect.bottom() - 20.0);
 
         egui::Area::new(egui::Id::new("thumbnail_size_hint"))
             .fixed_pos(pos)
@@ -96,20 +102,15 @@ impl GalleryWidget {
             .show(ctx, |ui| {
                 let bg_color = Color32::from_rgba_premultiplied(0, 0, 0, 180);
                 let text_color = Color32::WHITE;
-                
+
                 let text_style = egui::FontId::proportional(14.0);
-                let text_size = ui.painter().layout(
-                    text.clone(),
-                    text_style.clone(),
-                    text_color,
-                    f32::INFINITY,
-                ).size();
+                let text_size = ui
+                    .painter()
+                    .layout(text.clone(), text_style.clone(), text_color, f32::INFINITY)
+                    .size();
 
                 let padding = egui::vec2(12.0, 6.0);
-                let rect = egui::Rect::from_min_size(
-                    ui.min_rect().min,
-                    text_size + padding * 2.0,
-                );
+                let rect = egui::Rect::from_min_size(ui.min_rect().min, text_size + padding * 2.0);
 
                 ui.painter().rect_filled(rect, 6.0, bg_color);
                 ui.painter().text(
@@ -123,7 +124,7 @@ impl GalleryWidget {
     }
 
     /// 渲染画廊
-    /// 
+    ///
     /// # 返回值
     /// 返回被点击图片的索引，如果没有则返回 None
     pub fn ui(
@@ -258,7 +259,9 @@ impl GalleryWidget {
                 );
             } else {
                 // 显示文件名作为占位符
-                let filename = image.file_name().unwrap_or_else(|| get_text("unknown", language));
+                let filename = image
+                    .file_name()
+                    .unwrap_or_else(|| get_text("unknown", language));
                 let display_name = if filename.len() > 20 {
                     format!("{}...", &filename[..17])
                 } else {

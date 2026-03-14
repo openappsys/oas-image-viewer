@@ -48,7 +48,7 @@ impl CoreError {
     }
 
     /// 获取翻译键名（用于 i18n）
-    /// 
+    ///
     /// 返回的是翻译键名，而非实际消息文本。
     /// UI 层应使用 get_text(key, language) 获取本地化文本。
     pub fn translation_key(&self) -> &'static str {
@@ -106,7 +106,10 @@ impl CoreError {
     }
 
     /// 获取用户友好的错误消息（已弃用，请使用 translation_key + i18n）
-    #[deprecated(since = "0.3.3", note = "Use translation_key() with i18n module instead")]
+    #[deprecated(
+        since = "0.3.3",
+        note = "Use translation_key() with i18n module instead"
+    )]
     pub fn user_message(&self) -> String {
         // 默认返回英文消息作为后备
         self.translation_key().to_string()
@@ -325,20 +328,28 @@ mod tests {
             .translation_key(),
             "error_last_image"
         );
-        
+
         // View errors
         assert_eq!(
             CoreError::from(ViewError::NoCurrentImage).translation_key(),
             "error_no_current_image"
         );
         assert_eq!(
-            CoreError::from(ViewError::ZoomOutOfRange { requested: 10.0, min: 0.1, max: 5.0 }).translation_key(),
+            CoreError::from(ViewError::ZoomOutOfRange {
+                requested: 10.0,
+                min: 0.1,
+                max: 5.0
+            })
+            .translation_key(),
             "error_zoom_out_of_range"
         );
-        
+
         // Config errors
         assert_eq!(
-            CoreError::from(ConfigError::ReadFailed { path: PathBuf::from("test") }).translation_key(),
+            CoreError::from(ConfigError::ReadFailed {
+                path: PathBuf::from("test")
+            })
+            .translation_key(),
             "error_read_config"
         );
     }

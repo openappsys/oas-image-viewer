@@ -237,7 +237,13 @@ impl ViewerWidget {
         // [−] (20) + 间距 (4) + [百分比] (40) + 间距 (4) + [+] (20) + 间距 (4) + [1:1] (40)
         // 总宽度: 20 + 4 + 40 + 4 + 20 + 4 + 40 = 132
         // 总高度: 20
-        let panel_width = small_btn_size.x + spacing + percent_width + spacing + small_btn_size.x + spacing + large_btn_size.x;
+        let panel_width = small_btn_size.x
+            + spacing
+            + percent_width
+            + spacing
+            + small_btn_size.x
+            + spacing
+            + large_btn_size.x;
         let panel_height = 20.0;
 
         // 计算面板位置（右下角，向左偏移）
@@ -258,7 +264,8 @@ impl ViewerWidget {
         // − 按钮
         let btn_minus_pos = egui::Pos2::new(current_x, btn_y);
         let btn_minus_rect = Rect::from_min_size(btn_minus_pos, small_btn_size);
-        let btn_minus_response = ui.interact(btn_minus_rect, ui.id().with("zoom_minus"), Sense::click());
+        let btn_minus_response =
+            ui.interact(btn_minus_rect, ui.id().with("zoom_minus"), Sense::click());
 
         let btn_minus_bg = if btn_minus_response.hovered() {
             Color32::from_rgba_premultiplied(60, 60, 60, 220)
@@ -287,7 +294,8 @@ impl ViewerWidget {
         // 百分比显示
         current_x += small_btn_size.x + spacing;
         let percent_pos = egui::Pos2::new(current_x, btn_y);
-        let percent_rect = Rect::from_min_size(percent_pos, Vec2::new(percent_width, small_btn_size.y));
+        let percent_rect =
+            Rect::from_min_size(percent_pos, Vec2::new(percent_width, small_btn_size.y));
 
         let zoom_text = format!("{:.0}%", state.scale.percentage());
         ui.painter().text(
@@ -302,7 +310,8 @@ impl ViewerWidget {
         current_x += percent_width + spacing;
         let btn_plus_pos = egui::Pos2::new(current_x, btn_y);
         let btn_plus_rect = Rect::from_min_size(btn_plus_pos, small_btn_size);
-        let btn_plus_response = ui.interact(btn_plus_rect, ui.id().with("zoom_plus"), Sense::click());
+        let btn_plus_response =
+            ui.interact(btn_plus_rect, ui.id().with("zoom_plus"), Sense::click());
 
         let btn_plus_bg = if btn_plus_response.hovered() {
             Color32::from_rgba_premultiplied(60, 60, 60, 220)
@@ -371,18 +380,22 @@ impl ViewerWidget {
             let filename = image.file_name().unwrap_or("Unknown");
             let truncated = Self::truncate_filename(filename, 20);
             let dimensions = format!("{}×{}", image.metadata().width, image.metadata().height);
-            
+
             // 计算百万像素 (MP)
-            let megapixels = (image.metadata().width as f64 * image.metadata().height as f64) / 1_000_000.0;
-            
+            let megapixels =
+                (image.metadata().width as f64 * image.metadata().height as f64) / 1_000_000.0;
+
             // 获取文件大小
             let size_str = if let Ok(metadata) = std::fs::metadata(image.path()) {
                 Self::format_size(metadata.len())
             } else {
                 "-".to_string()
             };
-            
-            let display = format!("{}  {} / {:.1} MP  {}", truncated, dimensions, megapixels, size_str);
+
+            let display = format!(
+                "{}  {} / {:.1} MP  {}",
+                truncated, dimensions, megapixels, size_str
+            );
             (display, Some(filename.to_string()))
         } else {
             ("-".to_string(), None)
@@ -421,20 +434,25 @@ impl ViewerWidget {
             if let Some(ref full_name) = full_filename {
                 let full_text_size = ui
                     .painter()
-                    .layout(full_name.clone(), font.clone(), Color32::WHITE, f32::INFINITY)
+                    .layout(
+                        full_name.clone(),
+                        font.clone(),
+                        Color32::WHITE,
+                        f32::INFINITY,
+                    )
                     .size();
-                
+
                 let tooltip_rect = Rect::from_center_size(
                     pill_rect.center_top() - Vec2::new(0.0, full_text_size.y / 2.0 + 8.0),
                     full_text_size + Vec2::new(32.0, 16.0),
                 );
-                
+
                 ui.painter().rect_filled(
                     tooltip_rect,
                     20.0, // pill 圆角
                     Color32::from_rgba_premultiplied(0, 0, 0, 200),
                 );
-                
+
                 ui.painter().text(
                     tooltip_rect.center(),
                     egui::Align2::CENTER_CENTER,
@@ -466,7 +484,7 @@ impl ViewerWidget {
         if name.len() <= max_len {
             name.to_string()
         } else {
-            format!("{}...{}", &name[..15], &name[name.len()-5..])
+            format!("{}...{}", &name[..15], &name[name.len() - 5..])
         }
     }
 
@@ -475,7 +493,7 @@ impl ViewerWidget {
         const KB: u64 = 1024;
         const MB: u64 = KB * 1024;
         const GB: u64 = MB * 1024;
-        
+
         if bytes >= GB {
             format!("{:.1} GB", bytes as f64 / GB as f64)
         } else if bytes >= MB {

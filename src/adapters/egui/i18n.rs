@@ -14,8 +14,7 @@ static ENGLISH_PACK: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::n
 
 /// 从 JSON 内容加载为静态键值对
 fn load_static_pack(json_content: &str) -> HashMap<&'static str, &'static str> {
-    let value: serde_json::Value = serde_json::from_str(json_content)
-        .expect("解析 JSON 失败");
+    let value: serde_json::Value = serde_json::from_str(json_content).expect("解析 JSON 失败");
     let mut translations = HashMap::new();
 
     if let serde_json::Value::Object(map) = value {
@@ -51,7 +50,10 @@ fn get_locale_paths(lang_code: &str) -> Vec<String> {
     // 4. Unix 系统标准路径
     #[cfg(unix)]
     {
-        paths.push(format!("/usr/share/oas-image-viewer/locales/{}.json", lang_code));
+        paths.push(format!(
+            "/usr/share/oas-image-viewer/locales/{}.json",
+            lang_code
+        ));
         paths.push(format!(
             "/usr/local/share/oas-image-viewer/locales/{}.json",
             lang_code
@@ -101,19 +103,17 @@ fn load_embedded_pack(lang_code: &str) -> HashMap<&'static str, &'static str> {
 /// 优先从文件系统加载，失败时回退到嵌入的 JSON
 pub fn initialize() {
     // 加载中文语言包
-    let chinese_pack = try_load_from_filesystem("zh-CN")
-        .unwrap_or_else(|| {
-            tracing::info!("使用嵌入的中文语言包");
-            load_embedded_pack("zh-CN")
-        });
+    let chinese_pack = try_load_from_filesystem("zh-CN").unwrap_or_else(|| {
+        tracing::info!("使用嵌入的中文语言包");
+        load_embedded_pack("zh-CN")
+    });
     let _ = CHINESE_PACK.set(chinese_pack);
 
     // 加载英文语言包
-    let english_pack = try_load_from_filesystem("en-US")
-        .unwrap_or_else(|| {
-            tracing::info!("使用嵌入的英文语言包");
-            load_embedded_pack("en-US")
-        });
+    let english_pack = try_load_from_filesystem("en-US").unwrap_or_else(|| {
+        tracing::info!("使用嵌入的英文语言包");
+        load_embedded_pack("en-US")
+    });
     let _ = ENGLISH_PACK.set(english_pack);
 }
 
@@ -203,8 +203,14 @@ mod tests {
     #[test]
     fn test_format_thumbnail_hint() {
         init_for_test();
-        assert_eq!(format_thumbnail_hint(100, Language::Chinese), "缩略图: 100px");
-        assert_eq!(format_thumbnail_hint(100, Language::English), "Thumbnail: 100px");
+        assert_eq!(
+            format_thumbnail_hint(100, Language::Chinese),
+            "缩略图: 100px"
+        );
+        assert_eq!(
+            format_thumbnail_hint(100, Language::English),
+            "Thumbnail: 100px"
+        );
     }
 
     #[test]
@@ -212,11 +218,28 @@ mod tests {
         init_for_test();
         // 确保主要菜单键都有翻译
         let keys = [
-            "menu_file", "menu_view", "menu_image", "menu_help",
-            "open", "exit", "gallery", "viewer", "fullscreen",
-            "about", "close", "drag_hint", "no_image",
-            "image_info", "file_name", "dimensions", "file_size",
-            "shortcuts_title", "navigation", "zoom", "view", "other",
+            "menu_file",
+            "menu_view",
+            "menu_image",
+            "menu_help",
+            "open",
+            "exit",
+            "gallery",
+            "viewer",
+            "fullscreen",
+            "about",
+            "close",
+            "drag_hint",
+            "no_image",
+            "image_info",
+            "file_name",
+            "dimensions",
+            "file_size",
+            "shortcuts_title",
+            "navigation",
+            "zoom",
+            "view",
+            "other",
         ];
 
         for key in &keys {

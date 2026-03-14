@@ -2,6 +2,7 @@
 
 pub mod clipboard;
 pub mod egui;
+pub mod platform;
 pub mod system_integration;
 
 pub use egui::info_panel;

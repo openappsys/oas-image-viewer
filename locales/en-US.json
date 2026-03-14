@@ -113,6 +113,7 @@
   "operation_success": "Operation successful",
   "operation_failed": "Operation failed",
   "windows_only": "This feature is only available on Windows",
+  "context_menu": "Context Menu",
   "registered": "Registered",
   "not_registered": "Not registered"
 }

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Bundle 基本信息 -->
+    <key>CFBundleIdentifier</key>
+    <string>com.openappsys.oas-image-viewer</string>
+    
+    <key>CFBundleName</key>
+    <string>OAS Image Viewer</string>
+    
+    <key>CFBundleDisplayName</key>
+    <string>OAS Image Viewer</string>
+    
+    <key>CFBundleShortVersionString</key>
+    <string>0.3.3</string>
+    
+    <key>CFBundleVersion</key>
+    <string>0.3.3</string>
+    
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    
+    <key>CFBundleExecutable</key>
+    <string>oas-image-viewer</string>
+    
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+    
+    <!-- 支持的文档类型 -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <!-- PNG 图片 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>PNG Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.png</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>png</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+        
+        <!-- JPEG 图片 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>JPEG Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.jpeg</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>jpg</string>
+                <string>jpeg</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+        
+        <!-- GIF 图片 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>GIF Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.compuserve.gif</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>gif</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+        
+        <!-- TIFF 图片 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>TIFF Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.tiff</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>tiff</string>
+                <string>tif</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+        
+        <!-- BMP 图片 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>BMP Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.bmp</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>bmp</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+        
+        <!-- WebP 图片 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>WebP Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.webp</string>
+                <string>org.webmproject.webp</string>
+            </array>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>webp</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+        
+        <!-- 通用图片类型 -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Image</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.image</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ImageIcon</string>
+        </dict>
+    </array>
+    
+    <!-- 导入的 UTI 类型声明 -->
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>public.webp</string>
+            <key>UTTypeDescription</key>
+            <string>WebP Image</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.image</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>webp</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>image/webp</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
+    
+    <!-- 应用类别 -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.graphics-design</string>
+    
+    <!-- 后台模式（可选） -->
+    <key>UIBackgroundModes</key>
+    <array>
+    </array>
+    
+    <!-- 高分辨率支持 -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    
+    <!-- 自动图形切换 -->
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+    
+    <!-- 安全阅读的文件类型 -->
+    <key>LSFileQuarantineEnabled</key>
+    <false/>
+</dict>
+</plist>

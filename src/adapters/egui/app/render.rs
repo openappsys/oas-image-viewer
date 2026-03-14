@@ -101,7 +101,11 @@ impl EguiApp {
             window = window.current_pos(pos);
         }
 
-        let version_label = format!("{}: v{}", get_text("version", language), env!("CARGO_PKG_VERSION"));
+        let version_label = format!(
+            "{}: v{}",
+            get_text("version", language),
+            env!("CARGO_PKG_VERSION")
+        );
         let license_label = format!("{}: MIT License", get_text("license", language));
 
         let response = window.show(ctx, |ui| {
@@ -194,12 +198,10 @@ impl EguiApp {
         // 使用临时 ID 来显示 toast 通知
         let id = egui::Id::new("integration_result_toast");
         let current_time = ctx.input(|i| i.time);
-        
+
         // 获取或初始化显示开始时间
-        let start_time: f64 = ctx.data_mut(|d| {
-            d.get_temp(id).unwrap_or(current_time)
-        });
-        
+        let start_time: f64 = ctx.data_mut(|d| d.get_temp(id).unwrap_or(current_time));
+
         // 如果超过 3 秒，清除结果
         if current_time - start_time > 3.0 {
             self.last_context_menu_result = None;
@@ -220,8 +222,10 @@ impl EguiApp {
             .fixed_pos(pos)
             .interactable(false)
             .show(ctx, |ui| {
-                let is_error = result.contains("失败") || result.contains("failed") || result.contains("Error");
-                
+                let is_error = result.contains("失败")
+                    || result.contains("failed")
+                    || result.contains("Error");
+
                 let (bg_color, text_color) = if is_error {
                     (egui::Color32::from_rgb(200, 50, 50), egui::Color32::WHITE)
                 } else {
@@ -229,12 +233,8 @@ impl EguiApp {
                 };
 
                 let rect = egui::Rect::from_min_size(pos, egui::vec2(toast_width, toast_height));
-                
-                ui.painter().rect_filled(
-                    rect,
-                    8.0,
-                    bg_color,
-                );
+
+                ui.painter().rect_filled(rect, 8.0, bg_color);
 
                 ui.painter().text(
                     rect.center(),

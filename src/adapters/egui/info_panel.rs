@@ -242,7 +242,13 @@ impl InfoPanel {
                             bottom: 0,
                         })
                         .show(ui, |ui| {
-                            ui.label(egui::RichText::new(format!("📋 {}", get_text("image_info", language))).size(16.0));
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "📋 {}",
+                                    get_text("image_info", language)
+                                ))
+                                .size(16.0),
+                            );
                         });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("×").clicked() {
@@ -281,10 +287,22 @@ impl InfoPanel {
         egui::CollapsingHeader::new(format!("📁 {}", get_text("file_info", language)))
             .default_open(true)
             .show(ui, |ui| {
-                render_label_value(ui, &format!("{}: ", get_text("file_name", language)), &info.file_name);
-                render_label_value(ui, &format!("{}: ", get_text("file_size", language)), &format_file_size(info.file_size));
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("file_name", language)),
+                    &info.file_name,
+                );
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("file_size", language)),
+                    &format_file_size(info.file_size),
+                );
                 if let Some(ref time) = info.modified_time {
-                    render_label_value(ui, &format!("{}: ", get_text("modified_time", language)), time);
+                    render_label_value(
+                        ui,
+                        &format!("{}: ", get_text("modified_time", language)),
+                        time,
+                    );
                 }
             });
 
@@ -294,19 +312,35 @@ impl InfoPanel {
         egui::CollapsingHeader::new(format!("🖼 {}", get_text("image_info", language)))
             .default_open(true)
             .show(ui, |ui| {
-                render_label_value(ui, &format!("{}: ", get_text("format", language)), &info.format);
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("format", language)),
+                    &info.format,
+                );
                 render_label_value(
                     ui,
                     &format!("{}: ", get_text("dimensions", language)),
                     &format!("{} x {} px", info.width, info.height),
                 );
                 let mp = (info.width as f64 * info.height as f64) / 1_000_000.0;
-                render_label_value(ui, &format!("{}: ", get_text("megapixels", language)), &format!("{:.2} MP", mp));
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("megapixels", language)),
+                    &format!("{:.2} MP", mp),
+                );
                 if let Some(depth) = info.bit_depth {
-                    render_label_value(ui, &format!("{}: ", get_text("bit_depth", language)), &format!("{} bit", depth));
+                    render_label_value(
+                        ui,
+                        &format!("{}: ", get_text("bit_depth", language)),
+                        &format!("{} bit", depth),
+                    );
                 }
                 if let Some(ref space) = info.color_space {
-                    render_label_value(ui, &format!("{}: ", get_text("color_space", language)), space);
+                    render_label_value(
+                        ui,
+                        &format!("{}: ", get_text("color_space", language)),
+                        space,
+                    );
                 }
             });
 
@@ -358,11 +392,19 @@ impl InfoPanel {
 
         // 曝光参数
         if let Some(iso) = exif.iso {
-            render_label_value(ui, &format!("{}: ", get_text("iso", language)), &iso.to_string());
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("iso", language)),
+                &iso.to_string(),
+            );
         }
 
         if let Some(ref aperture) = exif.aperture {
-            render_label_value(ui, &format!("{}: ", get_text("aperture", language)), aperture);
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("aperture", language)),
+                aperture,
+            );
         }
 
         if let Some(ref shutter) = exif.shutter_speed {
@@ -370,17 +412,29 @@ impl InfoPanel {
         }
 
         if let Some(ref focal) = exif.focal_length {
-            render_label_value(ui, &format!("{}: ", get_text("focal_length", language)), focal);
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("focal_length", language)),
+                focal,
+            );
         }
 
         // GPS信息
         if exif.gps_latitude.is_some() || exif.gps_longitude.is_some() {
             ui.add_space(4.0);
             if let Some(ref lat) = exif.gps_latitude {
-                render_label_value(ui, &format!("{}: ", get_text("gps_latitude", language)), lat);
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("gps_latitude", language)),
+                    lat,
+                );
             }
             if let Some(ref lon) = exif.gps_longitude {
-                render_label_value(ui, &format!("{}: ", get_text("gps_longitude", language)), lon);
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("gps_longitude", language)),
+                    lon,
+                );
             }
         }
     }

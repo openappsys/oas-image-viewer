@@ -1,5 +1,6 @@
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
+use crate::adapters::platform::SystemIntegration;
 use crate::core::domain::{Language, NavigationDirection, Theme, ViewMode};
 use egui::{Color32, Context, CornerRadius, RichText, Stroke, Vec2};
 
@@ -107,6 +108,7 @@ impl EguiApp {
                 (get_text("menu_file", language), "📁"),
                 (get_text("menu_view", language), "👁"),
                 (get_text("menu_image", language), "🖼"),
+                (get_text("system_integration", language), "⚙"),
                 (get_text("menu_help", language), "❓"),
             ];
 
@@ -165,7 +167,15 @@ impl EguiApp {
             }
 
             if let Some(idx) = open_menu {
-                self.render_modern_popup_menu(ui, ctx, idx, &responses, open_menu_id, style, language);
+                self.render_modern_popup_menu(
+                    ui,
+                    ctx,
+                    idx,
+                    &responses,
+                    open_menu_id,
+                    style,
+                    language,
+                );
             }
 
             ui.add_space(8.0);
@@ -209,7 +219,8 @@ impl EguiApp {
                         0 => self.render_modern_file_menu(ui, ctx, style, language),
                         1 => self.render_modern_view_menu(ui, ctx, style, language),
                         2 => self.render_modern_image_menu(ui, ctx, style, language),
-                        3 => self.render_modern_help_menu(ui, ctx, style, language),
+                        3 => self.render_modern_system_menu(ui, ctx, style, language),
+                        4 => self.render_modern_help_menu(ui, ctx, style, language),
                         _ => false,
                     };
 
@@ -345,7 +356,11 @@ impl EguiApp {
     ) -> bool {
         let mut clicked = false;
 
-        ui.label(RichText::new(get_text("common", language)).size(11.0).color(style.shortcut_color));
+        ui.label(
+            RichText::new(get_text("common", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
         ui.add_space(4.0);
 
         if self.render_menu_item(
@@ -362,7 +377,11 @@ impl EguiApp {
 
         self.render_menu_separator(ui, style);
 
-        ui.label(RichText::new(get_text("actions", language)).size(11.0).color(style.shortcut_color));
+        ui.label(
+            RichText::new(get_text("actions", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
         ui.add_space(4.0);
 
         let quit_shortcut = if cfg!(target_os = "macos") {
@@ -437,7 +456,11 @@ impl EguiApp {
 
         self.render_menu_separator(ui, style);
 
-        ui.label(RichText::new(get_text("display", language)).size(11.0).color(style.shortcut_color));
+        ui.label(
+            RichText::new(get_text("display", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
         ui.add_space(4.0);
 
         if self.render_menu_item(
@@ -457,7 +480,11 @@ impl EguiApp {
         self.render_menu_separator(ui, style);
 
         // 语言切换子菜单
-        ui.label(RichText::new(get_text("language", language)).size(11.0).color(style.shortcut_color));
+        ui.label(
+            RichText::new(get_text("language", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
         ui.add_space(4.0);
 
         // 中文选项
@@ -515,11 +542,19 @@ impl EguiApp {
         self.render_menu_separator(ui, style);
 
         // 主题切换子菜单
-        ui.label(RichText::new(get_text("theme", language)).size(11.0).color(style.shortcut_color));
+        ui.label(
+            RichText::new(get_text("theme", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
         ui.add_space(4.0);
 
         // 获取当前主题设置
-        let current_theme = self.service.get_state().map(|s| s.config.theme).unwrap_or_default();
+        let current_theme = self
+            .service
+            .get_state()
+            .map(|s| s.config.theme)
+            .unwrap_or_default();
 
         // System 选项
         let system_label = get_text("theme_system", language).to_string();
@@ -629,7 +664,11 @@ impl EguiApp {
     ) -> bool {
         let mut clicked = false;
 
-        ui.label(RichText::new(get_text("navigation", language)).size(11.0).color(style.shortcut_color));
+        ui.label(
+            RichText::new(get_text("navigation", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
         ui.add_space(4.0);
 
         if self.render_menu_item(
@@ -644,14 +683,7 @@ impl EguiApp {
             clicked = true;
         }
 
-        if self.render_menu_item(
-            ui,
-            "➡",
-            get_text("next", language),
-            Some("→"),
-            style,
-            true,
-        ) {
+        if self.render_menu_item(ui, "➡", get_text("next", language), Some("→"), style, true) {
             self.navigate_and_open(_ctx, NavigationDirection::Next);
             clicked = true;
         }
@@ -716,6 +748,104 @@ impl EguiApp {
         clicked
     }
 
+    fn render_modern_system_menu(
+        &mut self,
+        ui: &mut egui::Ui,
+        _ctx: &Context,
+        style: &MenuStyle,
+        language: Language,
+    ) -> bool {
+        let mut clicked = false;
+
+        ui.label(
+            RichText::new(get_text("system_integration", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        // 使用新的 platform 模块获取集成实例
+        let integration = crate::adapters::platform::PlatformIntegration::new();
+
+        // 设置为默认图片查看器（带勾选状态）
+        let is_default = integration.is_default();
+        let default_label = if is_default {
+            format!("✓ {}", get_text("set_default_app", language))
+        } else {
+            get_text("set_default_app", language).to_string()
+        };
+
+        if self.render_menu_item(
+            ui,
+            if is_default { "✓" } else { "⭐" },
+            &default_label,
+            None,
+            style,
+            true,
+        ) {
+            match integration.set_as_default() {
+                Ok(_) => {
+                    self.last_context_menu_result =
+                        Some(get_text("default_app_set", language).to_string());
+                }
+                Err(e) => {
+                    self.last_context_menu_result =
+                        Some(format!("{}: {}", get_text("operation_failed", language), e));
+                }
+            }
+            clicked = true;
+        }
+
+        self.render_menu_separator(ui, style);
+
+        ui.label(
+            RichText::new(get_text("context_menu", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        // Windows 平台：添加/移除右键菜单
+        #[cfg(target_os = "windows")]
+        {
+            use crate::adapters::platform::SystemIntegration;
+
+            // 添加到右键菜单
+            let add_label = get_text("add_context_menu", language).to_string();
+            if self.render_menu_item(ui, "📝", &add_label, None, style, true) {
+                match integration.add_context_menu() {
+                    Ok(_) => {
+                        self.last_context_menu_result =
+                            Some(get_text("context_menu_added", language).to_string());
+                    }
+                    Err(e) => {
+                        self.last_context_menu_result =
+                            Some(format!("{}: {}", get_text("operation_failed", language), e));
+                    }
+                }
+                clicked = true;
+            }
+
+            // 从右键菜单移除
+            let remove_label = get_text("remove_context_menu", language).to_string();
+            if self.render_menu_item(ui, "🗑", &remove_label, None, style, true) {
+                match integration.remove_context_menu() {
+                    Ok(_) => {
+                        self.last_context_menu_result =
+                            Some(get_text("context_menu_removed", language).to_string());
+                    }
+                    Err(e) => {
+                        self.last_context_menu_result =
+                            Some(format!("{}: {}", get_text("operation_failed", language), e));
+                    }
+                }
+                clicked = true;
+            }
+        }
+
+        clicked
+    }
+
     fn render_modern_help_menu(
         &mut self,
         ui: &mut egui::Ui,
@@ -739,101 +869,7 @@ impl EguiApp {
 
         self.render_menu_separator(ui, style);
 
-        // 系统集成子菜单
-        ui.label(RichText::new(get_text("system_integration", language)).size(11.0).color(style.shortcut_color));
-        ui.add_space(4.0);
-
-        // 获取当前集成状态
-        let integration_status = crate::adapters::system_integration::get_integration_status();
-
-        // Windows: 添加到右键菜单
-        #[cfg(target_os = "windows")]
-        {
-            let is_registered = integration_status.context_menu_registered;
-            let context_menu_label = if is_registered {
-                format!("✓ {}", get_text("add_context_menu", language))
-            } else {
-                get_text("add_context_menu", language).to_string()
-            };
-            
-            if self.render_menu_item(
-                ui,
-                "📝",
-                &context_menu_label,
-                None,
-                style,
-                !is_registered,
-            ) {
-                match crate::adapters::system_integration::register_context_menu() {
-                    Ok(_) => {
-                        self.last_context_menu_result = Some(get_text("context_menu_added", language).to_string());
-                    }
-                    Err(e) => {
-                        self.last_context_menu_result = Some(format!("{}: {}", get_text("operation_failed", language), e));
-                    }
-                }
-                clicked = true;
-            }
-
-            // 从右键菜单移除
-            let remove_label = get_text("remove_context_menu", language);
-            if self.render_menu_item(
-                ui,
-                "🗑",
-                remove_label,
-                None,
-                style,
-                is_registered,
-            ) {
-                match crate::adapters::system_integration::unregister_context_menu() {
-                    Ok(_) => {
-                        self.last_context_menu_result = Some(get_text("context_menu_removed", language).to_string());
-                    }
-                    Err(e) => {
-                        self.last_context_menu_result = Some(format!("{}: {}", get_text("operation_failed", language), e));
-                    }
-                }
-                clicked = true;
-            }
-        }
-
-        // 设为默认图片查看器（所有平台）
-        let is_default = integration_status.default_app_registered;
-        let default_app_label = if is_default {
-            format!("✓ {}", get_text("set_default_app", language))
-        } else {
-            get_text("set_default_app", language).to_string()
-        };
-        
-        if self.render_menu_item(
-            ui,
-            "⭐",
-            &default_app_label,
-            None,
-            style,
-            !is_default,
-        ) {
-            match crate::adapters::system_integration::set_as_default_app() {
-                Ok(_) => {
-                    self.last_context_menu_result = Some(get_text("default_app_set", language).to_string());
-                }
-                Err(e) => {
-                    self.last_context_menu_result = Some(format!("{}: {}", get_text("operation_failed", language), e));
-                }
-            }
-            clicked = true;
-        }
-
-        self.render_menu_separator(ui, style);
-
-        if self.render_menu_item(
-            ui,
-            "ℹ",
-            get_text("about_app", language),
-            None,
-            style,
-            true,
-        ) {
+        if self.render_menu_item(ui, "ℹ", get_text("about_app", language), None, style, true) {
             self.show_about = true;
             clicked = true;
         }

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=OAS Image Viewer
+Name[zh_CN]=OAS 图片查看器
+Comment=A modern image viewer built with Rust and egui
+Comment[zh_CN]=使用 Rust 和 egui 构建的现代图片查看器
+Exec=oas-image-viewer %F
+Icon=oas-image-viewer
+Type=Application
+Categories=Graphics;Viewer;Photography;
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/tiff;image/bmp;
+Terminal=false
+StartupNotify=true

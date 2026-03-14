@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn test_gallery_error_empty() {
         let err = GalleryError::EmptyGallery;
-        assert!(err.to_string().contains("empty") || err.to_string().contains("Empty"));
+        assert!(err.to_string().contains("空") || err.to_string().contains("empty") || err.to_string().contains("Empty"));
     }
 
     #[test]
@@ -159,7 +159,7 @@ mod tests {
             current_index: 0,
             total_count: 10,
         };
-        assert!(err.to_string().contains("first") || err.to_string().contains("First"));
+        assert!(err.to_string().contains("第一张") || err.to_string().contains("first") || err.to_string().contains("First"));
     }
 
     #[test]
@@ -180,7 +180,7 @@ mod tests {
             current_index: 9,
             total_count: 10,
         };
-        assert!(err.to_string().contains("last") || err.to_string().contains("Last"));
+        assert!(err.to_string().contains("最后") || err.to_string().contains("last") || err.to_string().contains("Last"));
     }
 
     #[test]

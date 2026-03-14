@@ -9,6 +9,11 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_NET_RETRY: 10
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 代码签名证书配置（可选）
+  # MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+  # MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+  # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+  # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -58,7 +63,7 @@ jobs:
             archive_ext: tar.gz
             archive_cmd: tar czvf
           
-          - os: ubuntu-24.04-arm  # ARM64 原生 runner (GitHub beta)
+          - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             name: linux-aarch64
             binary_name: oas-image-viewer
@@ -104,27 +109,24 @@ jobs:
       if: matrix.target == 'aarch64-unknown-linux-gnu'
       run: cargo install --locked cargo-zigbuild
     
-    # ARM64 依赖由 Cross.toml 中指定的镜像提供
-    
-    - name: Install system dependencies (Ubuntu x86_64)
-      if: runner.os == 'Linux' && matrix.target == 'x86_64-unknown-linux-gnu'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev \
-          libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libxkbcommon-x11-dev \
-          libfontconfig1-dev libfreetype6-dev libxcb1-dev libxrandr-dev \
-          libxi-dev libxcursor-dev libx11-dev
-    
-    # cross 会通过 Cross.toml 自动安装 ARM64 依赖
-    # - name: Install system dependencies (Ubuntu ARM64)
-    #   if: matrix.target == 'aarch64-unknown-linux-gnu'
-    #   run: echo "Dependencies handled by cross"
-    
+    # ==================== macOS 依赖和工具 ====================
     - name: Install macOS dependencies
       if: runner.os == 'macOS'
       run: |
-        brew install create-dmg || true
+        brew install create-dmg cargo-bundle || true
         xcode-select --print-path || xcode-select --install || true
+    
+    # ==================== Windows 依赖和工具 ====================
+    - name: Install Windows dependencies
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        # 安装 WiX Toolset（用于 MSI 打包）
+        choco install wixtoolset
+        # 安装 cargo-wix
+        cargo install cargo-wix
+        # 安装 rcedit（用于编辑资源文件）
+        cargo install cargo-edit
     
     - name: Cache cargo
       uses: Swatinem/rust-cache@v2
@@ -134,10 +136,48 @@ jobs:
     - name: Fetch dependencies
       run: cargo fetch
     
-    - name: Build release (x86_64 Linux/macOS/Windows)
-      if: matrix.target != 'aarch64-unknown-linux-gnu'
+    # ==================== 构建：Windows + 清单嵌入 ====================
+    - name: Build release (Windows with manifest)
+      if: matrix.os == 'windows-latest'
+      shell: pwsh
+      run: |
+        # 构建发布版本
+        cargo build --release --target ${{ matrix.target }}
+        
+        # 嵌入应用清单到可执行文件
+        $binary = "target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+        $manifest = "windows/manifest.xml"
+        
+        if (Test-Path $manifest) {
+          Write-Host "Embedding manifest into executable..."
+          
+          # 使用 mt.exe（Windows SDK）嵌入清单
+          $mtPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\mt.exe"
+          if (-not (Test-Path $mtPath)) {
+            # 尝试查找 mt.exe
+            $mtCandidates = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "mt.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($mtCandidates) {
+              $mtPath = $mtCandidates.FullName
+            }
+          }
+          
+          if (Test-Path $mtPath) {
+            Write-Host "Using mt.exe at: $mtPath"
+            & $mtPath -manifest $manifest -outputresource:"$binary;1"
+            Write-Host "✅ Manifest embedded successfully"
+          } else {
+            Write-Host "⚠️ mt.exe not found, skipping manifest embedding"
+          }
+          
+          # 同时复制清单文件到输出目录（备用方案）
+          Copy-Item $manifest "target/${{ matrix.target }}/release/oas-image-viewer.exe.manifest" -ErrorAction SilentlyContinue
+        }
       env:
-        RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
+        RUSTFLAGS: "-C target-feature=+crt-static"
+    
+    # ==================== 构建：其他平台 ====================
+    - name: Build release (Linux x86_64/macOS)
+      if: matrix.target != 'aarch64-unknown-linux-gnu' && matrix.os != 'windows-latest'
       run: cargo build --release --target ${{ matrix.target }}
     
     - name: Install dependencies (ARM64 native)
@@ -150,129 +190,336 @@ jobs:
       if: matrix.target == 'aarch64-unknown-linux-gnu'
       run: cargo build --release --target ${{ matrix.target }}
     
-    - name: Package (Linux/Unix)
-      if: matrix.archive_ext == 'tar.gz'
-      run: |
-        mkdir -p dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}
-        cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/
-        cp README.md LICENSE dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/
-        # Copy platform-specific install scripts only (Windows)
-        if [ "${{ matrix.name }}" = "linux-x86_64" ] || [ "${{ matrix.name }}" = "linux-aarch64" ]; then
-          if [ -d "install/linux" ]; then
-            mkdir -p dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/install
-            cp -r install/linux dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/install/
-          fi
-        elif [ "${{ matrix.name }}" = "macos-x86_64" ] || [ "${{ matrix.name }}" = "macos-aarch64" ]; then
-          if [ -d "install/macos" ]; then
-            mkdir -p dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/install
-            cp -r install/macos dist/oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/install/
-          fi
-        fi
-        cd dist
-        ${{ matrix.archive_cmd }} ../oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.${{ matrix.archive_ext }} oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}/
-    
-    - name: Package (Windows)
-      if: matrix.archive_ext == 'zip'
-      shell: pwsh
-      run: |
-        New-Item -ItemType Directory -Force -Path "dist\oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}"
-        Copy-Item "target\${{ matrix.target }}\release\${{ matrix.binary_name }}" "dist\oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}\"
-        Copy-Item "README.md" "dist\oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}\"
-        Copy-Item "LICENSE" "dist\oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}\"
-        # Copy platform-specific install scripts only (Windows)
-        if (Test-Path "install\windows") {
-          Copy-Item -Recurse -Path "install\windows" -Destination "dist\oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}\"
-        }
-        cd dist
-        ${{ matrix.archive_cmd }} ..\oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.${{ matrix.archive_ext }} oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}\
-    
-    - name: Create .app bundle and DMG (macOS)
-      if: runner.os == 'macOS'
+    # ==================== 打包：Linux（含 .desktop 和图标） ====================
+    - name: Package (Linux x86_64)
+      if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
         VERSION="${{ needs.changelog.outputs.version }}"
-        APP_NAME="Image Viewer"
-        APP_BUNDLE="Image Viewer.app"
+        PKG_DIR="dist/oas-image-viewer-${VERSION}-linux-x86_64"
         
-        # 1. 创建 .app bundle 结构
-        mkdir -p "$APP_BUNDLE/Contents/MacOS"
-        mkdir -p "$APP_BUNDLE/Contents/Resources"
+        # 创建目录结构
+        mkdir -p "$PKG_DIR/bin"
+        mkdir -p "$PKG_DIR/share/applications"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/256x256/apps"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/128x128/apps"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/48x48/apps"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/32x32/apps"
         
-        # 2. 复制二进制文件到 MacOS/ 目录
-        cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$APP_BUNDLE/Contents/MacOS/"
-        chmod +x "$APP_BUNDLE/Contents/MacOS/${{ matrix.binary_name }}"
+        # 复制二进制文件
+        cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$PKG_DIR/bin/"
         
-        # 3. 创建 Info.plist
-        cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleName</key>
-            <string>Image Viewer</string>
-            <key>CFBundleDisplayName</key>
-            <string>Image Viewer</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.openappsys.oas-image-viewer</string>
-            <key>CFBundleVersion</key>
-            <string>$VERSION</string>
-            <key>CFBundleShortVersionString</key>
-            <string>$VERSION</string>
-            <key>CFBundleExecutable</key>
-            <string>${{ matrix.binary_name }}</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleSupportedPlatforms</key>
-            <array>
-                <string>MacOSX</string>
-            </array>
-            <key>LSMinimumSystemVersion</key>
-            <string>10.11</string>
-            <key>LSUIElement</key>
-            <false/>
-        </dict>
-        </plist>
-        EOF
+        # 复制 .desktop 文件
+        sed "s|Exec=oas-image-viewer|Exec=/usr/bin/oas-image-viewer|g" packaging/oas-image-viewer.desktop > "$PKG_DIR/share/applications/oas-image-viewer.desktop"
         
-        # 4. 复制图标（如果有 icon.icns）
-        if [ -f "assets/icon.icns" ]; then
-          cp assets/icon.icns "$APP_BUNDLE/Contents/Resources/"
+        # 复制图标文件
+        if [ -f "assets/icon_256x256.png" ]; then
+          cp assets/icon_256x256.png "$PKG_DIR/share/icons/hicolor/256x256/apps/oas-image-viewer.png"
+        fi
+        if [ -f "assets/icon_128x128.png" ]; then
+          cp assets/icon_128x128.png "$PKG_DIR/share/icons/hicolor/128x128/apps/oas-image-viewer.png"
+        fi
+        if [ -f "assets/icon_48x48.png" ]; then
+          cp assets/icon_48x48.png "$PKG_DIR/share/icons/hicolor/48x48/apps/oas-image-viewer.png"
+        fi
+        if [ -f "assets/icon_32x32.png" ]; then
+          cp assets/icon_32x32.png "$PKG_DIR/share/icons/hicolor/32x32/apps/oas-image-viewer.png"
         fi
         
-        # 5. 创建 PkgInfo
-        echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
+        # 复制 README 和 LICENSE
+        cp README.md LICENSE "$PKG_DIR/"
         
-        # 6. 创建 DMG 布局目录
+        # 创建安装脚本
+        cat > "$PKG_DIR/install.sh" << 'EOF'
+#!/bin/bash
+set -e
+
+INSTALL_PREFIX="${1:-/usr/local}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "Installing OAS Image Viewer to $INSTALL_PREFIX..."
+
+# 安装二进制文件
+sudo install -Dm755 "$SCRIPT_DIR/bin/oas-image-viewer" "$INSTALL_PREFIX/bin/oas-image-viewer"
+
+# 安装 .desktop 文件
+sudo install -Dm644 "$SCRIPT_DIR/share/applications/oas-image-viewer.desktop" \
+    "$INSTALL_PREFIX/share/applications/oas-image-viewer.desktop"
+
+# 安装图标
+for size in 32 48 128 256; do
+    icon_file="$SCRIPT_DIR/share/icons/hicolor/${size}x${size}/apps/oas-image-viewer.png"
+    if [ -f "$icon_file" ]; then
+        sudo install -Dm644 "$icon_file" \
+            "$INSTALL_PREFIX/share/icons/hicolor/${size}x${size}/apps/oas-image-viewer.png"
+    fi
+done
+
+# 更新图标缓存
+if command -v gtk-update-icon-cache &> /dev/null; then
+    sudo gtk-update-icon-cache -f -t "$INSTALL_PREFIX/share/icons/hicolor" || true
+fi
+
+echo "✅ Installation complete!"
+echo "You can now launch 'oas-image-viewer' from the terminal or application menu."
+EOF
+        chmod +x "$PKG_DIR/install.sh"
+        
+        # 创建卸载脚本
+        cat > "$PKG_DIR/uninstall.sh" << 'EOF'
+#!/bin/bash
+set -e
+
+INSTALL_PREFIX="${1:-/usr/local}"
+
+echo "Uninstalling OAS Image Viewer from $INSTALL_PREFIX..."
+
+sudo rm -f "$INSTALL_PREFIX/bin/oas-image-viewer"
+sudo rm -f "$INSTALL_PREFIX/share/applications/oas-image-viewer.desktop"
+
+for size in 32 48 128 256; do
+    sudo rm -f "$INSTALL_PREFIX/share/icons/hicolor/${size}x${size}/apps/oas-image-viewer.png"
+done
+
+# 更新图标缓存
+if command -v gtk-update-icon-cache &> /dev/null; then
+    sudo gtk-update-icon-cache -f -t "$INSTALL_PREFIX/share/icons/hicolor" || true
+fi
+
+echo "✅ Uninstallation complete!"
+EOF
+        chmod +x "$PKG_DIR/uninstall.sh"
+        
+        # 打包
+        cd dist
+        ${{ matrix.archive_cmd }} "../oas-image-viewer-${VERSION}-linux-x86_64.${{ matrix.archive_ext }}" "oas-image-viewer-${VERSION}-linux-x86_64/"
+        cd ..
+        
+        echo "✅ Linux x86_64 package created"
+    
+    - name: Package (Linux aarch64)
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        VERSION="${{ needs.changelog.outputs.version }}"
+        PKG_DIR="dist/oas-image-viewer-${VERSION}-linux-aarch64"
+        
+        mkdir -p "$PKG_DIR/bin"
+        cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$PKG_DIR/bin/"
+        cp README.md LICENSE "$PKG_DIR/"
+        
+        # 复制 .desktop 文件
+        mkdir -p "$PKG_DIR/share/applications"
+        cp packaging/oas-image-viewer.desktop "$PKG_DIR/share/applications/"
+        
+        cd dist
+        ${{ matrix.archive_cmd }} "../oas-image-viewer-${VERSION}-linux-aarch64.${{ matrix.archive_ext }}" "oas-image-viewer-${VERSION}-linux-aarch64/"
+        
+        echo "✅ Linux aarch64 package created"
+    
+    # ==================== 打包：macOS（cargo-bundle + 代码签名） ====================
+    - name: Package macOS with cargo-bundle
+      if: runner.os == 'macOS'
+      env:
+        MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+        MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
+        MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
+        MACOS_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+      run: |
+        VERSION="${{ needs.changelog.outputs.version }}"
+        echo "📦 Building macOS app bundle using cargo-bundle..."
+        
+        # 安装 cargo-bundle
+        cargo install cargo-bundle 2>/dev/null || true
+        
+        # 使用 cargo-bundle 创建 .app bundle
+        cargo bundle --release
+        
+        APP_BUNDLE="target/release/bundle/osx/OAS Image Viewer.app"
+        if [ ! -d "$APP_BUNDLE" ]; then
+          echo "❌ cargo-bundle failed, falling back to manual bundle creation"
+          
+          # 手动创建 .app bundle
+          APP_BUNDLE="OAS Image Viewer.app"
+          mkdir -p "$APP_BUNDLE/Contents/MacOS"
+          mkdir -p "$APP_BUNDLE/Contents/Resources"
+          
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$APP_BUNDLE/Contents/MacOS/"
+          chmod +x "$APP_BUNDLE/Contents/MacOS/${{ matrix.binary_name }}"
+          
+          # 使用项目中的 Info.plist
+          cp macos/Info.plist "$APP_BUNDLE/Contents/Info.plist"
+          
+          # 复制图标
+          if [ -f "assets/icon.icns" ]; then
+            cp assets/icon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+          fi
+          
+          echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
+        else
+          echo "✅ cargo-bundle created app bundle successfully"
+          # 移动 bundle 到工作目录
+          mv "$APP_BUNDLE" "OAS Image Viewer.app"
+          APP_BUNDLE="OAS Image Viewer.app"
+        fi
+        
+        # ==================== 代码签名 ====================
+        echo "🔐 Starting code signing..."
+        
+        # 检查是否有正式证书
+        if [ -n "$MACOS_CERTIFICATE" ] && [ -n "$MACOS_CERTIFICATE_PASSWORD" ]; then
+          echo "Found signing certificate, using formal signing..."
+          
+          # 导入证书
+          echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
+          
+          # 创建临时钥匙串
+          security create-keychain -p "$MACOS_CERTIFICATE_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$MACOS_CERTIFICATE_PASSWORD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$MACOS_CERTIFICATE_PASSWORD" build.keychain
+          
+          # 查找证书身份
+          IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep -o 'Developer ID Application:.*[^"]*' | head -1)
+          if [ -z "$IDENTITY" ]; then
+            IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep -o '".*"' | head -1 | tr -d '"')
+          fi
+          
+          if [ -n "$IDENTITY" ]; then
+            echo "Signing with identity: $IDENTITY"
+            # 深度签名整个 bundle
+            codesign --force --deep --sign "$IDENTITY" --options runtime \
+              --entitlements macos/entitlements.plist \
+              "$APP_BUNDLE"
+            echo "✅ Formal signing completed"
+          else
+            echo "⚠️ No signing identity found, falling back to ad-hoc signing"
+            codesign --force --deep --sign - "$APP_BUNDLE"
+          fi
+          
+          # 清理
+          rm -f certificate.p12
+          security delete-keychain build.keychain
+          
+        else
+          echo "No signing certificate found, using ad-hoc signing..."
+          # Ad-hoc 签名（用于本地测试和非分发用途）
+          codesign --force --deep --sign - "$APP_BUNDLE"
+          echo "✅ Ad-hoc signing completed"
+        fi
+        
+        # 验证签名
+        codesign -dv "$APP_BUNDLE" || true
+        codesign --verify --deep --strict "$APP_BUNDLE" || true
+        
+        # ==================== 创建 DMG ====================
+        echo "💿 Creating DMG..."
+        
+        # 准备 DMG 临时目录
         mkdir -p dist/dmg_staging
         cp -r "$APP_BUNDLE" dist/dmg_staging/
+        ln -sf /Applications dist/dmg_staging/Applications
         
-        # 7. 创建 Applications 软链接
-        ln -s /Applications dist/dmg_staging/Applications
+        DMG_NAME="oas-image-viewer-${VERSION}-${{ matrix.name }}.dmg"
         
-        # 8. 复制 README 和 LICENSE（可选）
-        cp README.md LICENSE dist/dmg_staging/ 2>/dev/null || true
-        
-        # 9. 使用 create-dmg 创建 DMG
         if command -v create-dmg &> /dev/null; then
+          echo "Using create-dmg..."
           create-dmg \
-            --volname "$APP_NAME $VERSION" \
+            --volname "OAS Image Viewer $VERSION" \
             --window-size 800 400 \
             --icon-size 100 \
             --app-drop-link 600 185 \
             --icon "$APP_BUNDLE" 200 185 \
             --eula LICENSE \
-            "oas-image-viewer-${VERSION}-${{ matrix.name }}.dmg" \
+            "$DMG_NAME" \
             dist/dmg_staging/
         else
-          # 备选：使用 hdiutil
-          hdiutil create -volname "$APP_NAME $VERSION" \
+          echo "Using hdiutil..."
+          hdiutil create -volname "OAS Image Viewer $VERSION" \
             -srcfolder dist/dmg_staging \
             -ov -format UDZO \
-            "oas-image-viewer-${VERSION}-${{ matrix.name }}.dmg"
+            "$DMG_NAME"
         fi
         
-        echo "✅ DMG created: oas-image-viewer-${VERSION}-${{ matrix.name }}.dmg"
+        echo "✅ DMG created: $DMG_NAME"
+        
+        # 签名 DMG（如果有证书）
+        if [ -n "$MACOS_CERTIFICATE" ]; then
+          echo "Signing DMG..."
+          codesign --sign - "$DMG_NAME" || true
+        fi
+        
+        # 同时创建 tar.gz 作为备用
+        mkdir -p "dist/oas-image-viewer-${VERSION}-${{ matrix.name }}"
+        cp -r "$APP_BUNDLE" "dist/oas-image-viewer-${VERSION}-${{ matrix.name }}/"
+        cp README.md LICENSE "dist/oas-image-viewer-${VERSION}-${{ matrix.name }}/"
+        cd dist
+        ${{ matrix.archive_cmd }} "../oas-image-viewer-${VERSION}-${{ matrix.name }}.${{ matrix.archive_ext }}" "oas-image-viewer-${VERSION}-${{ matrix.name }}/"
       continue-on-error: true
     
+    # ==================== 打包：Windows（含清单） ====================
+    - name: Package (Windows)
+      if: matrix.archive_ext == 'zip'
+      shell: pwsh
+      run: |
+        $version = "${{ needs.changelog.outputs.version }}"
+        $pkgDir = "dist\oas-image-viewer-$version-windows-x86_64"
+        
+        New-Item -ItemType Directory -Force -Path "$pkgDir"
+        
+        # 复制二进制文件和清单
+        Copy-Item "target\${{ matrix.target }}\release\${{ matrix.binary_name }}" "$pkgDir\"
+        if (Test-Path "windows\manifest.xml") {
+          Copy-Item "windows\manifest.xml" "$pkgDir\${{ matrix.binary_name }}.manifest"
+        }
+        
+        # 复制图标
+        if (Test-Path "assets\icon.ico") {
+          Copy-Item "assets\icon.ico" "$pkgDir\oas-image-viewer.ico"
+        }
+        
+        Copy-Item "README.md" "$pkgDir\"
+        Copy-Item "LICENSE" "$pkgDir\"
+        
+        # 创建安装脚本
+        @'
+@echo off
+echo Installing OAS Image Viewer...
+echo.
+
+set "INSTALL_DIR=%LOCALAPPDATA%\OAS Image Viewer"
+if "%1"=="--system" set "INSTALL_DIR=%ProgramFiles%\OAS Image Viewer"
+
+echo Installing to: %INSTALL_DIR%
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+
+copy /Y "%~dp0oas-image-viewer.exe" "%INSTALL_DIR%\"
+copy /Y "%~dp0oas-image-viewer.exe.manifest" "%INSTALL_DIR%\" 2>nul
+copy /Y "%~dp0oas-image-viewer.ico" "%INSTALL_DIR%\" 2>nul
+
+:: Add to PATH (user)
+echo Adding to PATH...
+setx PATH "%PATH%;%INSTALL_DIR%" >nul 2>&1
+
+:: Create Start Menu shortcut
+set "STARTMENU=%APPDATA%\Microsoft\Windows\Start Menu\Programs"
+if exist "%STARTMENU%" (
+    powershell -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STARTMENU%\OAS Image Viewer.lnk'); $Shortcut.TargetPath = '%INSTALL_DIR%\oas-image-viewer.exe'; $Shortcut.WorkingDirectory = '%INSTALL_DIR%'; $Shortcut.IconLocation = '%INSTALL_DIR%\oas-image-viewer.ico,0'; $Shortcut.Save()"
+)
+
+echo.
+echo Installation complete!
+echo You can now run 'oas-image-viewer' from the command line or Start Menu.
+pause
+'@ | Out-File -FilePath "$pkgDir\install.bat" -Encoding ASCII
+        
+        # 打包
+        cd dist
+        7z a "..\oas-image-viewer-$version-windows-x86_64.zip" "oas-image-viewer-$version-windows-x86_64\"
+        
+        Write-Host "✅ Windows package created"
+    
+    # ==================== 创建 Linux AppImage ====================
     - name: Create AppImage (Linux x86_64)
       if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
@@ -280,38 +527,27 @@ jobs:
         echo "📦 Starting AppImage build..."
         
         # 安装 linuxdeploy
-        echo "⬇️ Downloading linuxdeploy..."
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy.AppImage
         chmod +x linuxdeploy.AppImage
         
         # 创建 AppDir 结构
-        echo "📁 Creating AppDir structure..."
         mkdir -p AppDir/usr/bin
         mkdir -p AppDir/usr/share/applications
         mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+        mkdir -p AppDir/usr/share/icons/hicolor/128x128/apps
         
         # 复制二进制文件
-        echo "📋 Copying binary..."
         cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} AppDir/usr/bin/
         
-        # 创建 .desktop 文件
-        echo "📝 Creating .desktop file..."
-        cat > AppDir/usr/share/applications/oas-image-viewer.desktop << 'EOF'
-        [Desktop Entry]
-        Name=OAS Image Viewer
-        Exec=oas-image-viewer
-        Icon=oas-image-viewer
-        Type=Application
-        Categories=Graphics;Viewer;
-        Comment=A modern image viewer with gallery and viewer modes
-        Terminal=false
-        EOF
+        # 复制 .desktop 文件
+        cp packaging/oas-image-viewer.desktop AppDir/usr/share/applications/
         
-        # 复制图标（如果有）
-        if [ -f "assets/icon.png" ]; then
-          cp assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png
-        else
-          touch AppDir/usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png
+        # 复制图标
+        if [ -f "assets/icon_256x256.png" ]; then
+          cp assets/icon_256x256.png AppDir/usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png
+        fi
+        if [ -f "assets/icon_128x128.png" ]; then
+          cp assets/icon_128x128.png AppDir/usr/share/icons/hicolor/128x128/apps/oas-image-viewer.png
         fi
         
         # 创建 AppRun 链接
@@ -319,50 +555,32 @@ jobs:
         ln -sf usr/share/applications/oas-image-viewer.desktop AppDir/oas-image-viewer.desktop
         
         # 构建 AppImage
-        echo "🔨 Building AppImage..."
-        ./linuxdeploy.AppImage --appdir AppDir --output appimage || {
-          echo "❌ linuxdeploy failed"
-          exit 1
-        }
+        ./linuxdeploy.AppImage --appdir AppDir --output appimage
         
-        # 找到并重命名生成的 AppImage
-        echo "🔍 Looking for generated AppImage..."
-        ls -la *.AppImage 2>/dev/null || echo "No .AppImage files in current directory"
-        
+        # 重命名
         APPIMAGE_FILE=$(find . -maxdepth 1 -name "*.AppImage" -not -name "linuxdeploy.AppImage" | head -1)
-        if [ -z "$APPIMAGE_FILE" ]; then
-          echo "❌ No AppImage file found"
-          exit 1
+        if [ -n "$APPIMAGE_FILE" ]; then
+          mv "$APPIMAGE_FILE" "oas-image-viewer-${{ needs.changelog.outputs.version }}-linux-x86_64.AppImage"
+          echo "✅ AppImage created"
         fi
-        
-        NEW_NAME="oas-image-viewer-${{ needs.changelog.outputs.version }}-linux-x86_64.AppImage"
-        echo "✅ Found AppImage: $APPIMAGE_FILE"
-        echo "📝 Renaming to: $NEW_NAME"
-        mv "$APPIMAGE_FILE" "$NEW_NAME"
-        
-        # 验证文件存在
-        if [ -f "$NEW_NAME" ]; then
-          echo "✅ AppImage created successfully: $NEW_NAME"
-          ls -lh "$NEW_NAME"
-        else
-          echo "❌ Failed to create AppImage"
-          exit 1
-        fi
-      continue-on-error: false
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: oas-image-viewer-${{ matrix.name }}
         path: |
-          oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.${{ matrix.archive_ext }}
+          oas-image-viewer-${{ needs.changelog.outputs.version }}-${{ matrix.name }}.*
           ${{ matrix.target == 'x86_64-unknown-linux-gnu' && 'oas-image-viewer-*-linux-x86_64.AppImage' || '' }}
           ${{ runner.os == 'macOS' && '*.dmg' || '' }}
 
+  # ==================== Windows MSI 构建 + 代码签名 ====================
   build-msi:
     name: Build MSI (Windows)
     needs: changelog
     runs-on: windows-latest
+    env:
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
     - uses: actions/checkout@v4
     
@@ -375,7 +593,7 @@ jobs:
     - name: Install WiX Toolset
       run: |
         choco install wixtoolset
-        echo "C:\\Program Files (x86)\\WiX Toolset v3.11\\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
     
     - name: Install cargo-wix
       run: cargo install cargo-wix
@@ -383,10 +601,32 @@ jobs:
     - name: Fetch dependencies
       run: cargo fetch
     
-    - name: Build Windows binary first
-      run: cargo build --release
+    - name: Build Windows binary with manifest
+      shell: pwsh
+      run: |
+        cargo build --release
+        
+        # 嵌入清单
+        $binary = "target/release/oas-image-viewer.exe"
+        $manifest = "windows/manifest.xml"
+        
+        if (Test-Path $manifest) {
+          $mtPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\mt.exe"
+          if (-not (Test-Path $mtPath)) {
+            $mtCandidates = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "mt.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($mtCandidates) {
+              $mtPath = $mtCandidates.FullName
+            }
+          }
+          
+          if (Test-Path $mtPath) {
+            & $mtPath -manifest $manifest -outputresource:"$binary;1"
+          }
+        }
+      env:
+        RUSTFLAGS: "-C target-feature=+crt-static"
     
-    - name: Build MSI
+    - name: Prepare WiX source
       shell: pwsh
       run: |
         if (-not (Test-Path "wix")) {
@@ -395,11 +635,55 @@ jobs:
         if (-not (Test-Path "wix\main.wxs")) {
           cargo wix init --force
         }
-        cargo wix --output target/wix/oas-image-viewer.msi --nocapture
-      continue-on-error: true
+    
+    - name: Build MSI
+      shell: pwsh
+      run: |
+        cargo wix --output target/wix/oas-image-viewer-unsigned.msi --nocapture
+    
+    - name: Sign MSI (if certificate available)
+      shell: pwsh
+      run: |
+        $certBase64 = $env:WINDOWS_CERTIFICATE
+        $certPassword = $env:WINDOWS_CERTIFICATE_PASSWORD
+        
+        if ([string]::IsNullOrEmpty($certBase64) -or [string]::IsNullOrEmpty($certPassword)) {
+          Write-Host "No signing certificate found, skipping MSI signing"
+          Copy-Item "target/wix/oas-image-viewer-unsigned.msi" "target/wix/oas-image-viewer.msi"
+        } else {
+          Write-Host "Signing MSI with certificate..."
+          
+          # 导入证书
+          $certBytes = [Convert]::FromBase64String($certBase64)
+          $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certBytes, $certPassword)
+          
+          # 导出 PFX 用于 signtool
+          $pfxPath = "$env:TEMP\signing_cert.pfx"
+          [System.IO.File]::WriteAllBytes($pfxPath, $certBytes)
+          
+          # 查找 signtool
+          $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe"
+          if (-not (Test-Path $signtool)) {
+            $signtoolCandidates = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($signtoolCandidates) {
+              $signtool = $signtoolCandidates.FullName
+            }
+          }
+          
+          if (Test-Path $signtool) {
+            Write-Host "Using signtool: $signtool"
+            & $signtool sign /f $pfxPath /p $certPassword /tr http://timestamp.digicert.com /td sha256 /fd sha256 /a "target/wix/oas-image-viewer-unsigned.msi"
+            Copy-Item "target/wix/oas-image-viewer-unsigned.msi" "target/wix/oas-image-viewer.msi"
+            Write-Host "✅ MSI signed successfully"
+          } else {
+            Write-Host "⚠️ signtool not found, using unsigned MSI"
+            Copy-Item "target/wix/oas-image-viewer-unsigned.msi" "target/wix/oas-image-viewer.msi"
+          }
+          
+          Remove-Item $pfxPath -ErrorAction SilentlyContinue
+        }
     
     - name: Upload MSI
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: oas-image-viewer-windows-msi

@@ -172,7 +172,7 @@ impl EguiApp {
         // 获取窗口在屏幕上的绝对位置
         let outer_rect = ctx.input(|i| i.viewport().outer_rect);
         let current_pos = outer_rect.map(|rect| rect.left_top());
-        
+
         if let Some(pos) = current_pos {
             // 只在窗口停止移动时保存（位置变化后）
             if self.last_saved_window_pos != Some(pos) {
@@ -333,7 +333,7 @@ impl eframe::App for EguiApp {
                 tracing::error!(error = %e, "更新窗口位置失败");
             }
         }
-        
+
         if let Err(e) = self.service.update_state(|state| {
             if let Some(pos) = self.about_window_pos {
                 state.config.viewer.about_window_pos =
@@ -393,7 +393,12 @@ impl EguiApp {
     }
 
     /// 阶段2: 渲染内容 - 渲染中央面板（图库或查看器）
-    fn render_content(&mut self, ctx: &Context, _frame: &mut Frame, language: Language) -> egui::InnerResponse<()> {
+    fn render_content(
+        &mut self,
+        ctx: &Context,
+        _frame: &mut Frame,
+        language: Language,
+    ) -> egui::InnerResponse<()> {
         self.render_menu_bar(ctx, _frame, language);
 
         let texture_ref = self.current_texture.as_ref();
@@ -579,7 +584,8 @@ impl EguiApp {
         &self,
         path: &std::path::Path,
     ) -> Result<(), crate::core::CoreError> {
-        self.clipboard_manager.copy_image_from_file(path)
+        self.clipboard_manager
+            .copy_image_from_file(path)
             .map_err(|e| crate::core::CoreError::technical("CLIPBOARD_ERROR", e.to_string()))
     }
 }

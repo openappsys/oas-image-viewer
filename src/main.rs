@@ -238,7 +238,7 @@ fn run_app() -> Result<()> {
 }
 
 /// Configure font support, including Chinese fonts
-/// 
+///
 /// Unconditionally load system Chinese fonts (if available), independent of current language setting
 fn setup_fonts(ctx: &egui::Context, _config: &AppConfig) {
     use egui::FontFamily;

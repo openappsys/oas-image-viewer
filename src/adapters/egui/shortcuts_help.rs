@@ -127,7 +127,10 @@ impl ShortcutsHelpPanel {
                                     ("Ctrl + 0", get_text("shortcut_fit_window", language)),
                                     ("Ctrl + 1", get_text("shortcut_original", language)),
                                     ("F", get_text("shortcut_info_panel", language)),
-                                    (get_text("shortcut_dbl_click", language), get_text("shortcut_fullscreen", language)),
+                                    (
+                                        get_text("shortcut_dbl_click", language),
+                                        get_text("shortcut_fullscreen", language),
+                                    ),
                                 ],
                             );
 

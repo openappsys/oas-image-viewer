@@ -145,8 +145,8 @@ mod tests {
     #[test]
     fn test_app_config_default_values() {
         let config = AppConfig::default();
-        assert_eq!(config.window.width, 1200.0);
-        assert_eq!(config.window.height, 800.0);
+        assert_eq!(config.window.width, 960.0);
+        assert_eq!(config.window.height, 640.0);
         assert!(!config.window.maximized);
         assert_eq!(config.gallery.thumbnail_size, 100);
         assert!(config.viewer.fit_to_window);
@@ -196,7 +196,7 @@ mod tests {
     fn test_app_config_window_state() {
         let config = AppConfig::default();
         let size = config.window.size();
-        assert_eq!(size, [1200.0, 800.0]);
+        assert_eq!(size, [960.0, 640.0]);
         assert!(config.window.position().is_none());
     }
 
