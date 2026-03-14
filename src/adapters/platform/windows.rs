@@ -30,6 +30,7 @@ impl WindowsIntegration {
     }
 
     /// 检查右键菜单是否已注册
+    #[allow(dead_code)]
     fn is_context_menu_registered(&self) -> bool {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let shell_path = r"Software\Classes\*\shell\Open with OAS Image Viewer";
