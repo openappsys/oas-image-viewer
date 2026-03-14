@@ -108,7 +108,6 @@ impl EguiApp {
                 (get_text("menu_file", language), "📁"),
                 (get_text("menu_view", language), "👁"),
                 (get_text("menu_image", language), "🖼"),
-                (get_text("system_integration", language), "⚙"),
                 (get_text("menu_help", language), "❓"),
             ];
 
@@ -219,8 +218,7 @@ impl EguiApp {
                         0 => self.render_modern_file_menu(ui, ctx, style, language),
                         1 => self.render_modern_view_menu(ui, ctx, style, language),
                         2 => self.render_modern_image_menu(ui, ctx, style, language),
-                        3 => self.render_modern_system_menu(ui, ctx, style, language),
-                        4 => self.render_modern_help_menu(ui, ctx, style, language),
+                        3 => self.render_modern_help_menu(ui, ctx, style, language),
                         _ => false,
                     };
 
@@ -865,6 +863,86 @@ impl EguiApp {
         ) {
             self.shortcuts_help_panel.toggle();
             clicked = true;
+        }
+
+        self.render_menu_separator(ui, style);
+
+        // 系统集成子菜单
+        ui.label(
+            RichText::new(get_text("system_integration", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        // 使用新的 platform 模块获取集成实例
+        let integration = crate::adapters::platform::PlatformIntegration::new();
+
+        // 设置为默认图片查看器（带勾选状态）
+        let is_default = integration.is_default();
+        let default_label = if is_default {
+            format!("✓ {}", get_text("set_default_app", language))
+        } else {
+            get_text("set_default_app", language).to_string()
+        };
+
+        if self.render_menu_item(
+            ui,
+            if is_default { "✓" } else { "⭐" },
+            &default_label,
+            None,
+            style,
+            true,
+        ) {
+            match integration.set_as_default() {
+                Ok(_) => {
+                    self.last_context_menu_result =
+                        Some(get_text("default_app_set", language).to_string());
+                }
+                Err(e) => {
+                    self.last_context_menu_result =
+                        Some(format!("{}: {}", get_text("operation_failed", language), e));
+                }
+            }
+            clicked = true;
+        }
+
+        // Windows 平台：添加/移除右键菜单
+        #[cfg(target_os = "windows")]
+        {
+            use crate::adapters::platform::SystemIntegration;
+
+            // 添加到右键菜单
+            let add_label = get_text("add_context_menu", language).to_string();
+            if self.render_menu_item(ui, "📝", &add_label, None, style, true) {
+                match integration.add_context_menu() {
+                    Ok(_) => {
+                        self.last_context_menu_result =
+                            Some(get_text("context_menu_added", language).to_string());
+                    }
+                    Err(e) => {
+                        self.last_context_menu_result =
+                            Some(format!("{}: {}", get_text("operation_failed", language), e));
+                    }
+                }
+                clicked = true;
+            }
+
+            // 从右键菜单移除
+            let remove_label = get_text("remove_context_menu", language).to_string();
+            if self.render_menu_item(ui, "🗑", &remove_label, None, style, true) {
+                match integration.remove_context_menu() {
+                    Ok(_) => {
+                        self.last_context_menu_result =
+                            Some(get_text("context_menu_removed", language).to_string());
+                    }
+                    Err(e) => {
+                        self.last_context_menu_result =
+                            Some(format!("{}: {}", get_text("operation_failed", language), e));
+                    }
+                }
+                clicked = true;
+            }
         }
 
         self.render_menu_separator(ui, style);
