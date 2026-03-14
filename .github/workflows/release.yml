@@ -229,8 +229,12 @@ jobs:
         cp README.md LICENSE "$PKG_DIR/"
         
         # 创建安装脚本
-        echo 'IyEvYmluL2Jhc2gKc2V0IC1lCgpJTlNUQUxMX1BSRUZJWD0iJHsxOi0vdXNyL2xvY2FsfSIKCmVjaG8gIlVuaW5zdGFsbGluZyBPQVMgSW1hZ2UgVmlld2VyIGZyb20gJElOU1RBTExfUFJFRklYLi4uIgoKc3VkbyBybSAtZiAiJElOU1RBTExfUFJFRklYL2Jpbi9vYXMtaW1hZ2Utdmlld2VyIgpzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvYXBwbGljYXRpb25zL29hcy1pbWFnZS12aWV3ZXIuZGVza3RvcCIKCmZvciBzaXplIGluIDMyIDQ4IDEyOCAyNTY7IGRvCiAgICBzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvci8ke3NpemV9eCR7c2l6ZX0vYXBwcy9vYXMtaW1hZ2Utdmlld2VyLnBuZyIKZG9uZQoKIyDmm7TmlrDlm77moIfnvJPlrZgKaWYgY29tbWFuZCAtdiBndGstdXBkYXRlLWljb24tY2FjaGUgJj4gL2Rldi9udWxsOyB0aGVuCiAgICBzdWRvIGd0ay11cGRhdGUtaWNvbi1jYWNoZSAtZiAtdCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IiIHx8IHRydWUKZmkKCmVjaG8gIuKchSBVbmluc3RhbGxhdGlvbiBjb21wbGV0ZSEiCg==' | base64 -d > $PKG_DIR/install.sh
+        echo 'IyEvYmluL2Jhc2gKc2V0IC1lCgpJTlNUQUxMX1BSRUZJWD0iJHsxOi0vdXNyL2xvY2FsfSIKCmVjaG8gIkluc3RhbGxpbmcgT0FTIEltYWdlIFZpZXdlciB0byAkSU5TVEFMTF9QUkVGSVguLi4iCgojIENyZWF0ZSBkaXJlY3RvcmllcwpzdWRvIG1rZGlyIC1wICIkSU5TVEFMTF9QUkVGSVgvYmluIgpzdWRvIG1rZGlyIC1wICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvYXBwbGljYXRpb25zIgpzdWRvIG1rZGlyIC1wICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvci8yNTZ4MjU2L2FwcHMiCnN1ZG8gbWtkaXIgLXAgIiRJTlNUQUxMX1BSRUZJWC9zaGFyZS9pY29ucy9oaWNvbG9yLzEyOHgxMjgvYXBwcyIKc3VkbyBta2RpciAtcCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IvNDh4NDgvYXBwcyIKc3VkbyBta2RpciAtcCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IvMzJ4MzIvYXBwcyIKCiMgQ29weSBiaW5hcnkKc3VkbyBjcCBiaW4vb2FzLWltYWdlLXZpZXdlciAiJElOU1RBTExfUFJFRklYL2Jpbi8iCnN1ZG8gY2htb2QgK3ggIiRJTlNUQUxMX1BSRUZJWC9iaW4vb2FzLWltYWdlLXZpZXdlciIKCiMgQ29weSAuZGVza3RvcCBmaWxlCnN1ZG8gY3Agc2hhcmUvYXBwbGljYXRpb25zL29hcy1pbWFnZS12aWV3ZXIuZGVza3RvcCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2FwcGxpY2F0aW9ucy8iCgojIENvcHkgaWNvbnMKZm9yIHNpemUgaW4gMzIgNDggMTI4IDI1NjsgZG8KICAgIGlmIFsgLWYgInNoYXJlL2ljb25zL2hpY29sb3IvJHtzaXplfXgke3NpemV9L2FwcHMvb2FzLWltYWdlLXZpZXdlci5wbmciIF07IHRoZW4KICAgICAgICBzdWRvIGNwICJzaGFyZS9pY29ucy9oaWNvbG9yLyR7c2l6ZX14JHtzaXplfS9hcHBzL29hcy1pbWFnZS12aWV3ZXIucG5nIiBcCiAgICAgICAgICAgICAgICAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IvJHtzaXplfXgke3NpemV9L2FwcHMvIgogICAgZmkKZG9uZQoKIyBVcGRhdGUgaWNvbiBjYWNoZQppZiBjb21tYW5kIC12IGd0ay11cGRhdGUtaWNvbi1jYWNoZSAmPiAvZGV2L251bGw7IHRoZW4KICAgIHN1ZG8gZ3RrLXVwZGF0ZS1pY29uLWNhY2hlIC1mIC10ICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvciIgfHwgdHJ1ZQpmaQoKZWNobyAi4pyFIEluc3RhbGxhdGlvbiBjb21wbGV0ZSEiCmVjaG8gIllvdSBjYW4gbm93IHJ1biAnb2FzLWltYWdlLXZpZXdlcicgZnJvbSB0aGUgY29tbWFuZCBsaW5lLiI=' | base64 -d > "$PKG_DIR/install.sh"
         chmod +x "$PKG_DIR/install.sh"
+        
+        # 创建卸载脚本
+        echo 'IyEvYmluL2Jhc2gKc2V0IC1lCgpJTlNUQUxMX1BSRUZJWD0iJHsxOi0vdXNyL2xvY2FsfSIKCmVjaG8gIlVuaW5zdGFsbGluZyBPQVMgSW1hZ2UgVmlld2VyIGZyb20gJElOU1RBTExfUFJFRklYLi4uIgoKc3VkbyBybSAtZiAiJElOU1RBTExfUFJFRklYL2Jpbi9vYXMtaW1hZ2Utdmlld2VyIgpzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvYXBwbGljYXRpb25zL29hcy1pbWFnZS12aWV3ZXIuZGVza3RvcCIKCmZvciBzaXplIGluIDMyIDQ4IDEyOCAyNTY7IGRvCiAgICBzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvci8ke3NpemV9eCR7c2l6ZX0vYXBwcy9vYXMtaW1hZ2Utdmlld2VyLnBuZyIKZG9uZQoKIyDmm7TmlrDlm77moIfnvJPlrZgKaWYgY29tbWFuZCAtdiBndGstdXBkYXRlLWljb24tY2FjaGUgJj4gL2Rldi9udWxsOyB0aGVuCiAgICBzdWRvIGd0ay11cGRhdGUtaWNvbi1jYWNoZSAtZiAtdCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IiIHx8IHRydWUKZmkKCmVjaG8gIuKchSBVbmluc3RhbGxhdGlvbiBjb21wbGV0ZSEiCg==' | base64 -d > "$PKG_DIR/uninstall.sh"
+        chmod +x "$PKG_DIR/uninstall.sh"
         
         # 打包
         cd dist
@@ -246,12 +250,39 @@ jobs:
         PKG_DIR="dist/oas-image-viewer-${VERSION}-linux-aarch64"
         
         mkdir -p "$PKG_DIR/bin"
+        mkdir -p "$PKG_DIR/share/applications"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/256x256/apps"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/128x128/apps"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/48x48/apps"
+        mkdir -p "$PKG_DIR/share/icons/hicolor/32x32/apps"
+        
         cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$PKG_DIR/bin/"
         cp README.md LICENSE "$PKG_DIR/"
         
         # 复制 .desktop 文件
-        mkdir -p "$PKG_DIR/share/applications"
         cp packaging/oas-image-viewer.desktop "$PKG_DIR/share/applications/"
+        
+        # 复制图标文件
+        if [ -f "assets/icon_256x256.png" ]; then
+          cp assets/icon_256x256.png "$PKG_DIR/share/icons/hicolor/256x256/apps/oas-image-viewer.png"
+        fi
+        if [ -f "assets/icon_128x128.png" ]; then
+          cp assets/icon_128x128.png "$PKG_DIR/share/icons/hicolor/128x128/apps/oas-image-viewer.png"
+        fi
+        if [ -f "assets/icon_48x48.png" ]; then
+          cp assets/icon_48x48.png "$PKG_DIR/share/icons/hicolor/48x48/apps/oas-image-viewer.png"
+        fi
+        if [ -f "assets/icon_32x32.png" ]; then
+          cp assets/icon_32x32.png "$PKG_DIR/share/icons/hicolor/32x32/apps/oas-image-viewer.png"
+        fi
+        
+        # 创建安装脚本
+        echo 'IyEvYmluL2Jhc2gKc2V0IC1lCgpJTlNUQUxMX1BSRUZJWD0iJHsxOi0vdXNyL2xvY2FsfSIKCmVjaG8gIkluc3RhbGxpbmcgT0FTIEltYWdlIFZpZXdlciB0byAkSU5TVEFMTF9QUkVGSVguLi4iCgojIENyZWF0ZSBkaXJlY3RvcmllcwpzdWRvIG1rZGlyIC1wICIkSU5TVEFMTF9QUkVGSVgvYmluIgpzdWRvIG1rZGlyIC1wICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvYXBwbGljYXRpb25zIgpzdWRvIG1rZGlyIC1wICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvci8yNTZ4MjU2L2FwcHMiCnN1ZG8gbWtkaXIgLXAgIiRJTlNUQUxMX1BSRUZJWC9zaGFyZS9pY29ucy9oaWNvbG9yLzEyOHgxMjgvYXBwcyIKc3VkbyBta2RpciAtcCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IvNDh4NDgvYXBwcyIKc3VkbyBta2RpciAtcCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IvMzJ4MzIvYXBwcyIKCiMgQ29weSBiaW5hcnkKc3VkbyBjcCBiaW4vb2FzLWltYWdlLXZpZXdlciAiJElOU1RBTExfUFJFRklYL2Jpbi8iCnN1ZG8gY2htb2QgK3ggIiRJTlNUQUxMX1BSRUZJWC9iaW4vb2FzLWltYWdlLXZpZXdlciIKCiMgQ29weSAuZGVza3RvcCBmaWxlCnN1ZG8gY3Agc2hhcmUvYXBwbGljYXRpb25zL29hcy1pbWFnZS12aWV3ZXIuZGVza3RvcCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2FwcGxpY2F0aW9ucy8iCgojIENvcHkgaWNvbnMKZm9yIHNpemUgaW4gMzIgNDggMTI4IDI1NjsgZG8KICAgIGlmIFsgLWYgInNoYXJlL2ljb25zL2hpY29sb3IvJHtzaXplfXgke3NpemV9L2FwcHMvb2FzLWltYWdlLXZpZXdlci5wbmciIF07IHRoZW4KICAgICAgICBzdWRvIGNwICJzaGFyZS9pY29ucy9oaWNvbG9yLyR7c2l6ZX14JHtzaXplfS9hcHBzL29hcy1pbWFnZS12aWV3ZXIucG5nIiBcCiAgICAgICAgICAgICAgICAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IvJHtzaXplfXgke3NpemV9L2FwcHMvIgogICAgZmkKZG9uZQoKIyBVcGRhdGUgaWNvbiBjYWNoZQppZiBjb21tYW5kIC12IGd0ay11cGRhdGUtaWNvbi1jYWNoZSAmPiAvZGV2L251bGw7IHRoZW4KICAgIHN1ZG8gZ3RrLXVwZGF0ZS1pY29uLWNhY2hlIC1mIC10ICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvciIgfHwgdHJ1ZQpmaQoKZWNobyAi4pyFIEluc3RhbGxhdGlvbiBjb21wbGV0ZSEiCmVjaG8gIllvdSBjYW4gbm93IHJ1biAnb2FzLWltYWdlLXZpZXdlcicgZnJvbSB0aGUgY29tbWFuZCBsaW5lLiI=' | base64 -d > "$PKG_DIR/install.sh"
+        chmod +x "$PKG_DIR/install.sh"
+        
+        # 创建卸载脚本
+        echo 'IyEvYmluL2Jhc2gKc2V0IC1lCgpJTlNUQUxMX1BSRUZJWD0iJHsxOi0vdXNyL2xvY2FsfSIKCmVjaG8gIlVuaW5zdGFsbGluZyBPQVMgSW1hZ2UgVmlld2VyIGZyb20gJElOU1RBTExfUFJFRklYLi4uIgoKc3VkbyBybSAtZiAiJElOU1RBTExfUFJFRklYL2Jpbi9vYXMtaW1hZ2Utdmlld2VyIgpzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvYXBwbGljYXRpb25zL29hcy1pbWFnZS12aWV3ZXIuZGVza3RvcCIKCmZvciBzaXplIGluIDMyIDQ4IDEyOCAyNTY7IGRvCiAgICBzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvci8ke3NpemV9eCR7c2l6ZX0vYXBwcy9vYXMtaW1hZ2Utdmlld2VyLnBuZyIKZG9uZQoKIyDmm7TmlrDlm77moIfnvJPlrZgKaWYgY29tbWFuZCAtdiBndGstdXBkYXRlLWljb24tY2FjaGUgJj4gL2Rldi9udWxsOyB0aGVuCiAgICBzdWRvIGd0ay11cGRhdGUtaWNvbi1jYWNoZSAtZiAtdCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IiIHx8IHRydWUKZmkKCmVjaG8gIuKchSBVbmluc3RhbGxhdGlvbiBjb21wbGV0ZSEiCg==' | base64 -d > "$PKG_DIR/uninstall.sh"
+        chmod +x "$PKG_DIR/uninstall.sh"
         
         cd dist
         ${{ matrix.archive_cmd }} "../oas-image-viewer-${VERSION}-linux-aarch64.${{ matrix.archive_ext }}" "oas-image-viewer-${VERSION}-linux-aarch64/"
@@ -426,7 +457,7 @@ jobs:
         
         # 创建安装脚本
         $script = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('QGVjaG8gb2ZmCmVjaG8gSW5zdGFsbGluZyBPQVMgSW1hZ2UgVmlld2VyLi4uCmVjaG8uCgpzZXQgIklOU1RBTExfRElSPSVMT0NBTEFQUERBVEElXE9BUyBJbWFnZSBWaWV3ZXIiCmlmICIlMSI9PSItLXN5c3RlbSIgc2V0ICJJTlNUQUxMX0RJUj0lUHJvZ3JhbUZpbGVzJVxPQVMgSW1hZ2UgVmlld2VyIgoKZWNobyBJbnN0YWxsaW5nIHRvOiAlSU5TVEFMTF9ESVIlCmlmIG5vdCBleGlzdCAiJUlOU1RBTExfRElSJSIgbWtkaXIgIiVJTlNUQUxMX0RJUiUiCgpjb3B5IC9ZICIlfmRwMG9hcy1pbWFnZS12aWV3ZXIuZXhlIiAiJUlOU1RBTExfRElSJVwiCmNvcHkgL1kgIiV+ZHAwb2FzLWltYWdlLXZpZXdlci5leGUubWFuaWZlc3QiICIlSU5TVEFMTF9ESVIlXCIgMj5udWwKY29weSAvWSAiJX5kcDBvYXMtaW1hZ2Utdmlld2VyLmljbyIgIiVJTlNUQUxMX0RJUiVcIiAyPm51bAoKOjogQWRkIHRvIFBBVEggKHVzZXIpCmVjaG8gQWRkaW5nIHRvIFBBVEguLi4Kc2V0eCBQQVRIICIlUEFUSCU7JUlOU1RBTExfRElSJSIgPm51bCAyPiYxCgo6OiBDcmVhdGUgU3RhcnQgTWVudSBzaG9ydGN1dApzZXQgIlNUQVJUTUVOVT0lQVBQREFUQSVcTWljcm9zb2Z0XFdpbmRvd3NcU3RhcnQgTWVudVxQcm9ncmFtcyIKaWYgZXhpc3QgIiVTVEFSVE1FTlUlIiAoCiAgICBwb3dlcnNoZWxsIC1Db21tYW5kICIkV3NoU2hlbGwgPSBOZXctT2JqZWN0IC1jb21PYmplY3QgV1NjcmlwdC5TaGVsbDsgJFNob3J0Y3V0ID0gJFdzaFNoZWxsLkNyZWF0ZVNob3J0Y3V0KCclU1RBUlRNRU5VJVxPQVMgSW1hZ2UgVmlld2VyLmxuaycpOyAkU2hvcnRjdXQuVGFyZ2V0UGF0aCA9ICclSU5TVEFMTF9ESVIlXG9hcy1pbWFnZS12aWV3ZXIuZXhlJzsgJFNob3J0Y3V0LldvcmtpbmdEaXJlY3RvcnkgPSAnJUlOU1RBTExfRElSJSc7ICRTaG9ydGN1dC5JY29uTG9jYXRpb24gPSAnJUlOU1RBTExfRElSJVxvYXMtaW1hZ2Utdmlld2VyLmljbywwJzsgJFNob3J0Y3V0LlNhdmUoKSIKKQoKZWNoby4KZWNobyBJbnN0YWxsYXRpb24gY29tcGxldGUhCmVjaG8gWW91IGNhbiBub3cgcnVuICdvYXMtaW1hZ2Utdmlld2VyJyBmcm9tIHRoZSBjb21tYW5kIGxpbmUgb3IgU3RhcnQgTWVudS4KcGF1c2UK'))
-        $script | Out-File -FilePath "$pkgDir\install.bat" -Encoding UTF8 -Encoding ASCII
+        $script | Out-File -FilePath "$pkgDir\install.bat" -Encoding UTF8
         
         # 打包
         cd dist
@@ -529,6 +560,14 @@ jobs:
           $mtPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\mt.exe"
           if (-not (Test-Path $mtPath)) {
             $mtCandidates = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "mt.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($mtCandidates) {
+              $mtPath = $mtCandidates.FullName
+            }
+          }
+          
+          if (-not (Test-Path $mtPath)) {
+            # 尝试查找 mt.exe（只使用 x64 版本，排除 arm64）
+            $mtCandidates = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "mt.exe" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
             if ($mtCandidates) {
               $mtPath = $mtCandidates.FullName
             }
