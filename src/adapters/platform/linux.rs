@@ -6,6 +6,8 @@
 //! - 从右键菜单移除
 
 use super::SystemIntegration;
+use crate::adapters::egui::i18n::get_text;
+use crate::core::domain::Language;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
@@ -44,7 +46,7 @@ impl LinuxIntegration {
 
     /// 获取当前可执行文件路径
     fn get_exe_path(&self) -> Result<PathBuf> {
-        std::env::current_exe().context("无法获取可执行文件路径")
+        std::env::current_exe().context("Failed to get executable path")
     }
 
     /// 生成基础 .desktop 文件内容（无 Actions）
@@ -85,10 +87,12 @@ Exec={} %f
     }
 
     /// 确保 .desktop 文件父目录存在
-    fn ensure_desktop_dir_exists(&self) -> Result<()> {
+    fn ensure_desktop_dir_exists(&self, language: Language) -> Result<()> {
         let desktop_path = self.get_desktop_file_path();
         if let Some(parent) = desktop_path.parent() {
-            fs::create_dir_all(parent).with_context(|| format!("创建目录失败: {:?}", parent))?;
+            fs::create_dir_all(parent).with_context(|| {
+                get_text("error_desktop_file_write", language).to_string()
+            })?;
         }
         Ok(())
     }
@@ -118,12 +122,12 @@ impl SystemIntegration for LinuxIntegration {
     /// 设置为默认图片查看器
     ///
     /// 使用 xdg-mime 命令将 oas-image-viewer.desktop 设为所有支持图片格式的默认应用
-    fn set_as_default(&self) -> Result<()> {
+    fn set_as_default(&self, language: Language) -> Result<()> {
         // 首先确保 .desktop 文件存在（基础版本）
         let exe_path = self.get_exe_path()?;
         let exe_path_str = exe_path.to_string_lossy();
 
-        self.ensure_desktop_dir_exists()?;
+        self.ensure_desktop_dir_exists(language)?;
 
         let desktop_path = self.get_desktop_file_path();
 
@@ -131,7 +135,7 @@ impl SystemIntegration for LinuxIntegration {
         if !desktop_path.exists() {
             let content = self.generate_base_desktop_content(&exe_path_str);
             fs::write(&desktop_path, content)
-                .with_context(|| format!("写入 .desktop 文件失败: {:?}", desktop_path))?;
+                .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
 
             // 设置可执行权限
             #[cfg(unix)]
@@ -140,7 +144,7 @@ impl SystemIntegration for LinuxIntegration {
                 let mut perms = fs::metadata(&desktop_path)?.permissions();
                 perms.set_mode(0o755);
                 fs::set_permissions(&desktop_path, perms)
-                    .with_context(|| format!("设置权限失败: {:?}", desktop_path))?;
+                    .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
             }
 
             self.update_desktop_database()?;
@@ -151,11 +155,11 @@ impl SystemIntegration for LinuxIntegration {
             let output = Command::new("xdg-mime")
                 .args(["default", DESKTOP_FILENAME, mime_type])
                 .output()
-                .with_context(|| format!("执行 xdg-mime 失败: {}", mime_type))?;
+                .with_context(|| format!("xdg-mime failed for {}", mime_type))?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                anyhow::bail!("xdg-mime 设置默认应用失败 for {}: {}", mime_type, stderr);
+                anyhow::bail!("{}", get_text("error_xdg_mime_failed", language).replace("{}", &format!("{}: {}", mime_type, stderr)));
             }
         }
 
@@ -165,11 +169,11 @@ impl SystemIntegration for LinuxIntegration {
     /// 添加到右键菜单
     ///
     /// 通过添加 Desktop Action 到 .desktop 文件实现右键菜单集成
-    fn add_context_menu(&self) -> Result<()> {
+    fn add_context_menu(&self, language: Language) -> Result<()> {
         let exe_path = self.get_exe_path()?;
         let exe_path_str = exe_path.to_string_lossy();
 
-        self.ensure_desktop_dir_exists()?;
+        self.ensure_desktop_dir_exists(language)?;
 
         let desktop_path = self.get_desktop_file_path();
 
@@ -178,7 +182,7 @@ impl SystemIntegration for LinuxIntegration {
 
         // 写入文件
         fs::write(&desktop_path, content)
-            .with_context(|| format!("写入 .desktop 文件失败: {:?}", desktop_path))?;
+            .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
 
         // 设置可执行权限
         #[cfg(unix)]
@@ -187,7 +191,7 @@ impl SystemIntegration for LinuxIntegration {
             let mut perms = fs::metadata(&desktop_path)?.permissions();
             perms.set_mode(0o755);
             fs::set_permissions(&desktop_path, perms)
-                .with_context(|| format!("设置权限失败: {:?}", desktop_path))?;
+                .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
         }
 
         self.update_desktop_database()?;
@@ -198,7 +202,7 @@ impl SystemIntegration for LinuxIntegration {
     /// 从右键菜单移除
     ///
     /// 通过移除 Desktop Actions 部分实现
-    fn remove_context_menu(&self) -> Result<()> {
+    fn remove_context_menu(&self, language: Language) -> Result<()> {
         let desktop_path = self.get_desktop_file_path();
 
         // 如果文件不存在，直接返回成功
@@ -208,14 +212,14 @@ impl SystemIntegration for LinuxIntegration {
 
         // 读取当前内容
         let content = fs::read_to_string(&desktop_path)
-            .with_context(|| format!("读取 .desktop 文件失败: {:?}", desktop_path))?;
+            .with_context(|| get_text("error_desktop_file_read", language).to_string())?;
 
         // 查找 Actions 部分的起始位置
         if let Some(actions_pos) = content.find("\n[Desktop Action") {
             // 截取基础部分（不含 Actions）
             let base_content = &content[..actions_pos];
             fs::write(&desktop_path, base_content)
-                .with_context(|| format!("写入 .desktop 文件失败: {:?}", desktop_path))?;
+                .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
         } else {
             // 如果没有 Actions，检查是否有 Actions= 行
             let lines: Vec<&str> = content.lines().collect();
@@ -225,7 +229,7 @@ impl SystemIntegration for LinuxIntegration {
                 .collect();
             let new_content = filtered.join("\n");
             fs::write(&desktop_path, new_content)
-                .with_context(|| format!("写入 .desktop 文件失败: {:?}", desktop_path))?;
+                .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
         }
 
         self.update_desktop_database()?;

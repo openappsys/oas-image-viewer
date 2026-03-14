@@ -114,5 +114,17 @@
   "operation_failed": "操作失败",
   "windows_only": "此功能仅在 Windows 上可用",
   "context_menu": "右键菜单",
-  "not_registered": "未注册"
+  "not_registered": "未注册",
+  "error_get_default_handler": "无法获取 UTI {} 的默认程序",
+  "error_duti_not_found": "未找到 duti 工具",
+  "error_set_default_failed": "MacOS 设置默认程序失败。",
+  "error_info_plist_not_found": "未找到 Info.plist，请确保应用已正确打包为 .app 格式",
+  "error_set_default_python": "设置默认程序失败: {}",
+  "error_xdg_mime_failed": "xdg-mime 设置默认应用失败: {}",
+  "error_exe_path": "无法获取可执行文件路径",
+  "error_launch_services": "无法使用 Launch Services",
+  "error_desktop_file_write": "写入 .desktop 文件失败",
+  "error_desktop_file_read": "读取 .desktop 文件失败",
+  "manual_set_hint": "请手动设置：\n1. 右键图片文件 → 显示简介\n2. 在「打开方式」中选择「OAS Image Viewer」\n3. 点击「全部更改」",
+  "open_with_oas": "使用 OAS Image Viewer 打开"
 }

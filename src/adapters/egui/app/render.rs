@@ -195,54 +195,69 @@ impl EguiApp {
             return;
         };
 
-        // 使用临时 ID 来显示 toast 通知
         let id = egui::Id::new("integration_result_toast");
-        let current_time = ctx.input(|i| i.time);
 
-        // 获取或初始化显示开始时间
-        let start_time: f64 = ctx.data_mut(|d| d.get_temp(id).unwrap_or(current_time));
-
-        // 如果超过 3 秒，清除结果
-        if current_time - start_time > 3.0 {
+        // 检测 ESC 键提前关闭 Toast
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.last_context_menu_result = None;
             ctx.data_mut(|d| d.remove_temp::<f64>(id));
             return;
         }
 
-        // 显示 toast 通知
-        let screen_rect = ctx.viewport_rect();
-        let toast_width = 280.0;
-        let toast_height = 50.0;
-        let pos = egui::pos2(
-            screen_rect.center().x - toast_width / 2.0,
-            screen_rect.max.y - toast_height - 20.0,
-        );
+        let current_time = ctx.input(|i| i.time);
+        let start_time: f64 = ctx.data_mut(|d| d.get_temp(id).unwrap_or(current_time));
 
+        // 超过 10 秒自动关闭
+        if current_time - start_time > 10.0 {
+            self.last_context_menu_result = None;
+            ctx.data_mut(|d| d.remove_temp::<f64>(id));
+            return;
+        }
+
+        // 判断成功/失败，设置背景色
+        let is_error = result.contains("失败")
+            || result.contains("failed")
+            || result.contains("Error");
+        let bg_color = if is_error {
+            egui::Color32::from_rgb(200, 50, 50)
+        } else {
+            egui::Color32::from_rgb(50, 150, 80)
+        };
+
+        // 检测点击关闭 Toast（任意鼠标点击，但需显示 500ms 后）
+        let elapsed = current_time - start_time;
+        let pointer = ctx.input(|i| i.pointer.clone());
+        let mouse_clicked = elapsed > 0.5 && pointer.any_click();
+
+        // 使用 Frame 创建带背景的面板，内部用 label 显示文字
+        // 位置锚定在屏幕底部中央
         egui::Area::new(id)
-            .fixed_pos(pos)
+            .anchor(egui::Align2::CENTER_BOTTOM, [0.0, -20.0])
             .interactable(false)
             .show(ctx, |ui| {
-                let is_error = result.contains("失败")
-                    || result.contains("failed")
-                    || result.contains("Error");
-
-                let (bg_color, text_color) = if is_error {
-                    (egui::Color32::from_rgb(200, 50, 50), egui::Color32::WHITE)
-                } else {
-                    (egui::Color32::from_rgb(50, 150, 80), egui::Color32::WHITE)
-                };
-
-                let rect = egui::Rect::from_min_size(pos, egui::vec2(toast_width, toast_height));
-
-                ui.painter().rect_filled(rect, 8.0, bg_color);
-
-                ui.painter().text(
-                    rect.center(),
-                    egui::Align2::CENTER_CENTER,
-                    result,
-                    egui::FontId::proportional(14.0),
-                    text_color,
-                );
+                egui::Frame::new()
+                    .fill(bg_color)
+                    .corner_radius(8.0)
+                    .inner_margin(egui::Margin::symmetric(20, 12))
+                    .show(ui, |ui| {
+                        ui.set_max_width(400.0);
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new(result)
+                                    .color(egui::Color32::WHITE)
+                                    .font(egui::FontId::proportional(14.0)),
+                            );
+                        });
+                    });
             });
+
+        // 如果点击了鼠标，立即关闭 Toast
+        if mouse_clicked {
+            self.last_context_menu_result = None;
+            ctx.data_mut(|d| d.remove_temp::<f64>(id));
+            return;
+        }
+
+        ctx.data_mut(|d| d.insert_temp(id, start_time));
     }
 }

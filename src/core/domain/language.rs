@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn test_language_clone() {
         let lang = Language::Chinese;
-        let cloned = lang.clone();
+        let cloned = lang;
         assert_eq!(lang, cloned);
     }
 

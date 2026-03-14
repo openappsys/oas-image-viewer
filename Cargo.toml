@@ -44,7 +44,7 @@ directories = "6.0"
 sys-locale = "0.3"
 
 # System theme detection
-dark-light = "1.0"
+dark-light = "2.0"
 
 # File dialogs - use default backend selection
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
@@ -58,6 +58,12 @@ chrono = "0.4"
 # Clipboard support
 arboard = "3.6"
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc = "0.2"
+cocoa = "0.26"
+cocoa-foundation = "0.2"
+once_cell = "1.19"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 
 
@@ -67,7 +73,7 @@ winreg = "0.55"
 
 [dev-dependencies]
 # Testing
-tempfile = "3.26"
+tempfile = "3.27"
 
 [profile.release]
 opt-level = 3
@@ -151,3 +157,7 @@ upgrade-guid = "A3F5B2C1-D4E6-7890-ABCD-EF1234567890"
 path-guid = "B4C6D3E2-F5A7-8901-BCDE-F23456789012"
 license = false
 eula = false
+
+[lints.rust]
+# 忽略 objc crate 的 unexpected_cfgs 警告
+unexpected_cfgs = { level = "allow" }
