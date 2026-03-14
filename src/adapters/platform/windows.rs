@@ -1,6 +1,8 @@
 //! Windows 平台系统集成实现
 
 use super::SystemIntegration;
+use crate::adapters::egui::i18n::get_text;
+use crate::core::domain::Language;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use winreg::enums::HKEY_CURRENT_USER;
@@ -26,7 +28,7 @@ impl WindowsIntegration {
 
     /// 获取当前可执行文件路径
     fn get_exe_path(&self) -> Result<PathBuf> {
-        std::env::current_exe().context("无法获取可执行文件路径")
+        std::env::current_exe().context("Failed to get executable path")
     }
 }
 
@@ -38,7 +40,7 @@ impl Default for WindowsIntegration {
 
 impl SystemIntegration for WindowsIntegration {
     /// 设置为默认图片查看器
-    fn set_as_default(&self) -> anyhow::Result<()> {
+    fn set_as_default(&self, _language: Language) -> anyhow::Result<()> {
         let exe_path = self.get_exe_path()?;
         let exe_path_str = exe_path.to_string_lossy();
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
@@ -47,83 +49,85 @@ impl SystemIntegration for WindowsIntegration {
         let prog_id_path = format!(r"Software\Classes\{}", PROG_ID);
         let (prog_id_key, _) = hkcu
             .create_subkey(&prog_id_path)
-            .with_context(|| format!("创建 ProgID 注册表项失败: {}", prog_id_path))?;
+            .with_context(|| format!("Failed to create ProgID registry key: {}", prog_id_path))?;
 
         // 设置 ProgID 显示名称
         prog_id_key
             .set_value("", &APP_DISPLAY_NAME)
-            .context("设置 ProgID 显示名称失败")?;
+            .context("Failed to set ProgID display name")?;
 
         // 创建 DefaultIcon 子项
         let default_icon_path = format!(r"{}\DefaultIcon", prog_id_path);
         let (icon_key, _) = hkcu
             .create_subkey(&default_icon_path)
-            .context("创建 DefaultIcon 子项失败")?;
+            .context("Failed to create DefaultIcon subkey")?;
         icon_key
             .set_value("", &exe_path_str.as_ref())
-            .context("设置图标路径失败")?;
+            .context("Failed to set icon path")?;
 
         // 创建 shell\open\command 子项
         let command_path = format!(r"{}\shell\open\command", prog_id_path);
         let (cmd_key, _) = hkcu
             .create_subkey(&command_path)
-            .context("创建 command 子项失败")?;
+            .context("Failed to create command subkey")?;
 
         // 设置打开命令
         let command = format!(r#""{}" "%1""#, exe_path_str);
         cmd_key
             .set_value("", &command)
-            .context("设置打开命令失败")?;
+            .context("Failed to set open command")?;
 
         // 关联图片格式扩展名
         for ext in IMAGE_EXTENSIONS {
             let ext_path = format!(r"Software\Classes\.{}", ext);
             let (ext_key, _) = hkcu
                 .create_subkey(&ext_path)
-                .with_context(|| format!("创建扩展名注册表项失败: {}", ext))?;
+                .with_context(|| format!("Failed to create extension registry key: {}", ext))?;
 
             // 设置默认值为 ProgID
             ext_key
                 .set_value("", &PROG_ID)
-                .with_context(|| format!("设置扩展名关联失败: {}", ext))?;
+                .with_context(|| format!("Failed to set extension association: {}", ext))?;
         }
 
         Ok(())
     }
 
     /// 添加到右键菜单
-    fn add_context_menu(&self) -> anyhow::Result<()> {
+    fn add_context_menu(&self, language: Language) -> anyhow::Result<()> {
         let exe_path = self.get_exe_path()?;
         let exe_path_str = exe_path.to_string_lossy();
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+
+        let menu_text = get_text("open_with_oas", language);
 
         // 创建右键菜单项（对所有文件类型）
         let shell_path = r"Software\Classes\*\shell\Open with OAS Image Viewer";
         let (shell_key, _) = hkcu
             .create_subkey(shell_path)
-            .context("创建右键菜单注册表项失败")?;
+            .context("Failed to create context menu registry key")?;
 
         // 设置菜单显示名称
         shell_key
-            .set_value("", &"Open with OAS Image Viewer")
-            .context("设置右键菜单显示名称失败")?;
+            .set_value("", &menu_text)
+            .context("Failed to set context menu display name")?;
 
         // 设置菜单图标
         shell_key
             .set_value("Icon", &exe_path_str.as_ref())
-            .context("设置右键菜单图标失败")?;
+            .context("Failed to set context menu icon")?;
 
         // 创建 command 子项
         let command_path = format!(r"{}\command", shell_path);
         let (cmd_key, _) = hkcu
             .create_subkey(&command_path)
-            .context("创建右键菜单命令子项失败")?;
+            .context("Failed to create context menu command subkey")?;
 
         // 设置命令
         let command = format!(r#""{}" "%1""#, exe_path_str);
         cmd_key
             .set_value("", &command)
-            .context("设置右键菜单命令失败")?;
+            .context("Failed to set context menu command")?;
 
         // 同时针对图片格式添加特定的右键菜单
         for ext in IMAGE_EXTENSIONS {
@@ -132,31 +136,31 @@ impl SystemIntegration for WindowsIntegration {
             );
             let (ext_shell_key, _) = hkcu
                 .create_subkey(&ext_shell_path)
-                .with_context(|| format!("创建图片格式右键菜单项失败: {}", ext))?;
+                .with_context(|| format!("Failed to create image context menu: {}", ext))?;
 
             ext_shell_key
-                .set_value("", &"Open with OAS Image Viewer")
-                .with_context(|| format!("设置图片格式右键菜单名称失败: {}", ext))?;
+                .set_value("", &menu_text)
+                .with_context(|| format!("Failed to set image context menu name: {}", ext))?;
 
             ext_shell_key
                 .set_value("Icon", &exe_path_str.as_ref())
-                .with_context(|| format!("设置图片格式右键菜单图标失败: {}", ext))?;
+                .with_context(|| format!("Failed to set image context menu icon: {}", ext))?;
 
             let ext_cmd_path = format!(r"{}\command", ext_shell_path);
             let (ext_cmd_key, _) = hkcu
                 .create_subkey(&ext_cmd_path)
-                .with_context(|| format!("创建图片格式右键菜单命令失败: {}", ext))?;
+                .with_context(|| format!("Failed to create image context menu command: {}", ext))?;
 
             ext_cmd_key
                 .set_value("", &command)
-                .with_context(|| format!("设置图片格式右键菜单命令失败: {}", ext))?;
+                .with_context(|| format!("Failed to set image context menu command: {}", ext))?;
         }
 
         Ok(())
     }
 
     /// 从右键菜单移除
-    fn remove_context_menu(&self) -> anyhow::Result<()> {
+    fn remove_context_menu(&self, _language: Language) -> anyhow::Result<()> {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
 
         // 删除通用右键菜单项

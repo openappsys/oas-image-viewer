@@ -1,9 +1,11 @@
 //! macOS 平台系统集成实现
 //!
-//! 通过 duti 工具或 CoreServices API 设置默认程序
+//! 通过 CoreServices API (Python + LaunchServices) 设置默认程序
 //! 右键菜单通过 Info.plist 配置自动支持"打开方式"
 
 use super::SystemIntegration;
+use crate::adapters::egui::i18n::get_text;
+use crate::core::domain::Language;
 use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::process::Command;
@@ -90,35 +92,11 @@ impl MacOSIntegration {
 
     /// 获取当前可执行文件路径
     fn get_exe_path(&self) -> Result<PathBuf> {
-        std::env::current_exe().context("无法获取可执行文件路径")
-    }
-
-    /// 检查 duti 工具是否可用
-    fn check_duti_available(&self) -> bool {
-        Command::new("which")
-            .arg("duti")
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
-    }
-
-    /// 使用 duti 设置默认程序
-    fn set_default_with_duti(&self, uti: &str, bundle_id: &str) -> Result<()> {
-        let output = Command::new("duti")
-            .args(&["-s", bundle_id, uti, "all"])
-            .output()
-            .context("运行 duti 命令失败")?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            bail!("duti 命令执行失败: {}", stderr);
-        }
-
-        Ok(())
+        std::env::current_exe().context("Failed to get executable path")
     }
 
     /// 获取指定 UTI 的默认程序 bundle ID
-    fn get_default_handler_for_uti(&self, uti: &str) -> Result<String> {
+    fn get_default_handler_for_uti(&self, uti: &str, language: Language) -> Result<String> {
         // 使用 Launch Services API 的 Python 脚本来获取默认程序
         let python_script = format!(
             r#"
@@ -153,7 +131,7 @@ sys.exit(1)
                     .args(&["-c", &python_script])
                     .output()
             })
-            .context("无法运行 Python 查询默认程序")?;
+            .context(get_text("error_launch_services", language))?;
 
         if output.status.success() {
             let bundle_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -162,41 +140,19 @@ sys.exit(1)
             }
         }
 
-        // 如果 Python 方法失败，尝试使用 duti 查询
-        if self.check_duti_available() {
-            let output = Command::new("duti")
-                .args(&["-q", uti])
-                .output()
-                .context("运行 duti 查询命令失败")?;
-
-            if output.status.success() {
-                let result = String::from_utf8_lossy(&output.stdout);
-                // duti 输出格式: "handler    bundle_id"
-                let parts: Vec<&str> = result.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    return Ok(parts[1].to_string());
-                }
-            }
-        }
-
-        bail!("无法获取 UTI {} 的默认程序", uti)
+        bail!("{}", get_text("error_get_default_handler", language).replace("{}", uti))
     }
 
     /// 重置指定 UTI 的默认程序为系统默认（预览应用）
-    fn reset_default_to_preview(&self, uti: &str) -> Result<()> {
+    fn reset_default_to_preview(&self, uti: &str, language: Language) -> Result<()> {
         // macOS 预览应用的 bundle ID
         let preview_bundle_id = "com.apple.Preview";
 
-        if self.check_duti_available() {
-            self.set_default_with_duti(uti, preview_bundle_id)
-        } else {
-            // 如果没有 duti，使用 Python 脚本
-            self.set_default_with_python(uti, preview_bundle_id)
-        }
+        self.set_default_with_python(uti, preview_bundle_id, language)
     }
 
     /// 使用 Python 脚本设置默认程序
-    fn set_default_with_python(&self, uti: &str, bundle_id: &str) -> Result<()> {
+    fn set_default_with_python(&self, uti: &str, bundle_id: &str, language: Language) -> Result<()> {
         let python_script = format!(
             r#"
 import sys
@@ -212,13 +168,13 @@ try:
     if result == 0:
         sys.exit(0)
     else:
-        print(f"设置默认程序失败，错误码: {{result}}")
+        print(f"Failed to set default app, error code: {{result}}")
         sys.exit(1)
 except ImportError as e:
-    print(f"缺少必要的模块: {{e}}")
+    print(f"Missing required module: {{e}}")
     sys.exit(1)
 except Exception as e:
-    print(f"错误: {{e}}")
+    print(f"Error: {{e}}")
     sys.exit(1)
 "#,
             uti, bundle_id
@@ -232,13 +188,13 @@ except Exception as e:
                     .args(&["-c", &python_script])
                     .output()
             })
-            .context("无法运行 Python 设置默认程序")?;
+            .context(get_text("error_launch_services", language))?;
 
         if output.status.success() {
             Ok(())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            bail!("设置默认程序失败: {}", stderr)
+            bail!("{}", get_text("error_set_default_python", language).replace("{}", &stderr))
         }
     }
 }
@@ -252,29 +208,18 @@ impl Default for MacOSIntegration {
 impl SystemIntegration for MacOSIntegration {
     /// 设置为默认图片查看器
     ///
-    /// 使用 duti 工具或 CoreServices Python API 将本应用设置为
-    /// 所有支持的图片格式的默认打开程序
-    fn set_as_default(&self) -> Result<()> {
+    /// 使用 Python + LaunchServices 设置默认程序，失败时提示用户手动设置
+    fn set_as_default(&self, language: Language) -> Result<()> {
         let bundle_id = self.get_bundle_id()?;
-
-        // 检查是否已安装 duti
-        let use_duti = self.check_duti_available();
 
         // 为每种图片类型设置默认程序
         let mut any_success = false;
-        let mut last_error = None;
 
         for uti in IMAGE_UTIS {
-            let result = if use_duti {
-                self.set_default_with_duti(uti, &bundle_id)
-            } else {
-                self.set_default_with_python(uti, &bundle_id)
-            };
+            let result = self.set_default_with_python(uti, &bundle_id, language);
 
             if result.is_ok() {
                 any_success = true;
-            } else {
-                last_error = Some(result.unwrap_err());
             }
         }
 
@@ -288,11 +233,8 @@ impl SystemIntegration for MacOSIntegration {
         if any_success {
             Ok(())
         } else {
-            bail!("MacOS 设置默认程序需要 duti 工具或 PyObjC 库。\n\
-                   请尝试以下方案之一：\n\
-                   1. 安装 duti 工具：brew install duti\n\
-                   2. 手动设置：右键图片 → 显示简介 → 打开方式 → 全部更改\n\
-                   3. 使用 Python 方法：确保已安装 PyObjC (pip3 install pyobjc)")
+            let manual_hint = get_text("manual_set_hint", language);
+            bail!("{}\n\n{}", get_text("error_set_default_failed", language), manual_hint)
         }
     }
 
@@ -301,7 +243,7 @@ impl SystemIntegration for MacOSIntegration {
     /// 在 macOS 上，右键菜单主要通过 Info.plist 中的 CFBundleDocumentTypes
     /// 声明自动支持"打开方式"菜单。此方法返回成功，因为功能已通过
     /// Info.plist 配置实现。
-    fn add_context_menu(&self) -> Result<()> {
+    fn add_context_menu(&self, language: Language) -> Result<()> {
         // macOS 的"打开方式"菜单是系统级的，通过 Info.plist 配置
         // 只要应用声明了支持的文件类型，系统会自动显示在"打开方式"中
         //
@@ -311,8 +253,7 @@ impl SystemIntegration for MacOSIntegration {
         // 检查 Info.plist 是否正确配置
         if let Ok(exe_path) = self.get_exe_path() {
             if self.read_bundle_id_from_plist(&exe_path).is_none() {
-                bail!("未找到 Info.plist，请确保应用已正确打包为 .app 格式\n\
-                       通过 Info.plist 声明的文件类型会自动出现在系统的「打开方式」菜单中");
+                bail!("{}", get_text("error_info_plist_not_found", language));
             }
         }
 
@@ -322,11 +263,11 @@ impl SystemIntegration for MacOSIntegration {
     /// 从右键菜单移除
     ///
     /// 将默认程序重置为系统预览应用，从而"移除"本应用作为默认
-    fn remove_context_menu(&self) -> Result<()> {
+    fn remove_context_menu(&self, language: Language) -> Result<()> {
         // 将所有图片类型的默认程序重置为 macOS 预览应用
         for uti in IMAGE_UTIS {
-            self.reset_default_to_preview(uti)
-                .with_context(|| format!("无法重置 {} 的默认程序", uti))?;
+            self.reset_default_to_preview(uti, language)
+                .with_context(|| format!("Failed to reset default handler for {}", uti))?;
         }
 
         // 通知 Finder 刷新
@@ -346,7 +287,7 @@ impl SystemIntegration for MacOSIntegration {
         // 使用第一个图片类型进行检查
         let first_uti = IMAGE_UTIS[0];
 
-        match self.get_default_handler_for_uti(first_uti) {
+        match self.get_default_handler_for_uti(first_uti, Language::English) {
             Ok(current_bundle) => {
                 if let Ok(our_bundle) = self.get_bundle_id() {
                     current_bundle == our_bundle

@@ -779,9 +779,11 @@ mod tests {
         let mut state = ViewState::default();
         // 设置当前图片用于测试 fit_to_window
         let mut image = Image::new("test", "/test.jpg");
-        let mut metadata = ImageMetadata::default();
-        metadata.width = 100;
-        metadata.height = 100;
+        let metadata = ImageMetadata {
+            width: 100,
+            height: 100,
+            ..Default::default()
+        };
         image.set_metadata(metadata);
         state.current_image = Some(image);
 

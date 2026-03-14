@@ -1,11 +1,13 @@
+use crate::core::domain::Language;
+
 /// 跨平台系统集成 trait
 pub trait SystemIntegration {
     /// 设置为默认图片查看器
-    fn set_as_default(&self) -> anyhow::Result<()>;
+    fn set_as_default(&self, language: Language) -> anyhow::Result<()>;
     /// 添加到右键菜单
-    fn add_context_menu(&self) -> anyhow::Result<()>;
+    fn add_context_menu(&self, language: Language) -> anyhow::Result<()>;
     /// 从右键菜单移除
-    fn remove_context_menu(&self) -> anyhow::Result<()>;
+    fn remove_context_menu(&self, language: Language) -> anyhow::Result<()>;
     /// 检查是否已是默认查看器
     fn is_default(&self) -> bool;
 }

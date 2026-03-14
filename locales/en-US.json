@@ -115,5 +115,17 @@
   "windows_only": "This feature is only available on Windows",
   "context_menu": "Context Menu",
   "registered": "Registered",
-  "not_registered": "Not registered"
+  "not_registered": "Not registered",
+  "error_get_default_handler": "Cannot get default handler for UTI {}",
+  "error_duti_not_found": "duti tool not found",
+  "error_set_default_failed": "Failed to set default application on macOS.",
+  "error_info_plist_not_found": "Info.plist not found. Please ensure the app is properly packaged as .app format",
+  "error_set_default_python": "Failed to set default application: {}",
+  "error_xdg_mime_failed": "xdg-mime failed to set default application: {}",
+  "error_exe_path": "Cannot get executable path",
+  "error_launch_services": "Cannot use Launch Services",
+  "error_desktop_file_write": "Failed to write .desktop file",
+  "error_desktop_file_read": "Failed to read .desktop file",
+  "manual_set_hint": "Please set manually:\n1. Right-click image file → Get Info\n2. Select 'OAS Image Viewer' in 'Open with'\n3. Click 'Change All'",
+  "open_with_oas": "Open with OAS Image Viewer"
 }

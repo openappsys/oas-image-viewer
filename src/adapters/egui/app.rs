@@ -232,9 +232,9 @@ impl EguiApp {
             Theme::System => {
                 // 使用 dark-light crate 检测真正的系统主题
                 let is_dark = match dark_light::detect() {
-                    dark_light::Mode::Dark => true,
-                    dark_light::Mode::Light => false,
-                    dark_light::Mode::Default => true, // 默认使用暗色
+                    Ok(dark_light::Mode::Dark) => true,
+                    Ok(dark_light::Mode::Light) => false,
+                    _ => true, // 默认或其他情况使用暗色
                 };
                 if is_dark {
                     egui::Visuals::dark()

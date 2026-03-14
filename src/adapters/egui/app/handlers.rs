@@ -48,8 +48,22 @@ impl EguiApp {
         let win_w = rect.width();
         let win_h = rect.height();
 
+        // Process files added via UI (drag & drop, file dialog)
         while let Some(path) = self.pending_files.pop() {
             self.process_single_file(ctx, &path, win_w, win_h);
+        }
+
+        // On macOS, also check for files received via Apple Events
+        // (e.g., "Open With" context menu or double-clicking associated files)
+        #[cfg(target_os = "macos")]
+        {
+            // 从 main.rs 导入 macOS 文件打开模块
+            // 使用 crate 级外部函数避免循环依赖
+            if let Some(path) = crate::adapters::macos_file_open::get_pending_file() {
+                tracing::info!("处理 macOS Apple Event 文件: {:?}", path);
+                self.add_image_to_gallery(&path);
+                self.process_single_file(ctx, &path, win_w, win_h);
+            }
         }
     }
 

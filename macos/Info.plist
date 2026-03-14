@@ -49,6 +49,10 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
         
         <!-- JPEG 图片 -->
@@ -68,6 +72,8 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
         
         <!-- GIF 图片 -->
@@ -86,6 +92,8 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
         
         <!-- TIFF 图片 -->
@@ -105,6 +113,8 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
         
         <!-- BMP 图片 -->
@@ -123,6 +133,8 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
         
         <!-- WebP 图片 -->
@@ -142,6 +154,8 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
         
         <!-- 通用图片类型 -->
@@ -156,6 +170,8 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
         </dict>
     </array>
     

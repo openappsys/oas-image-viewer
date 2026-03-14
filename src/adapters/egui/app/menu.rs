@@ -796,7 +796,7 @@ impl EguiApp {
             style,
             true,
         ) {
-            match integration.set_as_default() {
+            match integration.set_as_default(language) {
                 Ok(_) => {
                     self.last_context_menu_result =
                         Some(get_text("default_app_set", language).to_string());
@@ -812,12 +812,10 @@ impl EguiApp {
         // Windows 平台：添加/移除右键菜单
         #[cfg(target_os = "windows")]
         {
-            use crate::adapters::platform::SystemIntegration;
-
             // 添加到右键菜单
             let add_label = get_text("add_context_menu", language).to_string();
             if self.render_menu_item(ui, "📝", &add_label, None, style, true) {
-                match integration.add_context_menu() {
+                match integration.add_context_menu(language) {
                     Ok(_) => {
                         self.last_context_menu_result =
                             Some(get_text("context_menu_added", language).to_string());
@@ -833,7 +831,43 @@ impl EguiApp {
             // 从右键菜单移除
             let remove_label = get_text("remove_context_menu", language).to_string();
             if self.render_menu_item(ui, "🗑", &remove_label, None, style, true) {
-                match integration.remove_context_menu() {
+                match integration.remove_context_menu(language) {
+                    Ok(_) => {
+                        self.last_context_menu_result =
+                            Some(get_text("context_menu_removed", language).to_string());
+                    }
+                    Err(e) => {
+                        self.last_context_menu_result =
+                            Some(format!("{}: {}", get_text("operation_failed", language), e));
+                    }
+                }
+                clicked = true;
+            }
+        }
+
+        // macOS 和 Linux 平台：添加/移除右键菜单
+        #[cfg(not(target_os = "windows"))]
+        {
+            // 添加到右键菜单
+            let add_label = get_text("add_context_menu", language).to_string();
+            if self.render_menu_item(ui, "📝", &add_label, None, style, true) {
+                match integration.add_context_menu(language) {
+                    Ok(_) => {
+                        self.last_context_menu_result =
+                            Some(get_text("context_menu_added", language).to_string());
+                    }
+                    Err(e) => {
+                        self.last_context_menu_result =
+                            Some(format!("{}: {}", get_text("operation_failed", language), e));
+                    }
+                }
+                clicked = true;
+            }
+
+            // 从右键菜单移除
+            let remove_label = get_text("remove_context_menu", language).to_string();
+            if self.render_menu_item(ui, "🗑", &remove_label, None, style, true) {
+                match integration.remove_context_menu(language) {
                     Ok(_) => {
                         self.last_context_menu_result =
                             Some(get_text("context_menu_removed", language).to_string());

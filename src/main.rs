@@ -10,6 +10,8 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use oas_image_viewer::adapters::egui::EguiApp;
+#[cfg(target_os = "macos")]
+use oas_image_viewer::adapters::macos_file_open;
 use oas_image_viewer::core::domain::Image;
 use oas_image_viewer::core::ports::{AppConfig, Storage};
 use oas_image_viewer::core::use_cases::{
@@ -156,6 +158,14 @@ fn run_app() -> Result<()> {
     info!("[步骤8] 初始化服务...");
     log_to_file("[步骤8] 初始化服务");
     service.initialize(Some(config.clone()))?;
+
+    // Setup macOS file open handler
+    #[cfg(target_os = "macos")]
+    {
+        info!("[步骤8.5] 设置 macOS 文件打开处理程序...");
+        log_to_file("[步骤8.5] 设置 macOS 文件打开处理程序");
+        macos_file_open::setup_file_open_handler();
+    }
 
     // If there's an initial path, load it
     if let Some(ref path) = initial_path {
