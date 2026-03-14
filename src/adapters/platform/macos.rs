@@ -261,13 +261,20 @@ impl SystemIntegration for MacOSIntegration {
         let use_duti = self.check_duti_available();
 
         // 为每种图片类型设置默认程序
+        let mut any_success = false;
+        let mut last_error = None;
+
         for uti in IMAGE_UTIS {
-            if use_duti {
+            let result = if use_duti {
                 self.set_default_with_duti(uti, &bundle_id)
-                    .with_context(|| format!("无法设置 {} 的默认程序", uti))?;
             } else {
                 self.set_default_with_python(uti, &bundle_id)
-                    .with_context(|| format!("无法设置 {} 的默认程序", uti))?;
+            };
+
+            if result.is_ok() {
+                any_success = true;
+            } else {
+                last_error = Some(result.unwrap_err());
             }
         }
 
@@ -278,7 +285,15 @@ impl SystemIntegration for MacOSIntegration {
             .arg("Finder")
             .output();
 
-        Ok(())
+        if any_success {
+            Ok(())
+        } else {
+            bail!("MacOS 设置默认程序需要 duti 工具或 PyObjC 库。\n\
+                   请尝试以下方案之一：\n\
+                   1. 安装 duti 工具：brew install duti\n\
+                   2. 手动设置：右键图片 → 显示简介 → 打开方式 → 全部更改\n\
+                   3. 使用 Python 方法：确保已安装 PyObjC (pip3 install pyobjc)")
+        }
     }
 
     /// 添加到右键菜单
