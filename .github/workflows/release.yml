@@ -230,7 +230,7 @@ jobs:
         
         # 创建安装脚本
         echo 'IyEvYmluL2Jhc2gKc2V0IC1lCgpJTlNUQUxMX1BSRUZJWD0iJHsxOi0vdXNyL2xvY2FsfSIKCmVjaG8gIlVuaW5zdGFsbGluZyBPQVMgSW1hZ2UgVmlld2VyIGZyb20gJElOU1RBTExfUFJFRklYLi4uIgoKc3VkbyBybSAtZiAiJElOU1RBTExfUFJFRklYL2Jpbi9vYXMtaW1hZ2Utdmlld2VyIgpzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvYXBwbGljYXRpb25zL29hcy1pbWFnZS12aWV3ZXIuZGVza3RvcCIKCmZvciBzaXplIGluIDMyIDQ4IDEyOCAyNTY7IGRvCiAgICBzdWRvIHJtIC1mICIkSU5TVEFMTF9QUkVGSVgvc2hhcmUvaWNvbnMvaGljb2xvci8ke3NpemV9eCR7c2l6ZX0vYXBwcy9vYXMtaW1hZ2Utdmlld2VyLnBuZyIKZG9uZQoKIyDmm7TmlrDlm77moIfnvJPlrZgKaWYgY29tbWFuZCAtdiBndGstdXBkYXRlLWljb24tY2FjaGUgJj4gL2Rldi9udWxsOyB0aGVuCiAgICBzdWRvIGd0ay11cGRhdGUtaWNvbi1jYWNoZSAtZiAtdCAiJElOU1RBTExfUFJFRklYL3NoYXJlL2ljb25zL2hpY29sb3IiIHx8IHRydWUKZmkKCmVjaG8gIuKchSBVbmluc3RhbGxhdGlvbiBjb21wbGV0ZSEiCg==' | base64 -d > $PKG_DIR/install.sh
-        chmod +x "$PKG_DIR/uninstall.sh"
+        chmod +x "$PKG_DIR/install.sh"
         
         # 打包
         cd dist
