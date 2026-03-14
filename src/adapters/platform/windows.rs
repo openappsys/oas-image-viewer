@@ -28,18 +28,6 @@ impl WindowsIntegration {
     fn get_exe_path(&self) -> Result<PathBuf> {
         std::env::current_exe().context("无法获取可执行文件路径")
     }
-
-    /// 检查右键菜单是否已注册
-    #[allow(dead_code)]
-    fn is_context_menu_registered(&self) -> bool {
-        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let shell_path = r"Software\Classes\*\shell\Open with OAS Image Viewer";
-
-        match hkcu.open_subkey(shell_path) {
-            Ok(_) => true,
-            Err(_) => false,
-        }
-    }
 }
 
 impl Default for WindowsIntegration {
