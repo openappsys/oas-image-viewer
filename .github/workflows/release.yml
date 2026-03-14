@@ -494,8 +494,8 @@ jobs:
         ln -sf usr/bin/oas-image-viewer AppDir/AppRun
         ln -sf usr/share/applications/oas-image-viewer.desktop AppDir/oas-image-viewer.desktop
         
-        # 构建 AppImage
-        ./linuxdeploy.AppImage --appdir AppDir --output appimage
+        # 构建 AppImage（使用 --appimage-extract-and-run 避免 FUSE 依赖）
+        ./linuxdeploy.AppImage --appimage-extract-and-run --appdir AppDir --output appimage
         
         # 重命名
         APPIMAGE_FILE=$(find . -maxdepth 1 -name "*.AppImage" -not -name "linuxdeploy.AppImage" | head -1)
