@@ -240,15 +240,16 @@ impl SystemIntegration for MacOSIntegration {
 
     /// 添加到右键菜单
     ///
-    /// 在 macOS 上，右键菜单主要通过 Info.plist 中的 CFBundleDocumentTypes
-    /// 声明自动支持"打开方式"菜单。此方法返回成功，因为功能已通过
-    /// Info.plist 配置实现。
+    /// 在 macOS 上，右键"打开方式"菜单通过 Info.plist 中的 CFBundleDocumentTypes
+    /// 声明自动支持。应用声明了支持的文件类型后，系统会自动将其显示在"打开方式"中。
+    /// 此方法仅返回信息提示，说明 macOS 的右键菜单机制。
     fn add_context_menu(&self, language: Language) -> Result<()> {
-        // macOS 的"打开方式"菜单是系统级的，通过 Info.plist 配置
+        // macOS 的"打开方式"菜单是系统级的，通过 Info.plist 中的 CFBundleDocumentTypes 配置
         // 只要应用声明了支持的文件类型，系统会自动显示在"打开方式"中
+        // 这是 macOS 的设计行为，不需要额外的注册操作
         //
-        // 如果需要在服务菜单中添加，需要额外创建 Service Provider
-        // 这需要更复杂的实现，当前版本暂不提供
+        // 注意：应用一旦声明了文件类型，就无法从"打开方式"菜单中完全移除
+        // 只能通过设置/取消默认程序来控制"使用...打开"选项的显示
 
         // 检查 Info.plist 是否正确配置
         if let Ok(exe_path) = self.get_exe_path() {
@@ -257,17 +258,30 @@ impl SystemIntegration for MacOSIntegration {
             }
         }
 
+        tracing::info!("macOS: 右键'打开方式'菜单支持已通过 Info.plist 自动配置");
         Ok(())
     }
 
     /// 从右键菜单移除
     ///
-    /// 将默认程序重置为系统预览应用，从而"移除"本应用作为默认
+    /// 注意：在 macOS 上，由于应用已通过 Info.plist 声明了支持的文件类型，
+    /// 无法真正从右键"打开方式"菜单中移除。应用会始终出现在"打开方式"列表中。
+    /// 
+    /// 此方法会重置默认程序为系统预览应用，从而"移除"本应用作为默认查看器。
+    /// 用户仍然可以在右键菜单的"打开方式"中看到本应用，但不会是默认选项。
     fn remove_context_menu(&self, language: Language) -> Result<()> {
+        tracing::info!("macOS: 正在重置图片文件的默认程序为系统预览应用");
+        tracing::info!("注意：应用仍会显示在右键'打开方式'菜单中，这是 macOS 的设计行为");
+
         // 将所有图片类型的默认程序重置为 macOS 预览应用
+        let mut any_success = false;
         for uti in IMAGE_UTIS {
-            self.reset_default_to_preview(uti, language)
-                .with_context(|| format!("Failed to reset default handler for {}", uti))?;
+            match self.reset_default_to_preview(uti, language) {
+                Ok(()) => any_success = true,
+                Err(e) => {
+                    tracing::warn!("重置 {} 的默认程序失败: {}", uti, e);
+                }
+            }
         }
 
         // 通知 Finder 刷新
@@ -277,7 +291,12 @@ impl SystemIntegration for MacOSIntegration {
             .arg("Finder")
             .output();
 
-        Ok(())
+        if any_success {
+            tracing::info!("已成功重置默认程序");
+            Ok(())
+        } else {
+            bail!("{}", get_text("error_remove_context_menu", language))
+        }
     }
 
     /// 检查是否已是默认查看器

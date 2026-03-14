@@ -42,6 +42,7 @@
             <key>LSItemContentTypes</key>
             <array>
                 <string>public.png</string>
+                <string>public.image</string>
             </array>
             <key>CFBundleTypeExtensions</key>
             <array>
@@ -49,8 +50,6 @@
             </array>
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
-            <key>LSHandlerRank</key>
-            <string>Alternate</string>
             <key>LSHandlerRank</key>
             <string>Alternate</string>
         </dict>
