@@ -105,7 +105,10 @@ identifier = "com.openappsys.oas-image-viewer"
 # 图标路径（多尺寸支持）
 icon = [
     "assets/icon_32x32.png",
+    "assets/icon_48x48.png",
+    "assets/icon_64x64.png",
     "assets/icon_128x128.png",
+    "assets/icon_256x256.png",
     "assets/icon.icns"
 ]
 # Info.plist 路径
@@ -142,6 +145,7 @@ assets = [
     ["packaging/oas-image-viewer.desktop", "usr/share/applications/oas-image-viewer.desktop", "644"],
     ["assets/icon_32x32.png", "usr/share/icons/hicolor/32x32/apps/oas-image-viewer.png", "644"],
     ["assets/icon_48x48.png", "usr/share/icons/hicolor/48x48/apps/oas-image-viewer.png", "644"],
+    ["assets/icon_64x64.png", "usr/share/icons/hicolor/64x64/apps/oas-image-viewer.png", "644"],
     ["assets/icon_128x128.png", "usr/share/icons/hicolor/128x128/apps/oas-image-viewer.png", "644"],
     ["assets/icon_256x256.png", "usr/share/icons/hicolor/256x256/apps/oas-image-viewer.png", "644"],
     ["README.md", "usr/share/doc/oas-image-viewer/README.md", "644"],
