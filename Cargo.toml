@@ -113,9 +113,9 @@ info_plist_path = "macos/Info.plist"
 # 版本
 version = "0.3.3"
 # 版权信息
-copyright = "Copyright (c) 2024 OpenAppSys Team"
+copyright = "Copyright (c) 2026 OpenAppSys Team"
 # 应用类别
-category = "Graphics"
+category = "Graphics and Design" # Photography, Utilities, Productivity
 # 最小 macOS 版本
 osx_minimum_system_version = "10.15"
 # 高分辨率支持
@@ -129,7 +129,7 @@ osx_entitlements = "macos/entitlements.plist"
 [package.metadata.deb]
 name = "oas-image-viewer"
 maintainer = "OpenAppSys Team <team@openappsys.com>"
-copyright = "Copyright (c) 2024 OpenAppSys Team"
+copyright = "Copyright (c) 2026 OpenAppSys Team"
 extended-description = """\
 A modern image viewer built with Rust and egui.
 Features include gallery mode, slideshow, metadata display,

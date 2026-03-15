@@ -805,7 +805,7 @@ mod tests {
     #[test]
     fn test_exif_data_clone() {
         let exif = ExifData {
-            date_time: Some("2024-01-01".to_string()),
+            date_time: Some("2026-01-01".to_string()),
             camera_model: Some("Test Camera".to_string()),
             iso: Some(100),
             ..Default::default()
@@ -885,7 +885,7 @@ mod additional_tests {
     #[test]
     fn test_exif_data_full() {
         let exif = ExifData {
-            date_time: Some("2024:01:15 10:30:00".to_string()),
+            date_time: Some("2026:01:15 10:30:00".to_string()),
             camera_model: Some("Canon EOS R5".to_string()),
             camera_make: Some("Canon".to_string()),
             lens_model: Some("RF 24-70mm F2.8".to_string()),
@@ -914,7 +914,7 @@ mod additional_tests {
             path: PathBuf::from("/test/photo.jpg"),
             file_name: "photo.jpg".to_string(),
             file_size: 2048,
-            modified_time: Some("2024-01-01 12:00:00".to_string()),
+            modified_time: Some("2026-01-01 12:00:00".to_string()),
             format: "JPEG".to_string(),
             width: 4000,
             height: 3000,
