@@ -162,8 +162,8 @@ fn test_numeric_filenames() {
     let test_cases = vec![
         ("001.png", true),
         ("123.jpg", true),
-        ("image_2024.gif", true),
-        ("2024.01.01.png", true),
+        ("image_2026.gif", true),
+        ("2026.01.01.png", true),
     ];
 
     for (filename, expected_supported) in test_cases {
