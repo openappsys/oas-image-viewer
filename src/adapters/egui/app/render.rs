@@ -215,9 +215,8 @@ impl EguiApp {
         }
 
         // 判断成功/失败，设置背景色
-        let is_error = result.contains("失败")
-            || result.contains("failed")
-            || result.contains("Error");
+        let is_error =
+            result.contains("失败") || result.contains("failed") || result.contains("Error");
         let bg_color = if is_error {
             egui::Color32::from_rgb(200, 50, 50)
         } else {

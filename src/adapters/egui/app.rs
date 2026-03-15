@@ -290,6 +290,17 @@ impl UiPort for EguiApp {
 
 impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        // 延迟加载初始文件（确保 egui 上下文已准备好）
+        if !self.initial_file_processed {
+            if let Some(path) = self.initial_file.take() {
+                tracing::info!("延迟加载初始文件: {:?}", path);
+                let rect = ctx.viewport_rect();
+                self.add_image_to_gallery(&path);
+                self.process_single_file(ctx, &path, rect.width(), rect.height());
+            }
+            self.initial_file_processed = true;
+        }
+
         // 应用主题设置
         self.apply_theme(ctx);
 

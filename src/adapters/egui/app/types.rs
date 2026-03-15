@@ -30,10 +30,17 @@ pub struct EguiApp {
     // 交互状态（用于拆分 update 函数）
     pub(crate) pending_clicked_image: Option<PathBuf>,
     pub(crate) pending_double_click: bool,
+    // 延迟加载初始文件（命令行参数传入）
+    pub(crate) initial_file: Option<PathBuf>,
+    pub(crate) initial_file_processed: bool,
 }
 
 impl EguiApp {
-    pub fn new(cc: &eframe::CreationContext<'_>, service: Arc<OASImageViewerService>) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        service: Arc<OASImageViewerService>,
+        initial_file: Option<PathBuf>,
+    ) -> Self {
         Self::configure_styles(&cc.egui_ctx);
 
         let about_window_pos = service
@@ -69,6 +76,9 @@ impl EguiApp {
             // 初始化交互状态
             pending_clicked_image: None,
             pending_double_click: false,
+            // 延迟加载初始文件
+            initial_file,
+            initial_file_processed: false,
         }
     }
 
