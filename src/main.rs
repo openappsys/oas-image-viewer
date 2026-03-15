@@ -227,6 +227,7 @@ fn run_app() -> Result<()> {
     info!("[步骤10] 启动UI...");
     log_to_file("[步骤10] 启动UI");
     let service_clone = service.clone();
+    let initial_path_clone = initial_path.clone();
     eframe::run_native(
         "OAS Image Viewer",
         native_options,
@@ -235,7 +236,11 @@ fn run_app() -> Result<()> {
             // cc.egui_ctx.set_pixels_per_point(1.0);
             setup_fonts(&cc.egui_ctx, &config);
             log_to_file("字体设置完成");
-            Ok(Box::new(EguiApp::new(cc, service_clone)))
+            Ok(Box::new(EguiApp::new(
+                cc,
+                service_clone,
+                initial_path_clone,
+            )))
         }),
     )
     .map_err(|e| {

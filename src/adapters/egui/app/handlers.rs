@@ -27,7 +27,7 @@ impl EguiApp {
         }
     }
 
-    fn add_image_to_gallery(&mut self, path: &Path) {
+    pub(crate) fn add_image_to_gallery(&mut self, path: &Path) {
         let file_name = path
             .file_stem()
             .and_then(|s| s.to_str())
@@ -67,7 +67,13 @@ impl EguiApp {
         }
     }
 
-    fn process_single_file(&mut self, ctx: &Context, path: &Path, win_w: f32, win_h: f32) {
+    pub(crate) fn process_single_file(
+        &mut self,
+        ctx: &Context,
+        path: &Path,
+        win_w: f32,
+        win_h: f32,
+    ) {
         let path_str = path.to_string_lossy().to_string();
         let load_result = self.load_image_with_data(ctx, path);
 
