@@ -93,6 +93,11 @@ impl SystemIntegration for WindowsIntegration {
         Ok(())
     }
 
+    /// 取消默认图片查看器
+    fn unset_default(&self, language: Language) -> anyhow::Result<()> {
+        anyhow::bail!("{}", get_text("unset_default_not_supported", language))
+    }
+
     /// 添加到右键菜单
     fn add_context_menu(&self, language: Language) -> anyhow::Result<()> {
         let exe_path = self.get_exe_path()?;
@@ -176,6 +181,10 @@ impl SystemIntegration for WindowsIntegration {
         }
 
         Ok(())
+    }
+
+    fn refresh_open_with_registration(&self, language: Language) -> anyhow::Result<()> {
+        anyhow::bail!("{}", get_text("refresh_open_with_not_supported", language))
     }
 
     /// 检查是否已是默认查看器

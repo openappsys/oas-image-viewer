@@ -95,6 +95,45 @@ impl MacOSIntegration {
         std::env::current_exe().context("Failed to get executable path")
     }
 
+    fn find_app_bundle_path(&self, exe_path: &Path) -> Option<PathBuf> {
+        let mut current = Some(exe_path);
+        while let Some(path) = current {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.ends_with(".app") {
+                    return Some(path.to_path_buf());
+                }
+            }
+            current = path.parent();
+        }
+        None
+    }
+
+    fn register_with_launch_services(&self, language: Language) -> Result<()> {
+        let exe_path = self.get_exe_path()?;
+        let app_path = self
+            .find_app_bundle_path(&exe_path)
+            .ok_or_else(|| anyhow::anyhow!(get_text("error_info_plist_not_found", language)))?;
+        let app_path_str = app_path.to_string_lossy().to_string();
+
+        let candidates = [
+            "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister",
+            "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister",
+        ];
+
+        for lsregister in candidates {
+            let output = Command::new(lsregister)
+                .args(["-f", &app_path_str])
+                .output();
+            match output {
+                Ok(out) if out.status.success() => return Ok(()),
+                Ok(_) => continue,
+                Err(_) => continue,
+            }
+        }
+
+        bail!("{}", get_text("error_launch_services", language))
+    }
+
     /// 获取指定 UTI 的默认程序 bundle ID
     fn get_default_handler_for_uti(&self, uti: &str, language: Language) -> Result<String> {
         // 使用 Launch Services API 的 Python 脚本来获取默认程序
@@ -147,7 +186,61 @@ sys.exit(1)
         // macOS 预览应用的 bundle ID
         let preview_bundle_id = "com.apple.Preview";
 
-        self.set_default_with_python(uti, preview_bundle_id, language)
+        self.set_default_handler(uti, preview_bundle_id, language)
+    }
+
+    fn set_default_with_swift(&self, uti: &str, bundle_id: &str, language: Language) -> Result<()> {
+        let swift_script = format!(
+            r#"
+import CoreServices
+import Foundation
+
+let status = LSSetDefaultRoleHandlerForContentType(
+    "{}" as CFString,
+    LSRolesMask.all,
+    "{}" as CFString
+)
+
+if status == noErr {{
+    exit(0)
+}} else {{
+    fputs("LSSetDefaultRoleHandlerForContentType failed: \(status)\n", stderr)
+    exit(1)
+}}
+"#,
+            uti, bundle_id
+        );
+
+        let output = Command::new("swift")
+            .args(["-e", &swift_script])
+            .output()
+            .context(get_text("error_launch_services", language))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let detail = if !stderr.trim().is_empty() {
+                stderr.trim().to_string()
+            } else {
+                stdout.trim().to_string()
+            };
+            bail!(
+                "{}",
+                get_text("error_set_default_python", language).replace("{}", &detail)
+            )
+        }
+    }
+
+    fn set_default_handler(&self, uti: &str, bundle_id: &str, language: Language) -> Result<()> {
+        match self.set_default_with_swift(uti, bundle_id, language) {
+            Ok(()) => Ok(()),
+            Err(swift_err) => {
+                tracing::warn!("Swift 调用失败，回退到 Python: {}", swift_err);
+                self.set_default_with_python(uti, bundle_id, language)
+            }
+        }
     }
 
     /// 使用 Python 脚本设置默认程序
@@ -162,8 +255,7 @@ sys.exit(1)
 import sys
 try:
     from LaunchServices import LSSetDefaultRoleHandlerForContentType
-    import objc
-    
+
     result = LSSetDefaultRoleHandlerForContentType(
         "{}",
         0xFFFFFFFF,
@@ -194,9 +286,15 @@ except Exception as e:
             Ok(())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let detail = if !stderr.trim().is_empty() {
+                stderr.trim().to_string()
+            } else {
+                stdout.trim().to_string()
+            };
             bail!(
                 "{}",
-                get_text("error_set_default_python", language).replace("{}", &stderr)
+                get_text("error_set_default_python", language).replace("{}", &detail)
             )
         }
     }
@@ -219,7 +317,7 @@ impl SystemIntegration for MacOSIntegration {
         let mut any_success = false;
 
         for uti in IMAGE_UTIS {
-            let result = self.set_default_with_python(uti, &bundle_id, language);
+            let result = self.set_default_handler(uti, &bundle_id, language);
 
             if result.is_ok() {
                 any_success = true;
@@ -242,6 +340,45 @@ impl SystemIntegration for MacOSIntegration {
                 get_text("error_set_default_failed", language),
                 manual_hint
             )
+        }
+    }
+
+    fn unset_default(&self, language: Language) -> Result<()> {
+        let mut any_success = false;
+        for uti in IMAGE_UTIS {
+            match self.reset_default_to_preview(uti, language) {
+                Ok(()) => any_success = true,
+                Err(e) => {
+                    tracing::warn!("重置 {} 默认查看器失败: {}", uti, e);
+                }
+            }
+        }
+
+        let mut killall_cmd = Command::new("killall");
+        if let Ok(user) = std::env::var("USER") {
+            killall_cmd.arg("-u").arg(user);
+        }
+        let _ = killall_cmd.arg("Finder").output();
+
+        if !any_success {
+            bail!("{}", get_text("error_unset_default_failed", language))
+        }
+
+        let verify_uti = IMAGE_UTIS[0];
+        match self.get_default_handler_for_uti(verify_uti, language) {
+            Ok(handler) => {
+                if let Ok(our_bundle) = self.get_bundle_id() {
+                    if handler == our_bundle {
+                        tracing::warn!("取消默认后校验失败，当前仍是本应用: {}", handler);
+                        bail!("{}", get_text("error_unset_default_failed", language));
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => {
+                tracing::warn!("取消默认后校验无法完成，按已执行成功处理: {}", e);
+                Ok(())
+            }
         }
     }
 
@@ -277,33 +414,14 @@ impl SystemIntegration for MacOSIntegration {
     /// 此方法会重置默认程序为系统预览应用，从而"移除"本应用作为默认查看器。
     /// 用户仍然可以在右键菜单的"打开方式"中看到本应用，但不会是默认选项。
     fn remove_context_menu(&self, language: Language) -> Result<()> {
-        tracing::info!("macOS: 正在重置图片文件的默认程序为系统预览应用");
-        tracing::info!("注意：应用仍会显示在右键'打开方式'菜单中，这是 macOS 的设计行为");
+        bail!(
+            "{}",
+            get_text("remove_context_menu_not_supported", language)
+        )
+    }
 
-        // 将所有图片类型的默认程序重置为 macOS 预览应用
-        let mut any_success = false;
-        for uti in IMAGE_UTIS {
-            match self.reset_default_to_preview(uti, language) {
-                Ok(()) => any_success = true,
-                Err(e) => {
-                    tracing::warn!("重置 {} 的默认程序失败: {}", uti, e);
-                }
-            }
-        }
-
-        // 通知 Finder 刷新
-        let mut killall_cmd = Command::new("killall");
-        if let Ok(user) = std::env::var("USER") {
-            killall_cmd.arg("-u").arg(user);
-        }
-        let _ = killall_cmd.arg("Finder").output();
-
-        if any_success {
-            tracing::info!("已成功重置默认程序");
-            Ok(())
-        } else {
-            bail!("{}", get_text("error_remove_context_menu", language))
-        }
+    fn refresh_open_with_registration(&self, language: Language) -> Result<()> {
+        self.register_with_launch_services(language)
     }
 
     /// 检查是否已是默认查看器

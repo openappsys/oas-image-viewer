@@ -4,10 +4,14 @@ use crate::core::domain::Language;
 pub trait SystemIntegration {
     /// 设置为默认图片查看器
     fn set_as_default(&self, language: Language) -> anyhow::Result<()>;
+    /// 取消默认图片查看器
+    fn unset_default(&self, language: Language) -> anyhow::Result<()>;
     /// 添加到右键菜单
     fn add_context_menu(&self, language: Language) -> anyhow::Result<()>;
     /// 从右键菜单移除
     fn remove_context_menu(&self, language: Language) -> anyhow::Result<()>;
+    /// 刷新 Open With 注册（macOS）
+    fn refresh_open_with_registration(&self, language: Language) -> anyhow::Result<()>;
     /// 检查是否已是默认查看器
     fn is_default(&self) -> bool;
 }

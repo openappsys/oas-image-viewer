@@ -10,6 +10,7 @@
 use eframe::Frame;
 use egui::Context;
 use std::path::PathBuf;
+use std::sync::mpsc::TryRecvError;
 
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::{Language, NavigationDirection, ViewMode};
@@ -316,6 +317,8 @@ impl eframe::App for EguiApp {
             .map(|s| s.config.language)
             .unwrap_or_default();
 
+        self.poll_integration_task(ctx, language);
+
         // 阶段1: 处理输入
         self.process_input(ctx, language);
 
@@ -370,6 +373,39 @@ impl EguiApp {
         self.handle_shortcuts(ctx);
         self.handle_drops(ctx);
         self.handle_gallery_scroll(ctx, language);
+    }
+
+    fn poll_integration_task(&mut self, ctx: &Context, language: Language) {
+        let mut message: Option<String> = None;
+        let mut clear_receiver = false;
+
+        if let Some(receiver) = &self.integration_task_receiver {
+            match receiver.try_recv() {
+                Ok(result) => {
+                    message = Some(result);
+                    clear_receiver = true;
+                }
+                Err(TryRecvError::Disconnected) => {
+                    message = Some(format!(
+                        "{}: {}",
+                        get_text("operation_failed", language),
+                        get_text("integration_task_disconnected", language)
+                    ));
+                    clear_receiver = true;
+                }
+                Err(TryRecvError::Empty) => {}
+            }
+        }
+
+        if clear_receiver {
+            self.integration_task_receiver = None;
+            self.integration_task_running = false;
+        }
+
+        if let Some(msg) = message {
+            self.last_context_menu_result = Some(msg);
+            ctx.request_repaint();
+        }
     }
 
     /// 处理画廊滚轮调整缩略图大小

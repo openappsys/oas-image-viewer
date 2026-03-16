@@ -8,6 +8,7 @@ use crate::core::use_cases::OASImageViewerService;
 
 use egui::Context;
 use std::path::PathBuf;
+use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
 /// egui 应用程序适配器
@@ -33,6 +34,8 @@ pub struct EguiApp {
     // 延迟加载初始文件（命令行参数传入）
     pub(crate) initial_file: Option<PathBuf>,
     pub(crate) initial_file_processed: bool,
+    pub(crate) integration_task_receiver: Option<Receiver<String>>,
+    pub(crate) integration_task_running: bool,
 }
 
 impl EguiApp {
@@ -79,6 +82,8 @@ impl EguiApp {
             // 延迟加载初始文件
             initial_file,
             initial_file_processed: false,
+            integration_task_receiver: None,
+            integration_task_running: false,
         }
     }
 

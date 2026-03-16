@@ -169,6 +169,11 @@ impl SystemIntegration for LinuxIntegration {
         Ok(())
     }
 
+    /// 取消默认图片查看器
+    fn unset_default(&self, language: Language) -> Result<()> {
+        anyhow::bail!("{}", get_text("unset_default_not_supported", language))
+    }
+
     /// 添加到右键菜单
     ///
     /// 通过添加 Desktop Action 到 .desktop 文件实现右键菜单集成
@@ -238,6 +243,10 @@ impl SystemIntegration for LinuxIntegration {
         self.update_desktop_database()?;
 
         Ok(())
+    }
+
+    fn refresh_open_with_registration(&self, language: Language) -> Result<()> {
+        anyhow::bail!("{}", get_text("refresh_open_with_not_supported", language))
     }
 
     /// 检查是否已是默认查看器

@@ -3,6 +3,8 @@ use crate::adapters::egui::i18n::get_text;
 use crate::adapters::platform::SystemIntegration;
 use crate::core::domain::{Language, NavigationDirection, Theme, ViewMode};
 use egui::{Color32, Context, CornerRadius, RichText, Stroke, Vec2};
+use std::sync::mpsc;
+use std::thread;
 
 struct MenuStyle {
     bg_color: Color32,
@@ -13,7 +15,20 @@ struct MenuStyle {
     icon_color: Color32,
     corner_radius: u8,
     item_height: f32,
-    menu_width: f32,
+    menu_min_width: f32,
+    menu_max_width: f32,
+}
+
+#[derive(Clone, Copy)]
+enum IntegrationAction {
+    SetDefault,
+    UnsetDefault,
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    AddContextMenu,
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    RemoveContextMenu,
+    #[cfg(target_os = "macos")]
+    RefreshOpenWith,
 }
 
 impl MenuStyle {
@@ -30,7 +45,8 @@ impl MenuStyle {
                 icon_color: Color32::from_rgb(200, 200, 200),
                 corner_radius: 6,
                 item_height: 28.0,
-                menu_width: 220.0,
+                menu_min_width: 220.0,
+                menu_max_width: 320.0,
             }
         } else {
             Self {
@@ -42,13 +58,205 @@ impl MenuStyle {
                 icon_color: Color32::from_rgb(80, 80, 80),
                 corner_radius: 6,
                 item_height: 28.0,
-                menu_width: 220.0,
+                menu_min_width: 220.0,
+                menu_max_width: 320.0,
             }
         }
     }
 }
 
 impl EguiApp {
+    fn popup_item_specs(&self, idx: usize, language: Language) -> Vec<(String, Option<String>)> {
+        match idx {
+            0 => vec![
+                (
+                    get_text("open", language).to_string(),
+                    Some("Ctrl+O".to_string()),
+                ),
+                (
+                    get_text("exit", language).to_string(),
+                    Some(if cfg!(target_os = "macos") {
+                        "Cmd+Q".to_string()
+                    } else {
+                        "Alt+F4".to_string()
+                    }),
+                ),
+            ],
+            1 => vec![
+                (
+                    get_text("gallery", language).to_string(),
+                    Some("G".to_string()),
+                ),
+                (
+                    get_text("viewer", language).to_string(),
+                    Some("V".to_string()),
+                ),
+                (
+                    get_text("fullscreen", language).to_string(),
+                    Some("F11".to_string()),
+                ),
+                (get_text("language_chinese", language).to_string(), None),
+                (get_text("language_english", language).to_string(), None),
+                (get_text("theme_system", language).to_string(), None),
+                (get_text("theme_light", language).to_string(), None),
+                (get_text("theme_dark", language).to_string(), None),
+                (get_text("theme_oled", language).to_string(), None),
+            ],
+            2 => vec![
+                (
+                    get_text("previous", language).to_string(),
+                    Some("←".to_string()),
+                ),
+                (
+                    get_text("next", language).to_string(),
+                    Some("→".to_string()),
+                ),
+                (
+                    get_text("zoom_in", language).to_string(),
+                    Some("+".to_string()),
+                ),
+                (
+                    get_text("zoom_out", language).to_string(),
+                    Some("-".to_string()),
+                ),
+                (
+                    get_text("fit_to_window", language).to_string(),
+                    Some("F".to_string()),
+                ),
+                (
+                    get_text("original_size", language).to_string(),
+                    Some("1".to_string()),
+                ),
+            ],
+            3 => {
+                let mut items = vec![
+                    (
+                        get_text("shortcuts_title", language).to_string(),
+                        Some("?".to_string()),
+                    ),
+                    (get_text("set_default_app", language).to_string(), None),
+                    (get_text("unset_default_app", language).to_string(), None),
+                    (get_text("about_app", language).to_string(), None),
+                ];
+                #[cfg(target_os = "windows")]
+                {
+                    items.push((get_text("add_context_menu", language).to_string(), None));
+                    items.push((get_text("remove_context_menu", language).to_string(), None));
+                }
+                #[cfg(target_os = "linux")]
+                {
+                    items.push((get_text("add_context_menu", language).to_string(), None));
+                    items.push((get_text("remove_context_menu", language).to_string(), None));
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    items.push((get_text("refresh_open_with", language).to_string(), None));
+                }
+                items
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    fn calculate_popup_width(
+        &self,
+        ui: &egui::Ui,
+        idx: usize,
+        style: &MenuStyle,
+        language: Language,
+    ) -> f32 {
+        let icon_and_left_padding = 12.0 + 26.0;
+        let right_padding = 12.0;
+        let shortcut_gap = 16.0;
+        let mut required = style.menu_min_width;
+
+        for (label, shortcut) in self.popup_item_specs(idx, language) {
+            let label_width = ui
+                .painter()
+                .layout_no_wrap(
+                    label,
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::WHITE,
+                )
+                .size()
+                .x;
+            let shortcut_width = shortcut
+                .map(|s| {
+                    ui.painter()
+                        .layout_no_wrap(s, egui::FontId::monospace(12.0), egui::Color32::WHITE)
+                        .size()
+                        .x
+                })
+                .unwrap_or(0.0);
+            let row_required = icon_and_left_padding
+                + label_width
+                + right_padding
+                + if shortcut_width > 0.0 {
+                    shortcut_width + shortcut_gap
+                } else {
+                    0.0
+                };
+            required = required.max(row_required);
+        }
+
+        required.clamp(style.menu_min_width, style.menu_max_width)
+    }
+
+    fn integration_success_text(action: IntegrationAction, language: Language) -> String {
+        match action {
+            IntegrationAction::SetDefault => get_text("default_app_set", language).to_string(),
+            IntegrationAction::UnsetDefault => get_text("default_app_unset", language).to_string(),
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            IntegrationAction::AddContextMenu => {
+                get_text("context_menu_added", language).to_string()
+            }
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            IntegrationAction::RemoveContextMenu => {
+                get_text("context_menu_removed", language).to_string()
+            }
+            #[cfg(target_os = "macos")]
+            IntegrationAction::RefreshOpenWith => {
+                get_text("open_with_refreshed", language).to_string()
+            }
+        }
+    }
+
+    fn run_integration_action_async(&mut self, action: IntegrationAction, language: Language) {
+        if self.integration_task_running {
+            return;
+        }
+
+        self.integration_task_running = true;
+        self.last_context_menu_result =
+            Some(get_text("integration_processing", language).to_string());
+
+        let (tx, rx) = mpsc::channel::<String>();
+        self.integration_task_receiver = Some(rx);
+
+        thread::spawn(move || {
+            let integration = crate::adapters::platform::PlatformIntegration::new();
+            let result = match action {
+                IntegrationAction::SetDefault => integration.set_as_default(language),
+                IntegrationAction::UnsetDefault => integration.unset_default(language),
+                #[cfg(any(target_os = "windows", target_os = "linux"))]
+                IntegrationAction::AddContextMenu => integration.add_context_menu(language),
+                #[cfg(any(target_os = "windows", target_os = "linux"))]
+                IntegrationAction::RemoveContextMenu => integration.remove_context_menu(language),
+                #[cfg(target_os = "macos")]
+                IntegrationAction::RefreshOpenWith => {
+                    integration.refresh_open_with_registration(language)
+                }
+            };
+
+            let message = match result {
+                Ok(()) => Self::integration_success_text(action, language),
+                Err(e) => format!("{}: {}", get_text("operation_failed", language), e),
+            };
+
+            let _ = tx.send(message);
+        });
+    }
+
     pub(crate) fn render_menu_bar(
         &mut self,
         ctx: &Context,
@@ -209,8 +417,9 @@ impl EguiApp {
                     ui.style_mut().visuals.widgets.active.weak_bg_fill = style.active_bg;
                     ui.style_mut().spacing.menu_margin = egui::Margin::same(6);
 
-                    ui.set_min_width(style.menu_width);
-                    ui.set_max_width(style.menu_width);
+                    let popup_width = self.calculate_popup_width(ui, idx, style, language);
+                    ui.set_min_width(popup_width);
+                    ui.set_max_width(popup_width);
 
                     ui.add_space(4.0);
 
@@ -270,10 +479,46 @@ impl EguiApp {
 
         ui.add_enabled_ui(enabled, |ui| {
             let available_width = ui.available_width();
-            let (rect, response) = ui.allocate_exact_size(
-                Vec2::new(available_width, style.item_height),
-                egui::Sense::click(),
+            let text_color = if enabled {
+                style.text_color
+            } else {
+                style.shortcut_color
+            };
+            let icon_color = if enabled {
+                style.icon_color
+            } else {
+                style.shortcut_color
+            };
+            let shortcut_width = shortcut
+                .map(|text| {
+                    ui.painter()
+                        .layout_no_wrap(
+                            text.to_string(),
+                            egui::FontId::monospace(12.0),
+                            style.shortcut_color,
+                        )
+                        .size()
+                        .x
+                })
+                .unwrap_or(0.0);
+            let label_left_padding = 12.0 + 26.0;
+            let label_right_padding = 12.0
+                + if shortcut_width > 0.0 {
+                    shortcut_width + 16.0
+                } else {
+                    0.0
+                };
+            let label_max_width =
+                (available_width - label_left_padding - label_right_padding).max(80.0);
+            let label_galley = ui.painter().layout(
+                label.to_string(),
+                egui::FontId::proportional(14.0),
+                text_color,
+                label_max_width,
             );
+            let row_height = (label_galley.size().y + 10.0).max(style.item_height);
+            let (rect, response) = ui
+                .allocate_exact_size(Vec2::new(available_width, row_height), egui::Sense::click());
 
             let is_hovered = response.hovered();
             let is_active = response.is_pointer_button_down_on();
@@ -291,17 +536,6 @@ impl EguiApp {
                     .rect_filled(rect, CornerRadius::same(style.corner_radius), bg_color);
             }
 
-            let text_color = if enabled {
-                style.text_color
-            } else {
-                style.shortcut_color
-            };
-            let icon_color = if enabled {
-                style.icon_color
-            } else {
-                style.shortcut_color
-            };
-
             let mut left_x = rect.left() + 12.0;
             let center_y = rect.center().y;
 
@@ -314,11 +548,9 @@ impl EguiApp {
             );
             left_x += 26.0;
 
-            ui.painter().text(
-                egui::pos2(left_x, center_y),
-                egui::Align2::LEFT_CENTER,
-                label,
-                egui::FontId::proportional(14.0),
+            ui.painter().galley(
+                egui::pos2(left_x, center_y - label_galley.size().y / 2.0),
+                label_galley,
                 text_color,
             );
 
@@ -779,6 +1011,7 @@ impl EguiApp {
 
         // 使用新的 platform 模块获取集成实例
         let integration = crate::adapters::platform::PlatformIntegration::new();
+        let integration_enabled = !self.integration_task_running;
 
         // 设置为默认图片查看器（带勾选状态）
         let is_default = integration.is_default();
@@ -794,18 +1027,15 @@ impl EguiApp {
             &default_label,
             None,
             style,
-            true,
+            integration_enabled,
         ) {
-            match integration.set_as_default(language) {
-                Ok(_) => {
-                    self.last_context_menu_result =
-                        Some(get_text("default_app_set", language).to_string());
-                }
-                Err(e) => {
-                    self.last_context_menu_result =
-                        Some(format!("{}: {}", get_text("operation_failed", language), e));
-                }
-            }
+            self.run_integration_action_async(IntegrationAction::SetDefault, language);
+            clicked = true;
+        }
+
+        let unset_label = get_text("unset_default_app", language).to_string();
+        if self.render_menu_item(ui, "↺", &unset_label, None, style, integration_enabled) {
+            self.run_integration_action_async(IntegrationAction::UnsetDefault, language);
             clicked = true;
         }
 
@@ -814,69 +1044,39 @@ impl EguiApp {
         {
             // 添加到右键菜单
             let add_label = get_text("add_context_menu", language).to_string();
-            if self.render_menu_item(ui, "📝", &add_label, None, style, true) {
-                match integration.add_context_menu(language) {
-                    Ok(_) => {
-                        self.last_context_menu_result =
-                            Some(get_text("context_menu_added", language).to_string());
-                    }
-                    Err(e) => {
-                        self.last_context_menu_result =
-                            Some(format!("{}: {}", get_text("operation_failed", language), e));
-                    }
-                }
+            if self.render_menu_item(ui, "📝", &add_label, None, style, integration_enabled) {
+                self.run_integration_action_async(IntegrationAction::AddContextMenu, language);
                 clicked = true;
             }
 
             // 从右键菜单移除
             let remove_label = get_text("remove_context_menu", language).to_string();
-            if self.render_menu_item(ui, "🗑", &remove_label, None, style, true) {
-                match integration.remove_context_menu(language) {
-                    Ok(_) => {
-                        self.last_context_menu_result =
-                            Some(get_text("context_menu_removed", language).to_string());
-                    }
-                    Err(e) => {
-                        self.last_context_menu_result =
-                            Some(format!("{}: {}", get_text("operation_failed", language), e));
-                    }
-                }
+            if self.render_menu_item(ui, "🗑", &remove_label, None, style, integration_enabled) {
+                self.run_integration_action_async(IntegrationAction::RemoveContextMenu, language);
                 clicked = true;
             }
         }
 
-        // macOS 和 Linux 平台：添加/移除右键菜单
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "linux")]
         {
-            // 添加到右键菜单
             let add_label = get_text("add_context_menu", language).to_string();
-            if self.render_menu_item(ui, "📝", &add_label, None, style, true) {
-                match integration.add_context_menu(language) {
-                    Ok(_) => {
-                        self.last_context_menu_result =
-                            Some(get_text("context_menu_added", language).to_string());
-                    }
-                    Err(e) => {
-                        self.last_context_menu_result =
-                            Some(format!("{}: {}", get_text("operation_failed", language), e));
-                    }
-                }
+            if self.render_menu_item(ui, "📝", &add_label, None, style, integration_enabled) {
+                self.run_integration_action_async(IntegrationAction::AddContextMenu, language);
                 clicked = true;
             }
 
-            // 从右键菜单移除
             let remove_label = get_text("remove_context_menu", language).to_string();
-            if self.render_menu_item(ui, "🗑", &remove_label, None, style, true) {
-                match integration.remove_context_menu(language) {
-                    Ok(_) => {
-                        self.last_context_menu_result =
-                            Some(get_text("context_menu_removed", language).to_string());
-                    }
-                    Err(e) => {
-                        self.last_context_menu_result =
-                            Some(format!("{}: {}", get_text("operation_failed", language), e));
-                    }
-                }
+            if self.render_menu_item(ui, "🗑", &remove_label, None, style, integration_enabled) {
+                self.run_integration_action_async(IntegrationAction::RemoveContextMenu, language);
+                clicked = true;
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let refresh_label = get_text("refresh_open_with", language).to_string();
+            if self.render_menu_item(ui, "🔄", &refresh_label, None, style, integration_enabled) {
+                self.run_integration_action_async(IntegrationAction::RefreshOpenWith, language);
                 clicked = true;
             }
         }
