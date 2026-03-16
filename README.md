@@ -5,7 +5,7 @@ A modern, high-performance image viewer built with Rust and egui.
 [![CI](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[中文文档](README.zh-CN.md)
+[中文文档](README.zh-CN.md) | [English Documentation](README.md)
 
 ## Features
 
@@ -16,58 +16,50 @@ A modern, high-performance image viewer built with Rust and egui.
 - 🎨 **Modern UI**: Clean interface powered by egui
 - 🔧 **Configurable**: Customize via configuration file
 - 🖥️ **Cross-platform**: Windows, macOS, Linux support
-- 🧪 **High Test Coverage**: 265+ unit tests ensuring quality
+- 🧪 **High Test Coverage**: 240+ unit tests ensuring quality
 
 ## Architecture
 
 This project adopts **Layered Architecture** design:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        UI Layer                              │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │   main.rs   │ │ info_panel  │ │   shortcuts_help    │   │
-│  │  (entry)    │ │(info panel) │ │  (shortcuts help)   │   │
-│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
-├─────────────────────────────────────────────────────────────┤
-│                     Domain Layer                            │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
-│  │      app/mod.rs         │  │       config.rs         │   │
-│  │   (OASImageViewerApp)      │  │    (config mgmt)        │   │
-│  │   app state, event loop │  │  config load & persist  │   │
-│  └─────────────────────────┘  └─────────────────────────┘   │
-├─────────────────────────────────────────────────────────────┤
-│                   Application Layer                         │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐    │
-│  │    viewer    │ │    gallery   │ │     decoder      │    │
-│  │ (img viewer) │ │   (gallery)  │ │  (img decoder)   │    │
-│  │ zoom/pan/ren │ │ thumb/grid   │ │  multi fmt dec   │    │
-│  └──────────────┘ └──────────────┘ └──────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                   Infrastructure Layer                      │
-│  ┌──────────┐ ┌──────────┐ ┌────────────────────────────┐  │
-│  │   dnd    │ │ clipboard│ │          utils             │  │
-│  │ (drag)   │ │(clipboard)│ │  errors / threading / ...  │  │
-│  └──────────┘ └──────────┘ └────────────────────────────┘  │
-├─────────────────────────────────────────────────────────────┤
-│                    Core Library Layer                       │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Zero external deps: Image, Gallery, Cache, Events  │   │
-│  │  Implements: ImageSource, ImageOperations, Gallery  │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                           Entry Layer                               │
+│  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
+│  │       main.rs        │  │               lib.rs               │  │
+│  │ startup/args/window  │  │ module exports and public API      │  │
+│  └──────────────────────┘  └────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                        Adapters Layer                               │
+│  ┌────────────────────────────┐ ┌────────────────────────────────┐  │
+│  │       adapters/egui        │ │       adapters/platform        │  │
+│  │ UI rendering/menu/input    │ │ Linux/macOS/Windows integration│  │
+│  └────────────────────────────┘ └────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                           Core Layer                                │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌─────────────────┐  │
+│  │    core/domain     │ │     core/ports     │ │ core/use_cases  │  │
+│  │ entities/value obj │ │ interface contracts│ │ app services    │  │
+│  └────────────────────┘ └────────────────────┘ └─────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                     Infrastructure Layer                             │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌─────────────────┐  │
+│  │    JsonStorage     │ │   FsImageSource    │ │ filesystem/I-O  │  │
+│  │ config persistence │ │ image source impl  │ │ technical detail│  │
+│  └────────────────────┘ └────────────────────┘ └─────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Layer Dependencies
 
 ```
-UI Layer (adapters/)
+Entry Layer (main.rs / lib.rs)
         ↓
-Domain Layer (app/) ←→ Application Layer (use_cases/)
+Adapters Layer (adapters/egui + adapters/platform)
+        ↓
+Core Layer (core/domain + core/ports + core/use_cases)
         ↓
 Infrastructure Layer (infrastructure/)
-        ↓
-Core Library Layer (core/)
 ```
 
 ## Installation
@@ -190,10 +182,10 @@ oas-image-viewer --help
 
 ### Configuration
 
-Configuration file location:
-- **Windows**: `%APPDATA%\oas-image-viewer\config.toml`
-- **macOS**: `~/Library/Application Support/oas-image-viewer/config.toml`
+Configuration file location is resolved by `directories::ProjectDirs`:
 - **Linux**: `~/.config/oas-image-viewer/config.toml`
+- **macOS**: `~/Library/Application Support/com.openappsys.oas-image-viewer/config.toml`
+- **Windows**: `%APPDATA%\openappsys\oas-image-viewer\config\config.toml` (path may vary by system policy)
 
 Example configuration:
 ```toml
@@ -233,13 +225,11 @@ oas-image-viewer/
 ├── src/
 │   ├── main.rs         # Entry point
 │   ├── lib.rs          # Library root
-│   ├── adapters/       # UI Adapters (egui)
-│   │   └── egui/
-│   │       ├── app.rs       # EguiApp main application
-│   │       ├── info_panel.rs
-│   │       ├── shortcuts_help.rs
-│   │       └── widgets/     # UI components
-│   ├── core/           # Core business layer
+│   ├── adapters/       # Adapter layer (UI + platform integration)
+│   │   ├── egui/       # egui UI adapter
+│   │   ├── platform/   # OS integration (linux/macos/windows)
+│   │   └── macos_file_open.rs
+│   ├── core/           # Core business layer (Domain + Use Cases)
 │   │   ├── domain/     # Entities, value objects
 │   │   ├── ports/      # Interface definitions
 │   │   └── use_cases/  # Use case implementations
@@ -267,7 +257,7 @@ cargo test
 RUST_LOG=debug cargo run
 
 # Check code
-make check       # or: cargo check && cargo clippy
+cargo clippy -- -D warnings
 ```
 
 ### Tech Stack

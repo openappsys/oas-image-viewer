@@ -79,7 +79,7 @@ cargo install cargo-tarpaulin
 cargo tarpaulin --out Html --out Xml --output-dir coverage/
 
 # 排除UI代码
-cargo tarpaulin --exclude-files "src/app/*" --out Html
+cargo tarpaulin --exclude-files "src/adapters/egui/app/*" --out Html
 ```
 
 **配置**（`.tarpaulin.toml`）：
@@ -92,7 +92,7 @@ out = ["Html", "Xml", "Stdout"]
 output-dir = "coverage"
 
 [exclude]
-exclude-files = ["src/app/*", "src/main.rs"]
+exclude-files = ["src/adapters/egui/app/*", "src/main.rs"]
 ```
 
 ### 2.2 mockall（模拟）
@@ -237,9 +237,8 @@ fn test_config_save_load() {
 
 以下代码可不计入覆盖率目标：
 - `src/main.rs` - 程序入口，主要是框架代码
-- `src/app/mod.rs` - UI 渲染代码（难以单元测试）
-- `src/viewer/mod.rs` - UI 部分（egui 渲染）
-- `src/gallery/mod.rs` - UI 部分（egui 渲染）
+- `src/adapters/egui/app/` - UI 渲染与交互代码（难以单元测试）
+- `src/adapters/egui/widgets/` - UI 组件渲染逻辑
 
 ### 4.3 覆盖率追踪
 
@@ -330,7 +329,7 @@ jobs:
       - name: Coverage check
         run: |
           cargo install cargo-tarpaulin
-          cargo tarpaulin --fail-under 85 --exclude-files "src/app/*"
+          cargo tarpaulin --fail-under 85 --exclude-files "src/adapters/egui/app/*"
 ```
 
 ### 5.3 覆盖率报告集成

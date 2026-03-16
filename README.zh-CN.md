@@ -5,7 +5,7 @@
 [![CI](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml/badge.svg)](https://github.com/openappsys/oas-image-viewer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[English Documentation](README.md)
+[English Documentation](README.md) | [中文文档](README.zh-CN.md)
 ## 特性
 
 - 🖼️ **多格式支持**：PNG、JPEG、GIF、WebP、TIFF、BMP
@@ -15,86 +15,50 @@
 - 🎨 **现代化 UI**：基于 egui 的简洁界面
 - 🔧 **可配置**：通过配置文件自定义
 - 🖥️ **跨平台**：支持 Windows、macOS、Linux
-- 🧪 **高测试覆盖**：265+ 单元测试保障质量
+- 🧪 **高测试覆盖**：240+ 单元测试保障质量
 
 ## 架构说明
 
 本项目采用 **分层架构** 架构设计，将代码组织为清晰的分层结构：
 
-### 分层架构
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        UI 层                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │   main.rs   │ │ info_panel  │ │   shortcuts_help    │   │
-│  │  (入口点)   │ │  (信息面板)  │ │     (快捷键帮助)     │   │
-│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
-├─────────────────────────────────────────────────────────────┤
-│                     Domain 层                               │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
-│  │      app/mod.rs         │  │       config.rs         │   │
-│  │   (OASImageViewerApp)      │  │      (配置管理)          │   │
-│  │   应用状态、事件循环      │  │    配置加载与持久化       │   │
-│  └─────────────────────────┘  └─────────────────────────┘   │
-├─────────────────────────────────────────────────────────────┤
-│                   Application 层                            │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐    │
-│  │    viewer    │ │    gallery   │ │     decoder      │    │
-│  │  (图像查看器) │ │    (图库)     │ │   (图像解码器)    │    │
-│  │ 缩放/平移/渲染│ │ 缩略图/网格   │ │  多格式解码      │    │
-│  └──────────────┘ └──────────────┘ └──────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                   Infrastructure 层                         │
-│  ┌──────────┐ ┌──────────┐ ┌────────────────────────────┐  │
-│  │   dnd    │ │ clipboard│ │          utils             │  │
-│  │ (拖放)   │ │ (剪贴板)  │ │  errors / threading / ...  │  │
-│  └──────────┘ └──────────┘ └────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         入口层 (Entry)                              │
+│  ┌──────────────────────┐  ┌────────────────────────────────────┐  │
+│  │       main.rs        │  │               lib.rs               │  │
+│  │ 启动流程/参数/窗口配置 │  │ 模块导出与公共 API 组织            │  │
+│  └──────────────────────┘  └────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                      适配器层 (Adapters)                             │
+│  ┌────────────────────────────┐ ┌────────────────────────────────┐  │
+│  │       adapters/egui        │ │       adapters/platform        │  │
+│  │ UI渲染/菜单/输入/状态同步   │ │ Linux/macOS/Windows 系统集成  │  │
+│  └────────────────────────────┘ └────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                         核心层 (Core)                                │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌─────────────────┐  │
+│  │    core/domain     │ │     core/ports     │ │ core/use_cases  │  │
+│  │   实体与值对象     │ │    抽象接口契约    │ │ 用例与应用服务  │  │
+│  └────────────────────┘ └────────────────────┘ └─────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│                    基础设施层 (Infrastructure)                        │
+│  ┌────────────────────┐ ┌────────────────────┐ ┌─────────────────┐  │
+│  │     JsonStorage    │ │   FsImageSource    │ │ 文件系统与I/O   │  │
+│  │     配置存储       │ │      图片来源      │ │ 与技术实现细节  │  │
+│  └────────────────────┘ └────────────────────┘ └─────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 架构原则
-
-1. **依赖方向**：内层不依赖外层，外层依赖内层
-2. **Domain 层**：核心业务逻辑，独立于框架
-3. **Application 层**：用例实现，编排 Domain 层
-4. **Infrastructure 层**：技术细节，可替换的实现
-5. **UI 层**：用户界面，最外层，最易变化
-
-### 模块依赖图
+### 层间依赖
 
 ```
-                    main.rs
-                      │
-                      ▼
-                ┌───────────┐
-                │   app     │◄───────┐
-                │  (Domain) │        │
-                └─────┬─────┘        │
-                      │              │
-        ┌─────────────┼─────────────┐│
-        │             │             ││
-        ▼             ▼             ▼│
-   ┌─────────┐  ┌──────────┐  ┌─────────┐
-   │ viewer  │  │  gallery │  │ decoder │
-   └────┬────┘  └────┬─────┘  └────┬────┘
-        │            │             │
-        └────────────┴─────────────┘
-                     │
-                     ▼
-        ┌─────────────────────────────┐
-        │        utils / dnd          │
-        │      / clipboard            │
-        │    (Infrastructure)         │
-        └─────────────────────────────┘
-```
-
-### 数据流向
-
-```
-用户输入 → UI 层 → App 控制器 → Application 组件 → Infrastructure 服务
-                                              ↓
-显示更新 ← UI 层 ← App 控制器 ←←←←←←←←←← 数据返回
+入口层（main.rs / lib.rs）
+        ↓
+适配器层（adapters/egui + adapters/platform）
+        ↓
+核心层（core/domain + core/ports + core/use_cases）
+        ↓
+基础设施层（infrastructure/）
 ```
 
 ## 安装
@@ -157,7 +121,7 @@ cargo build --release
 > ```bash
 > xattr -d com.apple.quarantine /Applications/Image\ Viewer.app
 
-### Linux
+**Linux:**
 ```bash
 # 赋予执行权限后运行
 chmod +x ./oas-image-viewer
@@ -184,54 +148,70 @@ oas-image-viewer /path/to/image.png
 
 # 打开目录
 oas-image-viewer /path/to/images/
+
+# 显示帮助
+oas-image-viewer --help
 ```
 
 ### 快捷键
 
-| 快捷键 | 操作 |
-|--------|------|
-| `Ctrl + O` | 打开文件 |
-| `Ctrl + +` | 放大 |
-| `Ctrl + -` | 缩小 |
-| `Ctrl + 0` | 重置缩放 |
-| `← / →` | 上一张/下一张 |
-| `F11` | 切换全屏 |
-| `Esc` | 退出全屏/关闭查看器 |
-| `G` | 切换画廊/查看器 |
-| `F` | 切换信息面板 |
-| `?` | 显示快捷键帮助 |
+| 按键 | 功能 | 模式 |
+|-----|------|------|
+| `Space` / `→` | 下一张图片 | 全部 |
+| `←` | 上一张图片 | 全部 |
+| `↑` / `↓` | 滚动画廊 | 画廊 |
+| `+` / `-` | 放大/缩小 | 查看器 |
+| `0` | 适应窗口 | 查看器 |
+| `1` | 原始尺寸（100%） | 查看器 |
+| `F` | 切换全屏 | 全部 |
+| `G` | 切换画廊模式 | 全部 |
+| `I` | 显示/隐藏信息面板 | 查看器 |
+| `Delete` | 删除当前图片 | 全部 |
+| `Cmd/Ctrl + C` | 复制图片 | 全部 |
+| `Esc` | 退出全屏 / 关闭图片 | - |
 
-### 鼠标控制
+### 鼠标操作
 
-- **滚轮**：缩放
-- **拖拽**：平移（缩放后）
-- **双击**：切换全屏
+- **单击**：选择图片 / 打开图片
+- **双击**：在画廊和查看器模式之间切换
+- **滚轮**：缩放（查看器模式）/ 滚动（画廊模式）
+- **拖拽**：平移图片（查看器模式）/ 拖动选择（画廊模式）
 - **右键**：上下文菜单
 
 ## 配置
 
-配置文件位置（平台特定）：
+配置文件位置由 `directories::ProjectDirs` 自动解析：
 
 - **Linux**: `~/.config/oas-image-viewer/config.toml`
 - **macOS**: `~/Library/Application Support/com.openappsys.oas-image-viewer/config.toml`
-- **Windows**: `%APPDATA%\oas-image-viewer\config\config.toml`
+- **Windows**: `%APPDATA%\openappsys\oas-image-viewer\config\config.toml`（路径可能因系统策略略有差异）
 
-### 配置示例
+配置示例：
 
 ```toml
-[window]
-width = 1200.0
-height = 800.0
+[app]
+# 窗口设置
+window_width = 1200
+window_height = 800
 maximized = false
 
 [gallery]
-thumbnail_size = 150
+# 画廊设置
+thumbnail_size = 120
 items_per_row = 4
+spacing = 10
 
 [viewer]
-background_color = [30, 30, 30]
-fit_to_window = true
+# 查看器设置
+background_color = [0.1, 0.1, 0.1]  # RGB
+default_zoom = "fit"  # 或 "actual"
 show_info_panel = true
+smooth_scroll = true
+
+[shortcuts]
+# 自定义快捷键
+next_image = "Space"
+prev_image = "Left"
 ```
 
 ## 开发
@@ -240,122 +220,95 @@ show_info_panel = true
 
 ```
 oas-image-viewer/
+├── Cargo.toml           # 项目配置
+├── config.example.toml  # 配置模板
 ├── src/
-│   ├── main.rs              # 应用程序入口点
-│   ├── lib.rs               # 库入口
-│   ├── adapters/            # 适配器层 (UI)
-│   │   └── egui/
-│   │       ├── app.rs       # EguiApp 主应用
-│   │       ├── info_panel.rs      # 信息面板
-│   │       ├── shortcuts_help.rs  # 快捷键帮助
-│   │       └── widgets/           # UI 组件
-│   │           ├── gallery_widget.rs
-│   │           └── viewer_widget.rs
-│   ├── core/                # 核心层 (Domain + Use Cases)
-│   │   ├── domain/          # 领域实体
-│   │   ├── ports/           # 端口接口 (traits)
-│   │   └── use_cases/       # 业务用例
-│   └── infrastructure/      # 基础设施层
+│   ├── main.rs         # 入口点
+│   ├── lib.rs          # 库根
+│   ├── adapters/       # 适配器层（UI + 平台集成）
+│   │   ├── egui/       # egui UI 适配器
+│   │   ├── platform/   # 系统集成（linux/macos/windows）
+│   │   └── macos_file_open.rs
+│   ├── core/           # 核心业务层（Domain + Use Cases）
+│   │   ├── domain/     # 实体、值对象
+│   │   ├── ports/      # 接口定义
+│   │   └── use_cases/  # 用例实现
+│   └── infrastructure/ # 基础设施层
 │       └── mod.rs
-├── tests/                   # 集成测试
-├── assets/                  # 静态资源
-└── Cargo.toml              # 依赖管理
+├── tests/              # 集成测试
+├── docs/               # 文档
+├── assets/             # 图标、资源
+└── scripts/            # 构建脚本
 ```
 
-### 开发命令
+### 构建与测试
 
 ```bash
-# 开发模式运行
-cargo run
+# 开发构建
+cargo build
+
+# Release 构建
+cargo build --release
 
 # 运行测试
 cargo test
 
-# 运行带覆盖率测试
-cargo tarpaulin
+# 带日志运行
+RUST_LOG=debug cargo run
 
-# 检查格式
-cargo fmt -- --check
-
-# 运行 clippy
+# 代码检查
 cargo clippy -- -D warnings
-
-# 构建 release
-cargo build --release
 ```
 
-### 代码质量
+### 技术栈
 
-本项目强制执行严格的代码质量标准：
-
-- **rustfmt**: 一致的代码格式 (`rustfmt.toml`)
-- **clippy**: 严格规则的 linting (`.clippy.toml`)
-- **EditorConfig**: 一致的编辑器设置 (`.editorconfig`)
-- **测试覆盖**: 380+ 单元测试，核心模块覆盖率 >80%
-
-## v0.3.x 新特性
-
-### v0.3.1 - 修复与优化
-
-- 修复配置保存防抖处理问题
-- 优化错误日志记录
-- 修复某些情况下缩略图加载失败的问题
-
-### v0.3.0 - 架构重构
-
-- 采用 分层架构 架构设计
-- 清晰的四层架构：Domain → Application → Infrastructure → UI
-- 模块间依赖关系明确，提高可维护性
-
-### 🧪 测试增强
-
-- 380+ 单元测试通过
-- 每个模块都包含全面的单元测试
-- 新增集成测试覆盖核心用例
-
-### ⚡ 性能优化
-
-- 缩略图后台线程异步加载
-- 图像解码双重容错机制
-- 配置保存防抖处理
-
-### 🐛 Bug 修复
-
-- 修复缩略图异步加载内存泄漏
-- 优化图像缩放算法
-- 修复全屏模式下菜单栏显示问题
-
-## 技术栈
-
-- **GUI 框架**: [egui](https://github.com/emilk/egui) / [eframe](https://github.com/emilk/egui/tree/master/crates/eframe)
-- **图像解码**: [image](https://github.com/image-rs/image) crate
-- **错误处理**: [anyhow](https://github.com/dtolnay/anyhow) + [thiserror](https://github.com/dtolnay/thiserror)
+- **GUI 框架**: [egui](https://github.com/emilk/egui) - 即时模式 GUI
+- **图像解码**: [image](https://github.com/image-rs/image) - Rust 图像库
+- **并行处理**: [rayon](https://github.com/rayon-rs/rayon) - 并行迭代
+- **配置**: [serde](https://serde.rs/) + [toml](https://github.com/toml-rs/toml) - 配置序列化
 - **日志**: [tracing](https://github.com/tokio-rs/tracing)
-- **配置**: [serde](https://github.com/serde-rs/serde) + [toml](https://github.com/toml-rs/toml)
-- **并发**: [rayon](https://github.com/rayon-rs/rayon)
-- **剪贴板**: [arboard](https://github.com/1Password/arboard)
-
-## 参与贡献
-
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 创建 Pull Request
-
-请确保：
-- 使用 `cargo fmt` 格式化代码
-- 使用 `cargo clippy -- -D warnings` 通过 linting
-- 使用 `cargo test` 通过所有测试
+- **剪贴板**: [arboard](https://github.com/1Password/arboard) - 系统剪贴板操作
 
 ## 路线图
 
+### v0.3.x（当前）
+- ✅ 多格式图片支持
+- ✅ 画廊视图
+- ✅ 基础图片编辑（旋转、翻转）
+- ✅ 拖拽支持
+- ✅ 键盘快捷键
+
+### v0.4.0（计划中）
+- [ ] 图片编辑（裁剪、亮度/对比度调整）
+- [ ] 批量处理
 - [ ] 幻灯片模式
-- [ ] EXIF 元数据显示
-- [ ] 基础图像编辑（旋转、裁剪）
 - [ ] 自定义主题
 - [ ] 插件系统
-- [ ] RAW 图像支持
+
+### v1.0.0（正式版）
+- [ ] 代码签名（Windows/macOS）
+- [ ] 自动更新
+- [ ] 多语言支持
+- [ ] 云同步（可选）
+
+完整路线图见 [ROADMAP.md](docs/ROADMAP.md)。
+
+## 参与贡献
+
+欢迎贡献！开始前请先阅读 [开发指南](docs/DEVELOPMENT.md)。
+
+### 快速开始
+
+1. Fork 本仓库
+2. 创建功能分支：`git checkout -b feature/amazing-feature`
+3. 提交更改：`git commit -m 'Add amazing feature'`
+4. 推送分支：`git push origin feature/amazing-feature`
+5. 创建 Pull Request
+
+请确保：
+- 代码符合 `rustfmt` 风格
+- 所有测试通过：`cargo test`
+- 无 clippy 警告：`cargo clippy`
 
 ## 许可证
 
@@ -363,6 +316,16 @@ cargo build --release
 
 ## 致谢
 
-- [egui](https://github.com/emilk/egui) 优秀的即时模式 GUI 库
-- [image-rs](https://github.com/image-rs) 图像解码库
-- 所有 Rust 生态系统的贡献者
+- [egui](https://github.com/emilk/egui) - 优秀的 Rust GUI 框架
+- [eframe](https://github.com/emilk/egui/tree/master/crates/eframe) - egui 官方框架集成
+- [image](https://github.com/image-rs/image) - Rust 图像处理库
+
+## 支持
+
+- 💬 [Discussions](https://github.com/openappsys/oas-image-viewer/discussions)
+- 🐛 [Issues](https://github.com/openappsys/oas-image-viewer/issues)
+- 📧 邮箱: team@openappsys.com
+
+---
+
+**Made with ❤️ using Rust**

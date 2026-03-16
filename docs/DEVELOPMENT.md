@@ -60,7 +60,7 @@ xcode-select --install
 ```
 
 #### Windows
-n
+
 无需额外依赖。
 
 ### 3. 克隆项目
@@ -94,18 +94,14 @@ cargo build
 oas-image-viewer/
 ├── src/
 │   ├── main.rs          # 应用程序入口点
-│   ├── config.rs        # 配置管理（加载、保存、默认值）
-│   ├── app/             # 主应用程序逻辑
-│   │   └── mod.rs       # App 状态、事件处理、UI 布局
-│   ├── viewer/          # 图片查看器组件
-│   │   └── mod.rs       # 图片显示、缩放、平移
-│   ├── gallery/         # 画廊网格组件
-│   │   └── mod.rs       # 缩略图网格、选择
-│   ├── decoder/         # 图片解码
-│   │   └── mod.rs       # 图片加载、格式支持
+│   ├── lib.rs           # 库入口
+│   ├── adapters/        # 适配器层（UI + 平台集成）
+│   │   ├── egui/        # egui UI 适配器
+│   │   └── platform/    # 平台集成（linux/macos/windows）
+│   ├── core/            # 核心层（domain/ports/use_cases）
+│   ├── infrastructure/  # 基础设施实现
 │   └── utils/           # 工具模块
 │       ├── mod.rs       # 模块导出
-│       ├── errors.rs    # 错误类型定义
 │       └── threading.rs # 线程工具
 ├── assets/              # 静态资源（图标等）
 ├── .github/workflows/   # CI/CD 配置
@@ -121,11 +117,11 @@ oas-image-viewer/
 | 模块 | 职责 |
 |------|------|
 | `main.rs` | 程序入口，初始化日志、加载配置、启动 eframe |
-| `config.rs` | 配置结构定义、TOML 序列化/反序列化、文件 I/O |
-| `app` | 主应用状态机，协调 viewer 和 gallery，处理用户输入 |
-| `viewer` | 单图片查看：缩放、平移、适应窗口 |
-| `gallery` | 缩略图网格：加载、缓存、选择 |
-| `decoder` | 图片解码抽象，支持多种格式 |
+| `adapters/egui` | UI 事件与渲染适配，调用核心用例 |
+| `adapters/platform` | 平台系统集成（默认程序、右键菜单等） |
+| `core/domain` | 领域模型与值对象 |
+| `core/use_cases` | 业务用例与应用服务 |
+| `infrastructure` | 文件系统、配置存储、图片源等技术实现 |
 | `utils` | 共享错误类型、线程池封装 |
 
 ---
@@ -170,7 +166,28 @@ cargo clippy -- -D warnings -W clippy::all
 - [ ] 错误处理使用 `anyhow` 或 `thiserror`
 - [ ] 异步操作使用适当的线程池
 - [ ] 避免 `unwrap()` 和 `expect()`，使用 `?` 或显式错误处理
-- [ ] 复杂逻辑添加行内注释
+- [ ] 复杂逻辑补充必要注释（中文）
+
+### 项目语言规范
+
+- 代码注释默认使用中文
+- 运行日志默认使用中文
+- 面向最终用户的报错与提示信息优先中文（国际化文案除外）
+
+### 质量规范
+
+- 目标：无已知 Bug（新增代码不引入回归）
+- 目标：无明显性能问题（避免 O(n²) 热路径、避免不必要拷贝和阻塞 I/O）
+- 目标：无安全问题（禁止硬编码密钥、避免不安全系统调用与路径注入）
+- 架构：符合轻量级 DDD 分层（Entry → Adapters → Core → Infrastructure）
+- 编译：不得有任何警告（`cargo clippy -- -D warnings` 必须通过）
+- 格式：代码格式化一致（`cargo fmt -- --check` 必须通过）
+
+### 文档同步规范
+
+- `README.md` 与 `README.zh-CN.md` 除语言外，章节结构与信息点保持一致
+- 新增/调整功能时，同步更新中英文 README、相关 `docs/*.md` 与示例配置
+- 涉及路径、命令、测试数量等易漂移信息，必须以当前仓库实际状态为准
 
 ### 命名规范
 
@@ -193,10 +210,10 @@ cargo clippy -- -D warnings -W clippy::all
 ```rust
 use tracing::{info, debug, warn, error};
 
-info!("Application started");
-debug!("Loading image: {:?}", path);
-warn!("Failed to load config, using defaults");
-error!("Critical error: {}", e);
+info!("应用已启动");
+debug!("正在加载图片: {:?}", path);
+warn!("配置加载失败，使用默认配置");
+error!("发生严重错误: {}", e);
 ```
 
 运行时使用环境变量控制日志级别：

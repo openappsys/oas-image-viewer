@@ -57,55 +57,41 @@ src/
 └── utils.rs
 ```
 
-#### 重构后结构 (v0.3.0)
+#### 当前结构（持续演进）
 
 ```
 src/
-├── main.rs              # UI 层 - 入口点
-├── config.rs            # Domain 层 - 配置
-├── app/                 # Domain 层 - 核心应用
-│   └── mod.rs
-├── viewer/              # Application 层 - 查看器
-│   └── mod.rs
-├── gallery/             # Application 层 - 图库
-│   └── mod.rs
-├── decoder/             # Application 层 - 解码器
-│   └── mod.rs
-├── dnd/                 # Infrastructure 层 - 拖放
-│   └── mod.rs
-├── clipboard/           # Infrastructure 层 - 剪贴板
-│   └── mod.rs
-├── info_panel.rs        # UI 层 - 信息面板
-├── shortcuts_help.rs    # UI 层 - 快捷键帮助
-└── utils/               # Infrastructure 层 - 工具
-    ├── mod.rs
-    ├── errors.rs
-    └── threading.rs
+├── main.rs              # 入口层
+├── lib.rs               # 库入口
+├── adapters/            # 适配器层（egui + 平台集成）
+│   ├── egui/
+│   └── platform/
+├── core/                # 核心层（domain/ports/use_cases）
+├── infrastructure/      # 基础设施层
+└── utils/               # 公共工具
 ```
 
 #### 分层说明
 
 | 层级 | 模块 | 设计原则 |
 |------|------|----------|
-| **Domain** | `app`, `config` | 核心业务逻辑，独立于框架 |
-| **Application** | `viewer`, `gallery`, `decoder` | 用例实现，编排业务逻辑 |
-| **Infrastructure** | `utils`, `dnd`, `clipboard` | 技术细节，可替换实现 |
-| **UI** | `main.rs`, `info_panel`, `shortcuts_help` | 用户界面，最易变化 |
+| **Core** | `core/domain`, `core/ports`, `core/use_cases` | 核心业务逻辑与用例编排 |
+| **Infrastructure** | `infrastructure`, `utils` | 技术细节与 I/O 实现 |
+| **Adapters** | `adapters/egui`, `adapters/platform` | UI 适配与平台系统集成 |
+| **Entry** | `main.rs`, `lib.rs` | 启动、装配、导出 |
 
 ### 2.3 测试增强
 
 #### v0.3.0 测试统计
 
-| 模块 | 测试数量 | 覆盖率 |
-|------|---------|--------|
-| app | 90+ | 85% |
-| viewer | 60+ | 82% |
-| gallery | 70+ | 88% |
-| decoder | 50+ | 90% |
-| dnd | 40+ | 85% |
-| clipboard | 30+ | 80% |
-| utils | 40+ | 90% |
-| **总计** | **380+** | **85%+** |
+| 模块 | 测试策略 | 覆盖率重点 |
+|------|---------|-----------|
+| core/domain | 单元测试 | 实体与值对象行为 |
+| core/use_cases | 单元测试 | 用例编排与状态转换 |
+| infrastructure | 单元测试 | 存储与图片源实现 |
+| adapters/egui | 单元测试 | 交互状态与事件处理 |
+| adapters/platform | 单元测试 | 平台集成行为 |
+| **总计** | **240+ 测试** | **核心模块 >80%** |
 
 #### 测试策略
 
@@ -123,7 +109,7 @@ src/
 
 #### 代码质量验收
 
-- [x] 265+ 单元测试通过
+- [x] 240+ 单元测试通过
 - [x] 代码覆盖率 >80%
 - [x] Clippy 无警告
 - [x] rustfmt 格式化通过
@@ -169,7 +155,7 @@ src/
 | ID | 功能 | 描述 | 状态 |
 |----|------|------|------|
 | F-301 | 架构重构 | 分层架构 分层设计 | ✅ |
-| F-302 | 测试增强 | 265+ 单元测试，85%+ 覆盖率 | ✅ |
+| F-302 | 测试增强 | 240+ 单元测试，85%+ 覆盖率 | ✅ |
 | F-303 | 性能优化 | 异步缩略图、防抖保存 | ✅ |
 | F-304 | 剪贴板增强 | 复制图片/路径/打开文件夹 | ✅ |
 
@@ -210,7 +196,7 @@ src/
 ### P2 验收 (v0.3.0) - 全部完成 ✅
 
 - [x] F-301: 分层架构 四层架构实现
-- [x] F-302: 265+ 单元测试，核心模块覆盖率 >80%
+- [x] F-302: 240+ 单元测试，核心模块覆盖率 >80%
 - [x] F-303: 缩略图后台线程加载、配置防抖保存
 - [x] F-304: 完整的剪贴板操作支持
 
@@ -285,10 +271,10 @@ src/
 | 周 | 任务 |
 |---|------|
 | W1 | 架构设计、模块拆分规划 |
-| W2 | Domain 层重构 (app, config) |
-| W3 | Application 层重构 (viewer, gallery, decoder) |
-| W4 | Infrastructure 层重构 (utils, dnd, clipboard) |
-| W5 | 单元测试编写 (265+ 测试) |
+| W2 | Core 层重构 (domain, ports, use_cases) |
+| W3 | Adapters 层重构 (egui, platform) |
+| W4 | Infrastructure 层重构 (存储与图片源实现) |
+| W5 | 单元测试编写 (240+ 测试) |
 | W6 | 集成测试、性能优化、Bug 修复 |
 
 ### Phase 4 v0.4.0 (计划中)
