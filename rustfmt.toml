@@ -7,21 +7,8 @@ hard_tabs = false
 tab_spaces = 4
 newline_style = "Unix"
 
-# Imports
-imports_granularity = "Module"
-group_imports = "StdExternalCrate"
 reorder_imports = true
 
-# Formatting
-format_code_in_doc_comments = true
-format_macro_matchers = true
-format_strings = true
-wrap_comments = true
-
-# Misc
-normalize_comments = true
-normalize_doc_attributes = true
 remove_nested_parens = true
-reorder_impl_items = true
 use_field_init_shorthand = true
 use_try_shorthand = true

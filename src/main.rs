@@ -6,7 +6,7 @@ use std::env;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tracing::{info, warn};
 
 use oas_image_viewer::adapters::egui::EguiApp;
@@ -19,6 +19,71 @@ use oas_image_viewer::core::use_cases::{
 };
 use oas_image_viewer::{FsImageSource, JsonStorage};
 
+struct LogPaths {
+    app: PathBuf,
+    crash: PathBuf,
+}
+
+static LOG_PATHS: OnceLock<LogPaths> = OnceLock::new();
+
+fn resolve_log_dir() -> PathBuf {
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(home) = std::env::var_os("HOME") {
+            PathBuf::from(home)
+                .join("Library")
+                .join("Logs")
+                .join("OAS Image Viewer")
+        } else {
+            std::env::temp_dir().join("OAS Image Viewer").join("logs")
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") {
+            PathBuf::from(local_app_data)
+                .join("OAS Image Viewer")
+                .join("logs")
+        } else {
+            std::env::temp_dir().join("OAS Image Viewer").join("logs")
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Some(state_home) = std::env::var_os("XDG_STATE_HOME") {
+            PathBuf::from(state_home)
+                .join("oas-image-viewer")
+                .join("logs")
+        } else if let Some(home) = std::env::var_os("HOME") {
+            PathBuf::from(home)
+                .join(".local")
+                .join("state")
+                .join("oas-image-viewer")
+                .join("logs")
+        } else {
+            std::env::temp_dir().join("oas-image-viewer").join("logs")
+        }
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    {
+        std::env::temp_dir().join("oas-image-viewer").join("logs")
+    }
+}
+
+fn log_paths() -> &'static LogPaths {
+    LOG_PATHS.get_or_init(|| {
+        let log_dir = resolve_log_dir();
+        let _ = std::fs::create_dir_all(&log_dir);
+        LogPaths {
+            app: log_dir.join("app.log"),
+            crash: log_dir.join("crash.log"),
+        }
+    })
+}
+
 fn main() {
     // Setup panic hook to capture panic info
     std::panic::set_hook(Box::new(|info| {
@@ -27,7 +92,7 @@ fn main() {
         if let Ok(mut file) = OpenOptions::new()
             .create(true)
             .append(true)
-            .open("oas-image-viewer-error.log")
+            .open(&log_paths().crash)
         {
             let _ = file.write_all(msg.as_bytes());
         }
@@ -35,8 +100,7 @@ fn main() {
         tracing::error!("{}", msg);
     }));
 
-    // Initialize logging to file
-    let _ = std::fs::write("oas-image-viewer.log", ""); // Clear or create log file
+    let _ = std::fs::write(&log_paths().app, "");
 
     // Default to INFO level and above, can be overridden via RUST_LOG env variable
     // Example: RUST_LOG=debug to show all debug info
@@ -71,7 +135,7 @@ fn log_to_file(msg: &str) {
     if let Ok(mut file) = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("oas-image-viewer.log")
+        .open(&log_paths().app)
     {
         let _ = file.write_all(line.as_bytes());
     }

@@ -126,11 +126,7 @@ sys.exit(1)
         let output = Command::new("python3")
             .args(["-c", &python_script])
             .output()
-            .or_else(|_| {
-                Command::new("python")
-                    .args(["-c", &python_script])
-                    .output()
-            })
+            .or_else(|_| Command::new("python").args(["-c", &python_script]).output())
             .context(get_text("error_launch_services", language))?;
 
         if output.status.success() {
@@ -140,7 +136,10 @@ sys.exit(1)
             }
         }
 
-        bail!("{}", get_text("error_get_default_handler", language).replace("{}", uti))
+        bail!(
+            "{}",
+            get_text("error_get_default_handler", language).replace("{}", uti)
+        )
     }
 
     /// 重置指定 UTI 的默认程序为系统默认（预览应用）
@@ -152,7 +151,12 @@ sys.exit(1)
     }
 
     /// 使用 Python 脚本设置默认程序
-    fn set_default_with_python(&self, uti: &str, bundle_id: &str, language: Language) -> Result<()> {
+    fn set_default_with_python(
+        &self,
+        uti: &str,
+        bundle_id: &str,
+        language: Language,
+    ) -> Result<()> {
         let python_script = format!(
             r#"
 import sys
@@ -183,18 +187,17 @@ except Exception as e:
         let output = Command::new("python3")
             .args(["-c", &python_script])
             .output()
-            .or_else(|_| {
-                Command::new("python")
-                    .args(["-c", &python_script])
-                    .output()
-            })
+            .or_else(|_| Command::new("python").args(["-c", &python_script]).output())
             .context(get_text("error_launch_services", language))?;
 
         if output.status.success() {
             Ok(())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            bail!("{}", get_text("error_set_default_python", language).replace("{}", &stderr))
+            bail!(
+                "{}",
+                get_text("error_set_default_python", language).replace("{}", &stderr)
+            )
         }
     }
 }
@@ -234,7 +237,11 @@ impl SystemIntegration for MacOSIntegration {
             Ok(())
         } else {
             let manual_hint = get_text("manual_set_hint", language);
-            bail!("{}\n\n{}", get_text("error_set_default_failed", language), manual_hint)
+            bail!(
+                "{}\n\n{}",
+                get_text("error_set_default_failed", language),
+                manual_hint
+            )
         }
     }
 
@@ -266,7 +273,7 @@ impl SystemIntegration for MacOSIntegration {
     ///
     /// 注意：在 macOS 上，由于应用已通过 Info.plist 声明了支持的文件类型，
     /// 无法真正从右键"打开方式"菜单中移除。应用会始终出现在"打开方式"列表中。
-    /// 
+    ///
     /// 此方法会重置默认程序为系统预览应用，从而"移除"本应用作为默认查看器。
     /// 用户仍然可以在右键菜单的"打开方式"中看到本应用，但不会是默认选项。
     fn remove_context_menu(&self, language: Language) -> Result<()> {

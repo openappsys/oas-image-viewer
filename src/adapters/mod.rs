@@ -2,9 +2,8 @@
 
 pub mod clipboard;
 pub mod egui;
-pub mod platform;
-pub mod system_integration;
 pub mod macos_file_open;
+pub mod platform;
 
 pub use egui::info_panel;
 pub use egui::shortcuts_help;

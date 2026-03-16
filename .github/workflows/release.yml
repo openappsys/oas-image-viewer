@@ -319,6 +319,13 @@ jobs:
         
         # 使用项目中的 Info.plist，替换版本号占位符
         sed -e "s|\${VERSION}|${VERSION#v}|g" macos/Info.plist > "$APP_BUNDLE/Contents/Info.plist"
+        SHORT_VERSION=$(plutil -extract CFBundleShortVersionString raw -o - "$APP_BUNDLE/Contents/Info.plist")
+        if [ "$SHORT_VERSION" = '${VERSION}' ] || [ -z "$SHORT_VERSION" ]; then
+          echo "❌ Info.plist 版本号替换失败: CFBundleShortVersionString=$SHORT_VERSION"
+          exit 1
+        fi
+        echo "✅ Info.plist CFBundleShortVersionString=$SHORT_VERSION"
+        plutil -p "$APP_BUNDLE/Contents/Info.plist" | grep -E '"CFBundleShortVersionString"|CFBundleVersion'
         
         # 复制图标
         if [ -f "assets/icon.icns" ]; then

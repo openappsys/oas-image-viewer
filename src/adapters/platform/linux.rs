@@ -90,9 +90,8 @@ Exec={} %f
     fn ensure_desktop_dir_exists(&self, language: Language) -> Result<()> {
         let desktop_path = self.get_desktop_file_path();
         if let Some(parent) = desktop_path.parent() {
-            fs::create_dir_all(parent).with_context(|| {
-                get_text("error_desktop_file_write", language).to_string()
-            })?;
+            fs::create_dir_all(parent)
+                .with_context(|| get_text("error_desktop_file_write", language).to_string())?;
         }
         Ok(())
     }
@@ -159,7 +158,11 @@ impl SystemIntegration for LinuxIntegration {
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                anyhow::bail!("{}", get_text("error_xdg_mime_failed", language).replace("{}", &format!("{}: {}", mime_type, stderr)));
+                anyhow::bail!(
+                    "{}",
+                    get_text("error_xdg_mime_failed", language)
+                        .replace("{}", &format!("{}: {}", mime_type, stderr))
+                );
             }
         }
 
@@ -254,7 +257,7 @@ impl SystemIntegration for LinuxIntegration {
     }
 }
 
-/// 兼容层：提供与 system_integration 模块相同的路径获取功能
+/// 平台目录工具：获取用户主目录
 mod dirs {
     use std::path::PathBuf;
 

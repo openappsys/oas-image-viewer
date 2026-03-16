@@ -170,12 +170,10 @@ mod tests {
     fn init_for_test() {
         // 使用 get_or_init 确保线程安全，避免竞态条件
         CHINESE_PACK.get_or_init(|| {
-            try_load_from_filesystem("zh-CN")
-                .unwrap_or_else(|| load_embedded_pack("zh-CN"))
+            try_load_from_filesystem("zh-CN").unwrap_or_else(|| load_embedded_pack("zh-CN"))
         });
         ENGLISH_PACK.get_or_init(|| {
-            try_load_from_filesystem("en-US")
-                .unwrap_or_else(|| load_embedded_pack("en-US"))
+            try_load_from_filesystem("en-US").unwrap_or_else(|| load_embedded_pack("en-US"))
         });
     }
 
