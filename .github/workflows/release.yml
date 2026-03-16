@@ -317,8 +317,8 @@ jobs:
         cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "$APP_BUNDLE/Contents/MacOS/"
         chmod +x "$APP_BUNDLE/Contents/MacOS/${{ matrix.binary_name }}"
         
-        # 使用项目中的 Info.plist，替换版本号
-        sed "s/0.3.3/${VERSION#v}/g" macos/Info.plist > "$APP_BUNDLE/Contents/Info.plist"
+        # 使用项目中的 Info.plist，替换版本号占位符
+        sed -e "s|\${VERSION}|${VERSION#v}|g" macos/Info.plist > "$APP_BUNDLE/Contents/Info.plist"
         
         # 复制图标
         if [ -f "assets/icon.icns" ]; then

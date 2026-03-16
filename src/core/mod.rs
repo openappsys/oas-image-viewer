@@ -104,16 +104,6 @@ impl CoreError {
             _ => vec![],
         }
     }
-
-    /// 获取用户友好的错误消息（已弃用，请使用 translation_key + i18n）
-    #[deprecated(
-        since = "0.3.3",
-        note = "Use translation_key() with i18n module instead"
-    )]
-    pub fn user_message(&self) -> String {
-        // 默认返回英文消息作为后备
-        self.translation_key().to_string()
-    }
 }
 
 impl From<GalleryError> for CoreError {

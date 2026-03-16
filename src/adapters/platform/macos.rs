@@ -7,7 +7,7 @@ use super::SystemIntegration;
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::Language;
 use anyhow::{bail, Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// 支持的图片文件 UTI 列表（Uniform Type Identifier）
@@ -48,9 +48,9 @@ impl MacOSIntegration {
 
     /// 从可执行文件路径尝试读取 bundle ID
     /// 在 macOS 中，应用通常位于 MyApp.app/Contents/MacOS/executable
-    fn read_bundle_id_from_plist(&self, exe_path: &PathBuf) -> Option<String> {
+    fn read_bundle_id_from_plist(&self, exe_path: &Path) -> Option<String> {
         // 尝试找到 .app 包目录
-        let mut current = exe_path.as_path();
+        let mut current = exe_path;
 
         // 向上遍历查找 .app 目录
         while let Some(parent) = current.parent() {
@@ -70,10 +70,10 @@ impl MacOSIntegration {
     }
 
     /// 解析 plist 文件获取 Bundle Identifier
-    fn parse_bundle_id_from_plist(&self, plist_path: &PathBuf) -> Option<String> {
+    fn parse_bundle_id_from_plist(&self, plist_path: &Path) -> Option<String> {
         // 使用 plutil 命令将 plist 转换为 JSON 格式
         let output = Command::new("plutil")
-            .args(&["-convert", "json", "-o", "-", plist_path.to_str()?])
+            .args(["-convert", "json", "-o", "-", plist_path.to_str()?])
             .output()
             .ok()?;
 
@@ -124,11 +124,11 @@ sys.exit(1)
         );
 
         let output = Command::new("python3")
-            .args(&["-c", &python_script])
+            .args(["-c", &python_script])
             .output()
             .or_else(|_| {
                 Command::new("python")
-                    .args(&["-c", &python_script])
+                    .args(["-c", &python_script])
                     .output()
             })
             .context(get_text("error_launch_services", language))?;
@@ -181,11 +181,11 @@ except Exception as e:
         );
 
         let output = Command::new("python3")
-            .args(&["-c", &python_script])
+            .args(["-c", &python_script])
             .output()
             .or_else(|_| {
                 Command::new("python")
-                    .args(&["-c", &python_script])
+                    .args(["-c", &python_script])
                     .output()
             })
             .context(get_text("error_launch_services", language))?;
@@ -224,11 +224,11 @@ impl SystemIntegration for MacOSIntegration {
         }
 
         // 通知 Finder 刷新（可选）
-        let _ = Command::new("killall")
-            .arg("-u")
-            .arg("$USER")
-            .arg("Finder")
-            .output();
+        let mut killall_cmd = Command::new("killall");
+        if let Ok(user) = std::env::var("USER") {
+            killall_cmd.arg("-u").arg(user);
+        }
+        let _ = killall_cmd.arg("Finder").output();
 
         if any_success {
             Ok(())
@@ -285,11 +285,11 @@ impl SystemIntegration for MacOSIntegration {
         }
 
         // 通知 Finder 刷新
-        let _ = Command::new("killall")
-            .arg("-u")
-            .arg("$USER")
-            .arg("Finder")
-            .output();
+        let mut killall_cmd = Command::new("killall");
+        if let Ok(user) = std::env::var("USER") {
+            killall_cmd.arg("-u").arg(user);
+        }
+        let _ = killall_cmd.arg("Finder").output();
 
         if any_success {
             tracing::info!("已成功重置默认程序");

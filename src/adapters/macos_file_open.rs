@@ -2,8 +2,7 @@
 //!
 //! 处理 macOS 右键"打开方式"和双击打开文件的事件
 
-#![allow(deprecated)]
-#![allow(unexpected_cfgs)]
+#![allow(unexpected_cfgs, deprecated)]
 
 use std::path::PathBuf;
 
@@ -27,9 +26,9 @@ pub fn setup_file_open_handler() {
     use cocoa::appkit::NSApplication;
     use cocoa::base::{id, nil};
     use objc::declare::ClassDecl;
-    use objc::runtime::{Object, Sel};
     #[allow(unused_imports)]
     use objc::runtime::Class;
+    use objc::runtime::{Object, Sel};
     use objc::{class, msg_send, sel, sel_impl};
 
     /// Objective-C 回调 `application:openFile:` 委托方法
@@ -66,12 +65,7 @@ pub fn setup_file_open_handler() {
     ///
     /// # Safety
     /// 当系统向应用发送打开多个文件事件时，由 Objective-C 运行时调用
-    extern "C" fn open_files_callback(
-        _this: &Object,
-        _sel: Sel,
-        _app: id,
-        filenames: id,
-    ) {
+    extern "C" fn open_files_callback(_this: &Object, _sel: Sel, _app: id, filenames: id) {
         unsafe {
             if filenames != nil {
                 let count: usize = msg_send![filenames, count];
@@ -81,7 +75,8 @@ pub fn setup_file_open_handler() {
                     for i in 0..count {
                         let filename: id = msg_send![filenames, objectAtIndex: i];
                         if filename != nil {
-                            let utf8_string: *const std::os::raw::c_char = msg_send![filename, UTF8String];
+                            let utf8_string: *const std::os::raw::c_char =
+                                msg_send![filename, UTF8String];
                             if !utf8_string.is_null() {
                                 let c_str = std::ffi::CStr::from_ptr(utf8_string);
                                 if let Ok(path_str) = c_str.to_str() {
@@ -127,8 +122,7 @@ pub fn setup_file_open_handler() {
         // 签名: (self, _cmd, application, filename) -> BOOL
         decl.add_method(
             sel!(application:openFile:),
-            open_file_callback
-                as extern "C" fn(&Object, Sel, id, id) -> objc::runtime::BOOL,
+            open_file_callback as extern "C" fn(&Object, Sel, id, id) -> objc::runtime::BOOL,
         );
 
         // 添加 application:openFiles: 选择器方法（处理多个文件）
@@ -168,7 +162,11 @@ pub fn setup_file_open_handler() {}
 /// 如果没有接收到事件，则返回空列表
 #[cfg(target_os = "macos")]
 pub fn get_pending_files() -> Vec<PathBuf> {
-    PENDING_FILES.lock().ok().map(|mut pending| std::mem::take(&mut *pending)).unwrap_or_default()
+    PENDING_FILES
+        .lock()
+        .ok()
+        .map(|mut pending| std::mem::take(&mut *pending))
+        .unwrap_or_default()
 }
 
 /// 非 macOS 平台始终返回空列表
@@ -183,7 +181,10 @@ pub fn get_pending_files() -> Vec<PathBuf> {
 /// 如果没有接收到事件，则返回 `None`
 #[cfg(target_os = "macos")]
 pub fn get_pending_file() -> Option<PathBuf> {
-    PENDING_FILES.lock().ok().and_then(|mut pending| pending.drain(..).next())
+    PENDING_FILES
+        .lock()
+        .ok()
+        .and_then(|mut pending| pending.drain(..).next())
 }
 
 /// 非 macOS 平台始终返回 None

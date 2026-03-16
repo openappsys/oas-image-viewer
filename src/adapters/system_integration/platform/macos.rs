@@ -5,7 +5,7 @@
 
 use super::IntegrationStatus;
 use anyhow::{bail, Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Info.plist 内容模板
@@ -86,9 +86,9 @@ fn get_bundle_id() -> Result<String> {
 
 /// 从可执行文件路径尝试读取 bundle ID
 /// 在 macOS 中，应用通常位于 MyApp.app/Contents/MacOS/executable
-fn read_bundle_id_from_plist(exe_path: &PathBuf) -> Option<String> {
+fn read_bundle_id_from_plist(exe_path: &Path) -> Option<String> {
     // 尝试找到 .app 包目录
-    let mut current = exe_path.as_path();
+    let mut current = exe_path;
 
     // 向上遍历查找 .app 目录
     while let Some(parent) = current.parent() {
@@ -108,7 +108,7 @@ fn read_bundle_id_from_plist(exe_path: &PathBuf) -> Option<String> {
 }
 
 /// 解析 plist 文件获取 Bundle Identifier
-fn parse_bundle_id_from_plist(plist_path: &PathBuf) -> Option<String> {
+fn parse_bundle_id_from_plist(plist_path: &Path) -> Option<String> {
     // 使用 plutil 命令将 plist 转换为 JSON 格式
     let output = Command::new("plutil")
         .args(["-convert", "json", "-o", "-", plist_path.to_str()?])
