@@ -13,10 +13,11 @@ pub struct ThreadPoolManager {
 impl ThreadPoolManager {
     /// 创建新的线程池管理器
     pub fn new(num_threads: usize) -> Self {
+        let safe_threads = num_threads.max(1);
         let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(num_threads)
+            .num_threads(safe_threads)
             .build()
-            .expect("Failed to create thread pool");
+            .unwrap_or_else(|e| panic!("创建线程池失败: {e}"));
 
         Self {
             pool: Arc::new(pool),

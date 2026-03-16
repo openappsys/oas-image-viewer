@@ -1,4 +1,4 @@
-//! Egui Widgets - UI 组件
+//! egui 组件模块 - 界面组件
 
 pub mod gallery_widget;
 pub mod viewer_widget;

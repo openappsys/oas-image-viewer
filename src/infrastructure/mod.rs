@@ -17,7 +17,7 @@ use crate::utils::threading::ThreadPoolManager;
 /// 文件系统图像源实现
 pub struct FsImageSource;
 
-/// JSON 配置存储实现
+/// Json 配置存储实现
 pub struct JsonStorage {
     config_path: PathBuf,
     save_tx: Option<Sender<AppConfig>>,
@@ -310,20 +310,20 @@ impl JsonStorage {
 
 impl Default for JsonStorage {
     fn default() -> Self {
-        Self::new().expect("Failed to create JsonStorage")
+        Self::new().unwrap_or_else(|e| panic!("创建 JsonStorage 失败: {e}"))
     }
 }
 
 impl Storage for JsonStorage {
     fn load_config(&self) -> Result<AppConfig> {
-        // Record the configuration file path being loaded
-        Self::log_debug(&format!("Loading config file: {:?}", self.config_path));
+        // 记录当前加载的配置文件路径
+        Self::log_debug(&format!("正在加载配置文件: {:?}", self.config_path));
 
         if self.config_path.exists() {
-            Self::log_debug("Config file exists, starting to read...");
+            Self::log_debug("配置文件存在，开始读取");
             Self::load_from_file(&self.config_path)
         } else {
-            Self::log_debug("Config file does not exist, using default config");
+            Self::log_debug("配置文件不存在，使用默认配置");
             Ok(AppConfig::default())
         }
     }
@@ -432,7 +432,7 @@ impl AsyncImageSource for AsyncFsImageSource {
     }
 }
 
-/// RFD 文件对话框实现
+/// rfd 文件对话框实现
 pub struct RfdFileDialog;
 
 impl RfdFileDialog {
@@ -544,7 +544,7 @@ mod tests {
     #[test]
     fn test_fs_image_source_is_supported_case_insensitive() {
         let source = FsImageSource::new();
-        // is_supported 使用小写比较
+        // is_supported 使用小写扩展名进行比较
         assert!(source.is_supported(Path::new("image.PNG")));
         assert!(source.is_supported(Path::new("image.JPG")));
         assert!(source.is_supported(Path::new("image.JPEG")));

@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn test_version_format() {
-        // Verify version format is x.y.z
+        // 验证版本号格式为 x.y.z
         let parts: Vec<&str> = VERSION.split('.').collect();
         assert_eq!(parts.len(), 3);
 
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_translation_key_all_variants() {
-        // Gallery errors
+        // 图库错误
         assert_eq!(
             CoreError::from(GalleryError::EmptyGallery).translation_key(),
             "error_empty_gallery"
@@ -319,7 +319,7 @@ mod tests {
             "error_last_image"
         );
 
-        // View errors
+        // 视图错误
         assert_eq!(
             CoreError::from(ViewError::NoCurrentImage).translation_key(),
             "error_no_current_image"
@@ -334,7 +334,7 @@ mod tests {
             "error_zoom_out_of_range"
         );
 
-        // Config errors
+        // 配置错误
         assert_eq!(
             CoreError::from(ConfigError::ReadFailed {
                 path: PathBuf::from("test")

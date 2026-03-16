@@ -1,4 +1,4 @@
-//! Gallery Widget - 画廊 UI 组件
+//! 画廊组件 - 画廊界面组件
 
 use crate::adapters::egui::i18n::{format_thumbnail_hint, get_text};
 use crate::adapters::egui::thumbnail_loader::ThumbnailCache;

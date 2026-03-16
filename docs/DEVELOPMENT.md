@@ -173,6 +173,7 @@ cargo clippy -- -D warnings -W clippy::all
 - 代码注释默认使用中文
 - 运行日志默认使用中文
 - 面向最终用户的报错与提示信息优先中文（国际化文案除外）
+- 领域与架构关键词可保留原样（如 Domain、Use Cases、Ports、Adapters、Infrastructure、DDD）
 
 ### 质量规范
 

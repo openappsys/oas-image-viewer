@@ -48,13 +48,13 @@ impl EguiApp {
         let win_w = rect.width();
         let win_h = rect.height();
 
-        // Process files added via UI (drag & drop, file dialog)
+        // 处理通过界面加入的文件（拖放、文件对话框）
         while let Some(path) = self.pending_files.pop() {
             self.process_single_file(ctx, &path, win_w, win_h);
         }
 
-        // On macOS, also check for files received via Apple Events
-        // (e.g., "Open With" context menu or double-clicking associated files)
+        // 在 macOS 上，还要检查通过 Apple Event 收到的文件
+        // （例如“打开方式”菜单或双击已关联文件）
         #[cfg(target_os = "macos")]
         {
             // 从 main.rs 导入 macOS 文件打开模块

@@ -1,4 +1,4 @@
-//! Use Cases - 业务用例/服务
+//! Use Cases 层 - 业务用例/服务
 //!
 //! 协调领域对象和端口，实现核心业务逻辑
 
@@ -792,7 +792,7 @@ mod tests {
         state.offset.translate(100.0, 100.0);
         state.user_zoomed = true;
 
-        // fit_to_window 应该重置
+        // 适应窗口后应重置缩放与偏移
         use_case.fit_to_window(&mut state, 800.0, 600.0);
         assert!((state.scale.value() - 1.0).abs() < 0.001);
         assert_eq!(state.offset.x, 0.0);

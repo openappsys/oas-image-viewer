@@ -554,7 +554,7 @@ impl EguiApp {
             .map(|s| s.config.theme)
             .unwrap_or_default();
 
-        // System 选项
+        // 跟随系统选项
         let system_label = get_text("theme_system", language).to_string();
         if self.render_menu_item(
             ui,
@@ -578,7 +578,7 @@ impl EguiApp {
             clicked = true;
         }
 
-        // Light 选项
+        // 浅色选项
         let light_label = get_text("theme_light", language).to_string();
         if self.render_menu_item(
             ui,
@@ -602,7 +602,7 @@ impl EguiApp {
             clicked = true;
         }
 
-        // Dark 选项
+        // 深色选项
         let dark_label = get_text("theme_dark", language).to_string();
         if self.render_menu_item(
             ui,
@@ -626,7 +626,7 @@ impl EguiApp {
             clicked = true;
         }
 
-        // OLED 选项
+        // 纯黑选项（OLED）
         let oled_label = get_text("theme_oled", language).to_string();
         if self.render_menu_item(
             ui,

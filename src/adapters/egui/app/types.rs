@@ -1,4 +1,4 @@
-//! Egui 应用程序类型定义
+//! egui 应用程序类型定义
 
 use crate::adapters::clipboard::ClipboardManager;
 use crate::adapters::egui::widgets::{GalleryWidget, ViewerWidget};
@@ -10,7 +10,7 @@ use egui::Context;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Egui 应用程序适配器
+/// egui 应用程序适配器
 pub struct EguiApp {
     pub(crate) service: Arc<OASImageViewerService>,
     pub(crate) viewer_widget: ViewerWidget,

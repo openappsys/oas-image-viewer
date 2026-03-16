@@ -85,10 +85,10 @@ fn log_paths() -> &'static LogPaths {
 }
 
 fn main() {
-    // Setup panic hook to capture panic info
+    // 注册 panic 钩子，捕获崩溃信息
     std::panic::set_hook(Box::new(|info| {
         let msg = format!("应用崩溃: {:?}\n", info);
-        // Write to log file
+        // 写入崩溃日志文件
         if let Ok(mut file) = OpenOptions::new()
             .create(true)
             .append(true)
@@ -96,15 +96,15 @@ fn main() {
         {
             let _ = file.write_all(msg.as_bytes());
         }
-        // Try to display error (may not be visible on Windows)
+        // 尝试输出错误日志（Windows 下可能不可见）
         tracing::error!("{}", msg);
     }));
 
     let _ = std::fs::write(&log_paths().app, "");
 
-    // Default to INFO level and above, can be overridden via RUST_LOG env variable
-    // Example: RUST_LOG=debug to show all debug info
-    // Example: RUST_LOG=oas_image_viewer=debug,winit=error for custom levels
+    // 默认日志级别为 INFO 及以上，可通过 RUST_LOG 环境变量覆盖
+    // 示例：RUST_LOG=debug 显示全部调试日志
+    // 示例：RUST_LOG=oas_image_viewer=debug,winit=error 为模块单独设置级别
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -145,12 +145,12 @@ fn run_app() -> Result<()> {
     info!("[步骤1] 开始初始化...");
     log_to_file("[步骤1] 开始初始化");
 
-    // Initialize i18n system first
+    // 先初始化国际化系统
     info!("[步骤1.5] 初始化国际化系统...");
     log_to_file("[步骤1.5] 初始化国际化系统");
     oas_image_viewer::adapters::egui::i18n::initialize();
 
-    // Parse command line arguments
+    // 解析命令行参数
     info!("[步骤2] 解析命令行参数...");
     log_to_file("[步骤2] 解析命令行参数");
     let args: Vec<String> = env::args().collect();
@@ -164,7 +164,7 @@ fn run_app() -> Result<()> {
         None
     };
 
-    // Create dependencies
+    // 创建依赖
     info!("[步骤3] 创建图像源...");
     log_to_file("[步骤3] 创建图像源");
     let image_source = Arc::new(FsImageSource::new());
@@ -186,7 +186,7 @@ fn run_app() -> Result<()> {
         }
     };
 
-    // Load configuration (only once)
+    // 加载配置（仅加载一次）
     info!("[步骤5] 加载配置...");
     log_to_file("[步骤5] 加载配置");
     let config = match storage.load_config() {
@@ -202,14 +202,14 @@ fn run_app() -> Result<()> {
         }
     };
 
-    // Create use cases
+    // 创建用例
     info!("[步骤6] 创建用例...");
     log_to_file("[步骤6] 创建用例");
     let view_use_case = ViewImageUseCase::new(image_source.clone(), storage.clone());
     let navigate_use_case = NavigateGalleryUseCase;
     let config_use_case = ManageConfigUseCase::new(storage.clone());
 
-    // Create application service
+    // 创建应用服务
     info!("[步骤7] 创建应用服务...");
     log_to_file("[步骤7] 创建应用服务");
     let service = Arc::new(OASImageViewerService::new(
@@ -218,12 +218,12 @@ fn run_app() -> Result<()> {
         config_use_case,
     ));
 
-    // Initialize service (using already loaded configuration to avoid duplicate loading)
+    // 初始化服务（复用已加载配置，避免重复加载）
     info!("[步骤8] 初始化服务...");
     log_to_file("[步骤8] 初始化服务");
     service.initialize(Some(config.clone()))?;
 
-    // Setup macOS file open handler
+    // 注册 macOS 文件打开处理器
     #[cfg(target_os = "macos")]
     {
         info!("[步骤8.5] 设置 macOS 文件打开处理程序...");
@@ -231,7 +231,7 @@ fn run_app() -> Result<()> {
         macos_file_open::setup_file_open_handler();
     }
 
-    // If there's an initial path, load it
+    // 如果存在初始路径则执行加载
     if let Some(ref path) = initial_path {
         info!("加载初始路径: {:?}", path);
         log_to_file(&format!("加载初始路径: {:?}", path));
@@ -244,7 +244,7 @@ fn run_app() -> Result<()> {
                     path,
                 );
             } else {
-                // Open image and add to gallery (only add current image, don't load entire directory)
+                // 打开单图并加入图库（仅加入当前图片，不扫描整个目录）
                 let image = Image::new(
                     path.file_stem()
                         .and_then(|s| s.to_str())
@@ -254,7 +254,7 @@ fn run_app() -> Result<()> {
                 );
                 state.gallery.gallery.add_image(image);
 
-                // Use default window size for initial loading (will be overridden by actual window size later)
+                // 初次加载使用默认窗口尺寸（后续会被真实窗口尺寸覆盖）
                 let fit_to_window = state.config.viewer.fit_to_window;
                 let _ = service.view_use_case.open_image(
                     path,
@@ -267,7 +267,7 @@ fn run_app() -> Result<()> {
         });
     }
 
-    // Configure window
+    // 配置窗口
     info!("[步骤9] 配置窗口...");
     log_to_file("[步骤9] 配置窗口");
     let mut viewport = egui::ViewportBuilder::default()
@@ -287,7 +287,7 @@ fn run_app() -> Result<()> {
         ..Default::default()
     };
 
-    // Run application
+    // 启动应用
     info!("[步骤10] 启动UI...");
     log_to_file("[步骤10] 启动UI");
     let service_clone = service.clone();
@@ -296,8 +296,7 @@ fn run_app() -> Result<()> {
         "OAS Image Viewer",
         native_options,
         Box::new(move |cc| {
-            log_to_file("UI初始化回调");
-            // cc.egui_ctx.set_pixels_per_point(1.0);
+            log_to_file("界面初始化回调");
             setup_fonts(&cc.egui_ctx, &config);
             log_to_file("字体设置完成");
             Ok(Box::new(EguiApp::new(
@@ -316,9 +315,9 @@ fn run_app() -> Result<()> {
     Ok(())
 }
 
-/// Configure font support, including Chinese fonts
+/// 配置字体支持（包含中文字体）
 ///
-/// Unconditionally load system Chinese fonts (if available), independent of current language setting
+/// 无条件尝试加载系统中文字体（若可用），与当前语言设置无关
 fn setup_fonts(ctx: &egui::Context, _config: &AppConfig) {
     use egui::FontFamily;
 
@@ -327,7 +326,7 @@ fn setup_fonts(ctx: &egui::Context, _config: &AppConfig) {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // Try different platform Chinese fonts in priority order (unconditional loading)
+        // 按优先级尝试加载各平台中文字体（无条件加载）
         for font_path in oas_image_viewer::CHINESE_FONT_PATHS {
             match std::fs::read(font_path) {
                 Ok(font_data) => {

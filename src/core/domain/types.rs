@@ -563,7 +563,7 @@ mod tests {
     // Bug 修复回归测试
     // =========================================================================
 
-    /// Bug 3 回归测试：验证 ViewerSettings 支持窗口位置记忆
+    /// 回归测试 3：验证 ViewerSettings 支持窗口位置记忆
     #[test]
     fn test_viewer_settings_window_position_memory() {
         let settings = ViewerSettings {
@@ -584,7 +584,7 @@ mod tests {
         assert!(validated.shortcuts_window_pos.is_some());
     }
 
-    /// Bug 3 回归测试：验证默认情况下窗口位置为 None
+    /// 回归测试 3：验证默认情况下窗口位置为空
     #[test]
     fn test_viewer_settings_default_window_positions() {
         let settings = ViewerSettings::default();
@@ -592,7 +592,7 @@ mod tests {
         assert!(settings.shortcuts_window_pos.is_none());
     }
 
-    /// Bug 2 回归测试：验证 ViewerSettings 支持 show_info_panel 字段
+    /// 回归测试 2：验证 ViewerSettings 支持 show_info_panel 字段
     #[test]
     fn test_viewer_settings_show_info_panel() {
         let settings = ViewerSettings {

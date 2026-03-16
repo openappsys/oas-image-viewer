@@ -1,4 +1,4 @@
-//! Viewer Widget - 查看器 UI 组件
+//! 查看器组件 - 查看器界面组件
 
 use crate::adapters::clipboard::ClipboardManager;
 use crate::adapters::egui::i18n::get_text;

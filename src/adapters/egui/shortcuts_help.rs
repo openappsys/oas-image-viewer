@@ -389,35 +389,35 @@ mod tests {
         // 初始状态：隐藏
         assert!(!panel.is_visible());
 
-        // show() -> 显示
+        // 调用 show()：显示
         panel.show();
         assert!(panel.is_visible());
 
-        // show() -> 仍显示
+        // 再次调用 show()：仍显示
         panel.show();
         assert!(panel.is_visible());
 
-        // toggle() -> 隐藏
+        // 调用 toggle()：隐藏
         panel.toggle();
         assert!(!panel.is_visible());
 
-        // toggle() -> 显示
-        panel.toggle();
-        assert!(panel.is_visible());
-
-        // hide() -> 隐藏
-        panel.hide();
-        assert!(!panel.is_visible());
-
-        // hide() -> 仍隐藏
-        panel.hide();
-        assert!(!panel.is_visible());
-
-        // toggle() -> 显示
+        // 再次调用 toggle()：显示
         panel.toggle();
         assert!(panel.is_visible());
 
-        // toggle() -> 隐藏
+        // 调用 hide()：隐藏
+        panel.hide();
+        assert!(!panel.is_visible());
+
+        // 再次调用 hide()：仍隐藏
+        panel.hide();
+        assert!(!panel.is_visible());
+
+        // 调用 toggle()：显示
+        panel.toggle();
+        assert!(panel.is_visible());
+
+        // 再次调用 toggle()：隐藏
         panel.toggle();
         assert!(!panel.is_visible());
     }

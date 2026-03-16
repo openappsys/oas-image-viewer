@@ -1,4 +1,4 @@
-//! Egui 适配器 - 重构后的主模块
+//! egui 适配器 - 重构后的主模块
 //!
 //! 代码已拆分到以下子模块：
 //! - types: EguiApp 结构体定义
@@ -264,11 +264,11 @@ impl UiPort for EguiApp {
     }
 
     fn show_error(&self, message: &str) {
-        tracing::error!("UI错误: {}", message);
+        tracing::error!("界面错误: {}", message);
     }
 
     fn show_status(&self, message: &str) {
-        tracing::info!("UI状态: {}", message);
+        tracing::info!("界面状态: {}", message);
     }
 
     fn toggle_fullscreen(&self) {

@@ -1,4 +1,4 @@
-//! Egui 适配器模块
+//! egui 适配器模块
 
 pub mod app;
 pub mod i18n;
