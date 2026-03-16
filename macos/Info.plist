@@ -13,10 +13,10 @@
     <string>OAS Image Viewer</string>
     
     <key>CFBundleShortVersionString</key>
-    <string>0.3.3</string>
+    <string>${VERSION}</string>
     
     <key>CFBundleVersion</key>
-    <string>0.3.3</string>
+    <string>${VERSION}</string>
     
     <key>CFBundlePackageType</key>
     <string>APPL</string>
@@ -157,7 +157,7 @@
             <string>Alternate</string>
         </dict>
         
-        <!-- 通用图片类型 -->
+        <!-- 通用图片类型（兜底，不参与默认应用竞争） -->
         <dict>
             <key>CFBundleTypeName</key>
             <string>Image</string>
@@ -170,7 +170,7 @@
             <key>CFBundleTypeIconFile</key>
             <string>ImageIcon</string>
             <key>LSHandlerRank</key>
-            <string>Alternate</string>
+            <string>None</string>
         </dict>
     </array>
     
@@ -185,6 +185,7 @@
             <key>UTTypeConformsTo</key>
             <array>
                 <string>public.image</string>
+                <string>public.data</string>
             </array>
             <key>UTTypeTagSpecification</key>
             <dict>
@@ -204,10 +205,16 @@
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.graphics-design</string>
     
-    <!-- 后台模式（可选） -->
-    <key>UIBackgroundModes</key>
-    <array>
-    </array>
+    <!-- 应用签名 -->
+    <key>CFBundleSignature</key>
+    <string>OASV</string>
+    
+    <!-- 安全传输 -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
     
     <!-- 高分辨率支持 -->
     <key>NSHighResolutionCapable</key>
@@ -216,9 +223,5 @@
     <!-- 自动图形切换 -->
     <key>NSSupportsAutomaticGraphicsSwitching</key>
     <true/>
-    
-    <!-- 安全阅读的文件类型 -->
-    <key>LSFileQuarantineEnabled</key>
-    <false/>
 </dict>
 </plist>
