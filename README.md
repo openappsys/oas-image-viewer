@@ -16,7 +16,7 @@ A modern, high-performance image viewer built with Rust and egui.
 - 🎨 **Modern UI**: Clean interface powered by egui
 - 🔧 **Configurable**: Customize via configuration file
 - 🖥️ **Cross-platform**: Windows, macOS, Linux support
-- 🧪 **High Test Coverage**: 240+ unit tests ensuring quality
+- 🧪 **Quality-focused Testing**: unit + integration tests for core workflows
 
 ## Architecture
 
@@ -151,33 +151,32 @@ oas-image-viewer /path/to/image.png
 # Open directory
 oas-image-viewer /path/to/images/
 
-# Show help
-oas-image-viewer --help
+# Open with debug logging
+RUST_LOG=debug oas-image-viewer /path/to/image.png
 ```
 
 ### Keyboard Shortcuts
 
 | Key | Function | Mode |
 |-----|----------|------|
-| `Space` / `→` | Next image | All |
+| `→` | Next image | All |
 | `←` | Previous image | All |
-| `↑` / `↓` | Scroll gallery | Gallery |
-| `+` / `-` | Zoom in/out | Viewer |
-| `0` | Fit to window | Viewer |
-| `1` | Actual size (100%) | Viewer |
-| `F` | Toggle fullscreen | All |
+| `Ctrl + O` | Open file dialog | All |
+| `Ctrl + + / Ctrl + -` | Zoom in/out | Viewer |
+| `Ctrl + 0` | Fit to window | Viewer |
+| `Ctrl + 1` | Actual size (100%) | Viewer |
+| `F11` | Toggle fullscreen | All |
 | `G` | Toggle gallery mode | All |
-| `I` | Show/hide info panel | Viewer |
-| `Delete` | Delete current image | All |
-| `Cmd/Ctrl + C` | Copy image | All |
-| `Esc` | Exit fullscreen / Close image | - |
+| `F` | Show/hide info panel | Viewer |
+| `?` | Toggle shortcuts help panel | All |
+| `Esc` | Exit fullscreen / Close overlays | All |
 
 ### Mouse Operations
 
 - **Click**: Select image / Open image
-- **Double-click**: Toggle between gallery and viewer modes
+- **Double-click**: Toggle fullscreen
 - **Scroll**: Zoom in/out (in viewer mode) / Scroll gallery (in gallery mode)
-- **Drag**: Pan image (in viewer mode) / Drag selection (in gallery mode)
+- **Drag**: Pan image (in viewer mode)
 - **Right-click**: Context menu
 
 ### Configuration
@@ -185,33 +184,32 @@ oas-image-viewer --help
 Configuration file location is resolved by `directories::ProjectDirs`:
 - **Linux**: `~/.config/oas-image-viewer/config.toml`
 - **macOS**: `~/Library/Application Support/com.openappsys.oas-image-viewer/config.toml`
-- **Windows**: `%APPDATA%\openappsys\oas-image-viewer\config\config.toml` (path may vary by system policy)
+- **Windows**: `%APPDATA%\openappsys\oas-image-viewer\config\config.toml`
 
 Example configuration:
 ```toml
-[app]
+[window]
 # Window settings
-window_width = 1200
-window_height = 800
+width = 1200.0
+height = 800.0
 maximized = false
 
 [gallery]
 # Gallery settings
 thumbnail_size = 120
-items_per_row = 4
-spacing = 10
+items_per_row = 0
+grid_spacing = 12.0
+show_filenames = true
 
 [viewer]
 # Viewer settings
-background_color = [0.1, 0.1, 0.1]  # RGB
-default_zoom = "fit"  # or "actual"
-show_info_panel = true
+background_color = [30, 30, 30]
+fit_to_window = true
+show_info_panel = false
+min_scale = 0.1
+max_scale = 20.0
+zoom_step = 1.25
 smooth_scroll = true
-
-[shortcuts]
-# Custom keyboard shortcuts
-next_image = "Space"
-prev_image = "Left"
 ```
 
 ## Development
@@ -287,7 +285,6 @@ cargo clippy -- -D warnings
 ### v1.0.0 (Release)
 - [ ] Code signing (Windows/macOS)
 - [ ] Auto-update
-- [ ] Multi-language support
 - [ ] Cloud sync (optional)
 
 See [ROADMAP.md](docs/ROADMAP.md) for full roadmap.

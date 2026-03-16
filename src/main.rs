@@ -180,7 +180,7 @@ fn run_app() -> Result<()> {
         Err(e) => {
             warn!("创建存储失败: {}，使用临时存储", e);
             log_to_file(&format!("存储初始化失败: {}", e));
-            let temp_path = std::env::temp_dir().join("oas-image-viewer-temp-config.json");
+            let temp_path = std::env::temp_dir().join("oas-image-viewer-temp-config.toml");
             log_to_file(&format!("使用临时路径: {:?}", temp_path));
             Arc::new(JsonStorage::from_path(temp_path))
         }

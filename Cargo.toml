@@ -135,7 +135,7 @@ maintainer = "OpenAppSys Team <team@openappsys.com>"
 copyright = "Copyright (c) 2026 OpenAppSys Team"
 extended-description = """\
 A modern image viewer built with Rust and egui.
-Features include gallery mode, slideshow, metadata display,
+Features include gallery mode, metadata display,
 and support for multiple image formats.
 """
 section = "graphics"

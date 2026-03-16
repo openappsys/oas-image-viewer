@@ -62,10 +62,10 @@ oas-image-viewer ~/Pictures/
 | 操作 | 效果 |
 |------|------|
 | `←` / `→` | 上一张/下一张图片 |
-| `↑` / `↓` | 放大/缩小 |
 | 鼠标滚轮 | 放大/缩小 |
 | 拖拽 | 平移图片（放大后） |
 | 双击 | 切换全屏 |
+| 右键菜单 | 复制路径、在文件夹中显示 |
 
 #### 缩放控制
 
@@ -73,10 +73,8 @@ oas-image-viewer ~/Pictures/
 |--------|------|
 | `Ctrl + +` | 放大 |
 | `Ctrl + -` | 缩小 |
-| `Ctrl + 0` | 重置为原始大小 |
-| `Ctrl + 1` | 适应窗口 |
-| `Ctrl + 2` | 适应宽度 |
-| `Ctrl + 3` | 适应高度 |
+| `Ctrl + 0` | 适应窗口 |
+| `Ctrl + 1` | 重置为原始大小 |
 
 ### 2. 画廊模式
 
@@ -92,48 +90,36 @@ oas-image-viewer ~/Pictures/
 | 点击缩略图 | 在查看器中打开该图片 |
 | 滚轮 | 滚动缩略图列表 |
 | `Ctrl + 滚轮` | 调整缩略图大小 |
-| 右键菜单 | 复制路径、在文件夹中显示 |
+| `G` | 切换画廊/查看器模式 |
 
 ### 3. 文件操作
 
 | 快捷键 | 功能 |
 |--------|------|
 | `Ctrl + O` | 打开文件对话框 |
-| `Ctrl + Shift + O` | 打开文件夹 |
-| `Ctrl + C` | 复制当前图片到剪贴板 |
-| `Ctrl + Shift + C` | 复制图片路径 |
-| `Delete` | 移动到回收站（需确认） |
-| `Ctrl + R` | 重命名当前文件 |
+| `←` / `→` | 导航上一张/下一张 |
+| `Esc` | 退出全屏/关闭浮层 |
 
 ### 4. 显示选项
 
 | 快捷键 | 功能 |
 |--------|------|
 | `F11` | 切换全屏模式 |
-| `F` | 切换文件信息面板 |
+| `F` | 切换信息面板 |
 | `?` | 显示快捷键帮助 |
-| `I` | 切换图片信息覆盖层 |
-| `B` | 切换背景颜色（黑/灰/白） |
+| `G` | 切换画廊模式 |
 | `H` | 水平翻转 |
 | `V` | 垂直翻转 |
 | `R` | 顺时针旋转 90° |
 | `Shift + R` | 逆时针旋转 90° |
 
-### 5. 幻灯片模式
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Space` | 开始/暂停幻灯片 |
-| `Shift + →` | 下一张（幻灯片模式）|
-| `Shift + ←` | 上一张（幻灯片模式）|
-
-### 6. 配置自定义
+### 5. 配置自定义
 
 配置文件位置：
 
 - **Linux**: `~/.config/oas-image-viewer/config.toml`
 - **macOS**: `~/Library/Application Support/com.openappsys.oas-image-viewer/config.toml`
-- **Windows**: `%APPDATA%\\oas-image-viewer\\config\\config.toml`
+- **Windows**: `%APPDATA%\\openappsys\\oas-image-viewer\\config\\config.toml`
 
 #### 完整配置示例
 
@@ -143,37 +129,23 @@ oas-image-viewer ~/Pictures/
 width = 1200.0          # 窗口宽度
 height = 800.0          # 窗口高度
 maximized = false       # 启动时最大化
-remember_position = true # 记住窗口位置
 
 # 画廊设置
 [gallery]
 thumbnail_size = 150            # 缩略图大小（像素）
-items_per_row = 4               # 每行缩略图数量
+items_per_row = 0               # 0 表示自动计算每行数量
+grid_spacing = 12.0             # 缩略图间距
 show_filenames = true           # 显示文件名
-sort_by = "name"                # 排序方式: name, date, size
-sort_order = "ascending"        # 排序顺序: ascending, descending
 
 # 查看器设置
 [viewer]
 background_color = [30, 30, 30]     # 背景色 RGB
 fit_to_window = true                # 默认适应窗口
-show_info_panel = true              # 显示信息面板
-smooth_zoom = true                  # 平滑缩放
-zoom_step = 0.1                     # 缩放步长
-min_zoom = 0.1                      # 最小缩放比例
-max_zoom = 10.0                     # 最大缩放比例
-
-# 幻灯片设置
-[slideshow]
-enabled = false             # 默认启用
-interval_seconds = 5        # 切换间隔（秒）
-loop = true                 # 循环播放
-random_order = false        # 随机顺序
-
-# 快捷键（可选：覆盖默认快捷键）
-[keybindings]
-# quit = "Ctrl+Q"
-# fullscreen = "F11"
+show_info_panel = false             # 显示信息面板
+smooth_scroll = true                # 平滑滚动
+zoom_step = 1.25                    # 缩放步长（倍率）
+min_scale = 0.1                     # 最小缩放比例
+max_scale = 20.0                    # 最大缩放比例
 ```
 
 ---
@@ -219,7 +191,7 @@ random_order = false        # 随机顺序
 
 ### Q: 可以编辑图片吗？
 
-**A:** 当前版本仅支持查看，不支持编辑。以下功能正在开发中：
+**A:** 当前版本支持轻量编辑操作，包含旋转和翻转。更高级编辑能力仍在规划中：
 
 - 基础旋转和翻转
 - 裁剪
@@ -227,7 +199,7 @@ random_order = false        # 随机顺序
 
 ### Q: 如何清除最近打开的文件列表？
 
-**A:** 删除配置文件中的 `[history]` 部分，或直接删除配置文件。
+**A:** 当前版本没有独立的“最近文件列表”配置段。如需重置相关状态，可直接删除配置文件 `config.toml`。
 
 ### Q: 支持网络图片吗？
 

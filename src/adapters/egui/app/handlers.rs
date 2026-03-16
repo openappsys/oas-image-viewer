@@ -57,9 +57,7 @@ impl EguiApp {
         // （例如“打开方式”菜单或双击已关联文件）
         #[cfg(target_os = "macos")]
         {
-            // 从 main.rs 导入 macOS 文件打开模块
-            // 使用 crate 级外部函数避免循环依赖
-            if let Some(path) = crate::adapters::macos_file_open::get_pending_file() {
+            for path in crate::adapters::macos_file_open::get_pending_files() {
                 tracing::info!("处理 macOS Apple Event 文件: {:?}", path);
                 self.add_image_to_gallery(&path);
                 self.process_single_file(ctx, &path, win_w, win_h);

@@ -15,7 +15,7 @@
 - 🎨 **现代化 UI**：基于 egui 的简洁界面
 - 🔧 **可配置**：通过配置文件自定义
 - 🖥️ **跨平台**：支持 Windows、macOS、Linux
-- 🧪 **高测试覆盖**：240+ 单元测试保障质量
+- 🧪 **质量导向测试**：核心流程包含单元测试与集成测试
 
 ## 架构说明
 
@@ -120,6 +120,7 @@ cargo build --release
 > 💡 终端命令（快速解除）：
 > ```bash
 > xattr -d com.apple.quarantine /Applications/Image\ Viewer.app
+> ```
 
 **Linux:**
 ```bash
@@ -149,33 +150,32 @@ oas-image-viewer /path/to/image.png
 # 打开目录
 oas-image-viewer /path/to/images/
 
-# 显示帮助
-oas-image-viewer --help
+# 调试日志方式打开
+RUST_LOG=debug oas-image-viewer /path/to/image.png
 ```
 
 ### 快捷键
 
 | 按键 | 功能 | 模式 |
 |-----|------|------|
-| `Space` / `→` | 下一张图片 | 全部 |
+| `→` | 下一张图片 | 全部 |
 | `←` | 上一张图片 | 全部 |
-| `↑` / `↓` | 滚动画廊 | 画廊 |
-| `+` / `-` | 放大/缩小 | 查看器 |
-| `0` | 适应窗口 | 查看器 |
-| `1` | 原始尺寸（100%） | 查看器 |
-| `F` | 切换全屏 | 全部 |
+| `Ctrl + O` | 打开文件对话框 | 全部 |
+| `Ctrl + + / Ctrl + -` | 放大/缩小 | 查看器 |
+| `Ctrl + 0` | 适应窗口 | 查看器 |
+| `Ctrl + 1` | 原始尺寸（100%） | 查看器 |
+| `F11` | 切换全屏 | 全部 |
 | `G` | 切换画廊模式 | 全部 |
-| `I` | 显示/隐藏信息面板 | 查看器 |
-| `Delete` | 删除当前图片 | 全部 |
-| `Cmd/Ctrl + C` | 复制图片 | 全部 |
-| `Esc` | 退出全屏 / 关闭图片 | - |
+| `F` | 显示/隐藏信息面板 | 查看器 |
+| `?` | 显示/隐藏快捷键帮助 | 全部 |
+| `Esc` | 退出全屏 / 关闭浮层 | 全部 |
 
 ### 鼠标操作
 
 - **单击**：选择图片 / 打开图片
-- **双击**：在画廊和查看器模式之间切换
+- **双击**：切换全屏
 - **滚轮**：缩放（查看器模式）/ 滚动（画廊模式）
-- **拖拽**：平移图片（查看器模式）/ 拖动选择（画廊模式）
+- **拖拽**：平移图片（查看器模式）
 - **右键**：上下文菜单
 
 ## 配置
@@ -184,34 +184,33 @@ oas-image-viewer --help
 
 - **Linux**: `~/.config/oas-image-viewer/config.toml`
 - **macOS**: `~/Library/Application Support/com.openappsys.oas-image-viewer/config.toml`
-- **Windows**: `%APPDATA%\openappsys\oas-image-viewer\config\config.toml`（路径可能因系统策略略有差异）
+- **Windows**: `%APPDATA%\openappsys\oas-image-viewer\config\config.toml`
 
 配置示例：
 
 ```toml
-[app]
+[window]
 # 窗口设置
-window_width = 1200
-window_height = 800
+width = 1200.0
+height = 800.0
 maximized = false
 
 [gallery]
 # 画廊设置
 thumbnail_size = 120
-items_per_row = 4
-spacing = 10
+items_per_row = 0
+grid_spacing = 12.0
+show_filenames = true
 
 [viewer]
 # 查看器设置
-background_color = [0.1, 0.1, 0.1]  # RGB
-default_zoom = "fit"  # 或 "actual"
-show_info_panel = true
+background_color = [30, 30, 30]
+fit_to_window = true
+show_info_panel = false
+min_scale = 0.1
+max_scale = 20.0
+zoom_step = 1.25
 smooth_scroll = true
-
-[shortcuts]
-# 自定义快捷键
-next_image = "Space"
-prev_image = "Left"
 ```
 
 ## 开发
@@ -288,7 +287,6 @@ cargo clippy -- -D warnings
 ### v1.0.0（正式版）
 - [ ] 代码签名（Windows/macOS）
 - [ ] 自动更新
-- [ ] 多语言支持
 - [ ] 云同步（可选）
 
 完整路线图见 [ROADMAP.md](docs/ROADMAP.md)。
