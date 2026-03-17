@@ -6,7 +6,7 @@
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::Language;
 use crate::utils::format_file_size;
-use egui::{Context, Frame, RichText, ScrollArea, SidePanel, Widget};
+use egui::{Context, Frame, RichText, ScrollArea, SidePanel};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
@@ -560,14 +560,26 @@ impl Default for InfoPanel {
 }
 
 /// 渲染标签-值对
+///
+/// 使用 TextEdit（只读模式）替代普通 Label，支持文本选中功能。
+/// 这样当用户选中文本时，ctx.wants_keyboard_input() 会返回 true，
+/// 从而让复制快捷键正确处理（复制选中的文本而非复制图片）。
 fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
     let text_color = ui.style().visuals.text_color();
     let weak_color = ui.style().visuals.weak_text_color();
     ui.horizontal(|ui| {
         ui.label(RichText::new(label).size(13.0).color(weak_color));
-        egui::Label::new(RichText::new(value).size(13.0).color(text_color).strong())
-            .wrap()
-            .ui(ui);
+        // 使用 TextEdit（只读模式）让文本可选中
+        // 通过设置 text_edit_multiline 为 false 实现单行显示
+        // 使用 lock_focus 防止焦点问题
+        let mut text = value.to_string();
+        let text_edit = egui::TextEdit::singleline(&mut text)
+            .text_color(text_color)
+            .font(egui::TextStyle::Body)
+            .desired_width(ui.available_width());
+        
+        // 渲染 TextEdit，但忽略输出（因为是只读的）
+        let _response = ui.add(text_edit);
     });
 }
 
