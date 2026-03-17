@@ -1,3 +1,5 @@
+//! 用例层状态模型定义
+
 use crate::core::domain::{Gallery, GalleryLayout, Image, Position, Scale, ViewMode};
 use crate::core::ports::AppConfig;
 

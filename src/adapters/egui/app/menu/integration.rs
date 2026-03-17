@@ -1,3 +1,5 @@
+//! 菜单中的系统集成动作与反馈文本
+
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::platform::{PlatformIntegration, SystemIntegration};
 use crate::core::domain::Language;

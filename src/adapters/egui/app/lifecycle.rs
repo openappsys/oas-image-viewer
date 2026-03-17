@@ -1,3 +1,5 @@
+//! 应用生命周期与主界面编排逻辑
+
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::{Language, Theme, ViewMode};

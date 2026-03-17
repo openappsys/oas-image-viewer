@@ -1,3 +1,5 @@
+//! 菜单与提示中使用的快捷键文案生成器
+
 #[derive(Clone, Copy)]
 pub enum ShortcutTextStyle {
     Compact,

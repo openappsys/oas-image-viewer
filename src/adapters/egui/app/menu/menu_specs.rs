@@ -1,3 +1,5 @@
+//! 菜单弹窗条目与快捷键文案规格
+
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::egui::shortcut_labels::{open_file, open_folder, quit, ShortcutTextStyle};
 use crate::core::domain::Language;

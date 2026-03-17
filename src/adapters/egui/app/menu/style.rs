@@ -1,3 +1,5 @@
+//! 菜单样式参数定义与主题映射
+
 use egui::{Color32, Context};
 
 pub(super) struct MenuStyle {

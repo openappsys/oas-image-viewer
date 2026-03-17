@@ -1,3 +1,5 @@
+//! 复制快捷键判定逻辑与信号聚合
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum CopyAction {
     Image,

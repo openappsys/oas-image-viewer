@@ -1,3 +1,5 @@
+//! egui 应用入口与模块装配
+
 use eframe::Frame;
 use egui::Context;
 

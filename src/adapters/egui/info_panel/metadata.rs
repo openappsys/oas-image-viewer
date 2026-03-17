@@ -1,3 +1,5 @@
+//! 信息面板 EXIF 元数据读取逻辑
+
 use super::ExifData;
 use std::path::Path;
 use tracing::{debug, warn};

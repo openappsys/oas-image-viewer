@@ -1,3 +1,5 @@
+//! 画廊导航用例与目录装载逻辑
+
 use crate::core::domain::{GalleryLayout, Image, NavigationDirection};
 use crate::core::ports::ImageSource;
 use crate::core::{CoreError, Result};

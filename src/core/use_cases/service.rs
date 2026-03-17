@@ -1,3 +1,5 @@
+//! 应用服务：聚合用例并提供语义化状态接口
+
 use crate::core::domain::{
     Image, Language, NavigationDirection, Position, Theme, ViewMode, ViewerSettings,
 };

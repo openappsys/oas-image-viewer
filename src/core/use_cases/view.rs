@@ -1,3 +1,5 @@
+//! 图像查看用例与缩放/视图模式逻辑
+
 use crate::core::domain::{Image, Scale, ViewMode};
 use crate::core::ports::{ImageSource, Storage};
 use crate::core::{CoreError, Result};

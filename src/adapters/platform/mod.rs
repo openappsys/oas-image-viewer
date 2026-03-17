@@ -1,3 +1,5 @@
+//! 平台系统集成抽象与具体实现导出
+
 use crate::core::domain::Language;
 
 /// 跨平台系统集成 trait

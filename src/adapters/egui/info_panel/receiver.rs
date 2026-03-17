@@ -1,3 +1,5 @@
+//! 信息面板 EXIF 异步接收与轮询逻辑
+
 use super::ExifData;
 use std::path::Path;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};

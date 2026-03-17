@@ -1,3 +1,5 @@
+//! 用例层模块导出与聚合入口
+
 mod config;
 mod navigate;
 mod service;

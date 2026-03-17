@@ -1,3 +1,5 @@
+//! 配置管理用例与配置更新规则
+
 use crate::core::domain::{GalleryLayout, ViewerSettings, WindowState};
 use crate::core::ports::{AppConfig, Storage};
 use crate::core::Result;

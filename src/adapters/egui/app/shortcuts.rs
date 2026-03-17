@@ -1,3 +1,5 @@
+//! 键盘快捷键输入处理与动作分发
+
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::{NavigationDirection, ViewMode};

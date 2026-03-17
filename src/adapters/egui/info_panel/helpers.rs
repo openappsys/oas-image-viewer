@@ -1,3 +1,5 @@
+//! 信息面板渲染与文本格式化辅助函数
+
 use egui::RichText;
 
 pub(super) fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {

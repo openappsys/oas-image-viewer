@@ -1,3 +1,5 @@
+//! 顶部菜单与下拉交互渲染逻辑
+
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::egui::shortcut_labels::{

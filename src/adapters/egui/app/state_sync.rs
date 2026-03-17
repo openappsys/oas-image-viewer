@@ -1,3 +1,5 @@
+//! 应用状态写回与配置持久化辅助逻辑
+
 use super::types::EguiApp;
 use crate::core::domain::{Language, Position, Theme, ViewMode};
 use std::path::PathBuf;
