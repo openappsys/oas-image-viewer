@@ -160,10 +160,10 @@ RUST_LOG=debug oas-image-viewer /path/to/image.png
 |-----|------|------|
 | `→` | 下一张图片 | 全部 |
 | `←` | 上一张图片 | 全部 |
-| `Ctrl + O` | 打开文件对话框 | 全部 |
-| `Ctrl + Shift + O` | 打开文件夹对话框 | 全部 |
-| `Ctrl + C` | 复制当前图片 | 查看器 |
-| `Ctrl + Shift + C` | 复制当前图片路径 | 查看器 |
+| `Cmd/Ctrl + O` | 打开文件对话框 | 全部 |
+| `Cmd/Ctrl + Shift + O` | 打开文件夹对话框 | 全部 |
+| `Cmd + C`（macOS）/ `Ctrl + C`（Windows/Linux） | 复制当前图片 | 查看器 |
+| `Cmd + Shift + C`（macOS）/ `Ctrl + Shift + C`（Windows/Linux） | 复制当前图片路径 | 查看器 |
 | `Ctrl + + / Ctrl + -` | 放大/缩小 | 查看器 |
 | `Ctrl + 0` | 适应窗口 | 查看器 |
 | `Ctrl + 1` | 原始尺寸（100%） | 查看器 |

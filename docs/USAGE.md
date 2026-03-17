@@ -96,10 +96,10 @@ oas-image-viewer ~/Pictures/
 
 | 快捷键 | 功能 |
 |--------|------|
-| `Ctrl + O` | 打开文件对话框 |
-| `Ctrl + Shift + O` | 打开文件夹 |
-| `Ctrl + C` | 复制当前图片到剪贴板 |
-| `Ctrl + Shift + C` | 复制当前图片路径 |
+| `Cmd/Ctrl + O` | 打开文件对话框 |
+| `Cmd/Ctrl + Shift + O` | 打开文件夹 |
+| `Cmd + C`（macOS）/ `Ctrl + C`（Windows/Linux） | 复制当前图片到剪贴板 |
+| `Cmd + Shift + C`（macOS）/ `Ctrl + Shift + C`（Windows/Linux） | 复制当前图片路径 |
 | `←` / `→` | 导航上一张/下一张 |
 | `Esc` | 退出全屏/关闭浮层 |
 
