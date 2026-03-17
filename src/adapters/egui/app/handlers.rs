@@ -31,31 +31,10 @@ impl EguiApp {
             return;
         };
 
-        let mut load_error = None;
-        if let Err(e) = self.service.update_state(|state| {
-            match self
-                .service
-                .navigate_use_case
-                .load_directory(&mut state.gallery, self.image_source.as_ref(), &path)
-            {
-                Ok(count) => {
-                    if count > 0 && !state.gallery.gallery.select_image(0) {
-                        tracing::warn!(path = ?path, "目录加载成功但无法选中首张图片");
-                    }
-                }
-                Err(e) => {
-                    load_error = Some(e);
-                }
-            }
-            self.service
-                .view_use_case
-                .set_view_mode(&mut state.view, ViewMode::Gallery);
-        }) {
-            tracing::error!(path = ?path, error = %e, "打开目录失败");
-            return;
-        }
-
-        if let Some(e) = load_error {
+        if let Err(e) = self
+            .service
+            .load_directory(self.image_source.as_ref(), &path)
+        {
             tracing::error!(path = ?path, error = %e, "扫描目录失败");
             return;
         }
@@ -66,16 +45,7 @@ impl EguiApp {
     }
 
     pub(crate) fn add_image_to_gallery(&mut self, path: &Path) {
-        let file_name = path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-
-        if let Err(e) = self.service.update_state(|state| {
-            let image = crate::core::domain::Image::new(file_name, path.to_path_buf());
-            state.gallery.gallery.add_image(image);
-        }) {
+        if let Err(e) = self.service.add_image_to_gallery(path) {
             tracing::error!(error = %e, "添加图片到图库失败");
         }
     }
@@ -119,21 +89,10 @@ impl EguiApp {
             .map(|s| s.config.viewer.fit_to_window)
             .unwrap_or(true);
 
-        let mut open_error = None;
-        if let Err(e) = self.service.update_state(|state| {
-            if let Err(err) = self.service.view_use_case.open_image(
-                path,
-                &mut state.view,
-                Some(win_w),
-                Some(win_h),
-                fit_to_window,
-            ) {
-                open_error = Some(err);
-            }
-        }) {
-            tracing::error!(error = %e, "打开图片失败");
-        }
-        if let Some(e) = open_error {
+        if let Err(e) =
+            self.service
+                .open_image(path, Some(win_w), Some(win_h), fit_to_window)
+        {
             tracing::error!(path = %path.display(), error = %e, "更新查看状态失败");
         }
 
@@ -239,20 +198,10 @@ impl EguiApp {
 
     /// 导航并打开图片
     pub(crate) fn navigate_and_open(&mut self, ctx: &Context, direction: NavigationDirection) {
-        // 使用 update_state 持久化导航状态
-        if let Err(e) = self.service.update_state(|state| {
-            let _ = self
-                .service
-                .navigate_use_case
-                .navigate(&mut state.gallery, direction);
-        }) {
-            tracing::error!(error = %e, "导航失败");
-        }
-
-        // 获取更新后的状态来读取选中的索引
-        if let Ok(state) = self.service.get_state() {
-            if let Some(idx) = state.gallery.gallery.selected_index() {
-                self.open_navigated_image(ctx, Some(idx));
+        match self.service.navigate_gallery(direction) {
+            Ok(index) => self.open_navigated_image(ctx, index),
+            Err(e) => {
+                tracing::error!(error = %e, "导航失败");
             }
         }
     }
@@ -285,49 +234,33 @@ impl EguiApp {
         self.load_and_set_image(ctx, path);
 
         let rect = ctx.viewport_rect();
-
-        if let Err(e) = self.service.update_state(|state| {
-            let _ = self.service.view_use_case.open_image(
-                path,
-                &mut state.view,
-                Some(rect.width()),
-                Some(rect.height()),
-                fit_to_window,
-            );
-        }) {
+        if let Err(e) = self.service.open_image(
+            path,
+            Some(rect.width()),
+            Some(rect.height()),
+            fit_to_window,
+        ) {
             tracing::error!(path = %path.display(), error = %e, "打开图片失败");
         }
     }
 
     /// 处理放大
     pub(crate) fn handle_zoom_in(&mut self) {
-        if let Err(e) = self.service.update_state(|state| {
-            let max = state.config.viewer.max_scale;
-            self.service
-                .view_use_case
-                .zoom_in(&mut state.view, 1.25, max);
-        }) {
+        if let Err(e) = self.service.zoom_in(1.25) {
             tracing::error!(error = %e, "放大失败");
         }
     }
 
     /// 处理缩小
     pub(crate) fn handle_zoom_out(&mut self) {
-        if let Err(e) = self.service.update_state(|state| {
-            let min = state.config.viewer.min_scale;
-            self.service
-                .view_use_case
-                .zoom_out(&mut state.view, 1.25, min);
-        }) {
+        if let Err(e) = self.service.zoom_out(1.25) {
             tracing::error!(error = %e, "缩小失败");
         }
     }
 
     /// 重置缩放（100%原始尺寸）
     pub(crate) fn handle_reset_zoom(&mut self) {
-        if let Err(e) = self.service.update_state(|state| {
-            self.service.view_use_case.reset_zoom(&mut state.view);
-        }) {
+        if let Err(e) = self.service.reset_zoom() {
             tracing::error!(error = %e, "重置缩放失败");
         }
     }
@@ -335,11 +268,7 @@ impl EguiApp {
     /// 适应窗口
     pub(crate) fn handle_fit_to_window(&mut self, ctx: &Context) {
         let rect = ctx.viewport_rect();
-        if let Err(e) = self.service.update_state(|state| {
-            self.service
-                .view_use_case
-                .fit_to_window(&mut state.view, rect.width(), rect.height());
-        }) {
+        if let Err(e) = self.service.fit_to_window(rect.width(), rect.height()) {
             tracing::error!(error = %e, "适应窗口失败");
         }
     }

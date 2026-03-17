@@ -481,6 +481,98 @@ impl OASImageViewerService {
         f(&mut state);
         Ok(())
     }
+
+    pub fn toggle_view_mode(&self) -> Result<()> {
+        self.update_state(|state| {
+            self.view_use_case.toggle_view_mode(&mut state.view);
+        })
+    }
+
+    pub fn add_image_to_gallery(&self, path: &Path) -> Result<()> {
+        let file_name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        self.update_state(|state| {
+            let image = Image::new(file_name, path.to_path_buf());
+            state.gallery.gallery.add_image(image);
+        })
+    }
+
+    pub fn load_directory(&self, image_source: &dyn ImageSource, path: &Path) -> Result<usize> {
+        let mut loaded_result: Result<usize> = Ok(0);
+        self.update_state(|state| {
+            loaded_result = self
+                .navigate_use_case
+                .load_directory(&mut state.gallery, image_source, path);
+            if let Ok(count) = loaded_result {
+                if count > 0 {
+                    state.gallery.gallery.select_image(0);
+                }
+            }
+            self.view_use_case
+                .set_view_mode(&mut state.view, ViewMode::Gallery);
+        })?;
+        loaded_result
+    }
+
+    pub fn open_image(
+        &self,
+        path: &Path,
+        window_width: Option<f32>,
+        window_height: Option<f32>,
+        fit_to_window: bool,
+    ) -> Result<()> {
+        let mut open_result: Result<()> = Ok(());
+        self.update_state(|state| {
+            open_result = self.view_use_case.open_image(
+                path,
+                &mut state.view,
+                window_width,
+                window_height,
+                fit_to_window,
+            );
+        })?;
+        open_result
+    }
+
+    pub fn navigate_gallery(&self, direction: NavigationDirection) -> Result<Option<usize>> {
+        let mut selected = None;
+        self.update_state(|state| {
+            selected = self
+                .navigate_use_case
+                .navigate(&mut state.gallery, direction);
+        })?;
+        Ok(selected)
+    }
+
+    pub fn zoom_in(&self, step: f32) -> Result<()> {
+        self.update_state(|state| {
+            let max = state.config.viewer.max_scale;
+            self.view_use_case.zoom_in(&mut state.view, step, max);
+        })
+    }
+
+    pub fn zoom_out(&self, step: f32) -> Result<()> {
+        self.update_state(|state| {
+            let min = state.config.viewer.min_scale;
+            self.view_use_case.zoom_out(&mut state.view, step, min);
+        })
+    }
+
+    pub fn reset_zoom(&self) -> Result<()> {
+        self.update_state(|state| {
+            self.view_use_case.reset_zoom(&mut state.view);
+        })
+    }
+
+    pub fn fit_to_window(&self, window_width: f32, window_height: f32) -> Result<()> {
+        self.update_state(|state| {
+            self.view_use_case
+                .fit_to_window(&mut state.view, window_width, window_height);
+        })
+    }
 }
 
 #[cfg(test)]

@@ -12,7 +12,6 @@ use tracing::{info, warn};
 use oas_image_viewer::adapters::egui::EguiApp;
 #[cfg(target_os = "macos")]
 use oas_image_viewer::adapters::macos_file_open;
-use oas_image_viewer::core::domain::Image;
 use oas_image_viewer::core::ports::{AppConfig, FileDialogPort, ImageSource, Storage};
 use oas_image_viewer::core::use_cases::{
     ManageConfigUseCase, NavigateGalleryUseCase, OASImageViewerService, ViewImageUseCase,
@@ -204,44 +203,25 @@ fn apply_initial_path(service: &Arc<OASImageViewerService>, initial_path: &Optio
     if let Some(path) = initial_path {
         info!("加载初始路径: {:?}", path);
         log_to_file(&format!("加载初始路径: {:?}", path));
-        let mut operation_error = None;
-        if let Err(e) = service.update_state(|state| {
-            if path.is_dir() {
-                let image_source = FsImageSource::new();
-                if let Err(err) = service.navigate_use_case.load_directory(
-                    &mut state.gallery,
-                    &image_source,
-                    path,
-                ) {
-                    operation_error = Some(err);
-                }
-            } else {
-                let image = Image::new(
-                    path.file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("unknown")
-                        .to_string(),
-                    path.clone(),
-                );
-                state.gallery.gallery.add_image(image);
-                let fit_to_window = state.config.viewer.fit_to_window;
-                if let Err(err) = service.view_use_case.open_image(
-                    path,
-                    &mut state.view,
-                    None,
-                    None,
-                    fit_to_window,
-                ) {
-                    operation_error = Some(err);
-                }
+        if path.is_dir() {
+            let image_source = FsImageSource::new();
+            if let Err(e) = service.load_directory(&image_source, path) {
+                tracing::error!(path = %path.display(), error = %e, "处理初始目录失败");
             }
-        }) {
-            tracing::error!(path = %path.display(), error = %e, "更新初始路径状态失败");
             return;
         }
 
-        if let Some(e) = operation_error {
-            tracing::error!(path = %path.display(), error = %e, "处理初始路径失败");
+        if let Err(e) = service.add_image_to_gallery(path) {
+            tracing::error!(path = %path.display(), error = %e, "添加初始图片到图库失败");
+            return;
+        }
+
+        let fit_to_window = service
+            .get_state()
+            .map(|state| state.config.viewer.fit_to_window)
+            .unwrap_or(true);
+        if let Err(e) = service.open_image(path, None, None, fit_to_window) {
+            tracing::error!(path = %path.display(), error = %e, "处理初始图片失败");
         }
     }
 }

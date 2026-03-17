@@ -58,9 +58,7 @@ impl EguiApp {
 
         if should_open {
             self.open_from_gallery(ctx);
-        } else if let Err(e) = self.service.update_state(|state| {
-            self.service.view_use_case.toggle_view_mode(&mut state.view);
-        }) {
+        } else if let Err(e) = self.service.toggle_view_mode() {
             tracing::error!(error = %e, "切换视图模式失败");
         }
     }
@@ -534,15 +532,12 @@ impl EguiApp {
                 .unwrap_or(true);
 
             let path = path.clone();
-            if let Err(e) = self.service.update_state(|state| {
-                let _ = self.service.view_use_case.open_image(
-                    &path,
-                    &mut state.view,
-                    Some(rect.width()),
-                    Some(rect.height()),
-                    fit_to_window,
-                );
-            }) {
+            if let Err(e) = self.service.open_image(
+                &path,
+                Some(rect.width()),
+                Some(rect.height()),
+                fit_to_window,
+            ) {
                 tracing::error!(path = %path.display(), error = %e, "从图库打开图片失败");
             }
         }
