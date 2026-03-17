@@ -9,7 +9,6 @@
 
 use eframe::Frame;
 use egui::Context;
-use std::path::PathBuf;
 use std::sync::mpsc::TryRecvError;
 
 use crate::adapters::egui::i18n::get_text;
@@ -65,37 +64,25 @@ impl EguiApp {
 
     fn should_open_from_gallery(&self) -> bool {
         self.service
-            .get_state()
-            .map(|state| {
-                state.view.view_mode == ViewMode::Gallery
-                    && state.gallery.gallery.selected_index().is_some()
-            })
+            .get_selected_gallery_image_for_open()
+            .map(|selection| selection.is_some())
             .unwrap_or(false)
     }
 
     fn open_from_gallery(&mut self, ctx: &Context) {
-        let (selected_path, fit_to_window) = self
+        let Some((selected_path, fit_to_window)) = self
             .service
-            .get_state()
+            .get_selected_gallery_image_for_open()
             .ok()
-            .and_then(|state| {
-                let path = state.gallery.gallery.selected_index().and_then(|index| {
-                    state
-                        .gallery
-                        .gallery
-                        .get_image(index)
-                        .map(|img| img.path().to_path_buf())
-                });
-                path.map(|p| (p, state.config.viewer.fit_to_window))
-            })
-            .unwrap_or_else(|| (PathBuf::new(), true));
+            .flatten()
+        else {
+            return;
+        };
 
-        if !selected_path.as_os_str().is_empty() {
-            if let Err(e) = self.update_view_mode(ViewMode::Viewer) {
-                tracing::error!(error = %e, "切换到查看器模式失败");
-            }
-            self.open_image(ctx, &selected_path, fit_to_window);
+        if let Err(e) = self.update_view_mode(ViewMode::Viewer) {
+            tracing::error!(error = %e, "切换到查看器模式失败");
         }
+        self.open_image(ctx, &selected_path, fit_to_window);
     }
 
     fn handle_ctrl_shift_o(&mut self, ctx: &Context) {
@@ -163,12 +150,13 @@ impl EguiApp {
             return;
         };
 
-        let (path, language) = match self.service.get_state() {
-            Ok(state) => match state.view.current_image {
-                Some(ref image) => (image.path().to_path_buf(), state.config.language),
-                None => return,
-            },
-            Err(_) => return,
+        let Some((path, language)) = self
+            .service
+            .get_current_view_image_path_and_language()
+            .ok()
+            .flatten()
+        else {
+            return;
         };
 
         match action {
@@ -199,8 +187,8 @@ impl EguiApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         } else if self
             .service
-            .get_state()
-            .map(|state| state.view.view_mode == ViewMode::Viewer)
+            .get_view_mode()
+            .map(|mode| mode == ViewMode::Viewer)
             .unwrap_or(false)
         {
             if let Err(e) = self.update_view_mode(ViewMode::Gallery) {
@@ -251,23 +239,14 @@ impl EguiApp {
             return;
         }
 
-        let state = self.service.get_state().ok();
-        let Some(s) = state else { return };
-
-        if s.view.view_mode != ViewMode::Gallery {
-            return;
-        }
-
-        let Some(selected_index) = s.gallery.gallery.selected_index() else {
+        let Some((image_path, fit_to_window)) = self
+            .service
+            .get_selected_gallery_image_for_open()
+            .ok()
+            .flatten()
+        else {
             return;
         };
-
-        let Some(selected_image) = s.gallery.gallery.get_image(selected_index) else {
-            return;
-        };
-
-        let image_path = selected_image.path().to_path_buf();
-        let fit_to_window = s.config.viewer.fit_to_window;
         self.open_image(ctx, &image_path, fit_to_window);
     }
 
@@ -275,8 +254,7 @@ impl EguiApp {
     fn apply_theme(&self, ctx: &Context) {
         let theme = self
             .service
-            .get_state()
-            .map(|s| s.config.theme)
+            .get_theme()
             .unwrap_or_default();
 
         ctx.set_visuals(match theme {
@@ -363,8 +341,7 @@ impl eframe::App for EguiApp {
         // 获取当前语言
         let language = self
             .service
-            .get_state()
-            .map(|s| s.config.language)
+            .get_language()
             .unwrap_or_default();
 
         self.poll_integration_task(ctx, language);
@@ -448,16 +425,12 @@ impl EguiApp {
 
     /// 处理画廊滚轮调整缩略图大小
     fn handle_gallery_scroll(&mut self, ctx: &Context, language: Language) {
-        let Ok(state) = self.service.get_state() else {
+        let Ok(Some(current_size)) = self
+            .service
+            .get_gallery_thumbnail_size_if_gallery_mode()
+        else {
             return;
         };
-
-        // 只在画廊模式下处理
-        if state.view.view_mode != ViewMode::Gallery {
-            return;
-        }
-
-        let current_size = state.config.gallery.thumbnail_size;
         if let Some(new_size) = self
             .gallery_widget
             .handle_scroll(ctx, current_size, language)
@@ -480,32 +453,42 @@ impl EguiApp {
         let texture_ref = self.current_texture.as_ref();
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let mut state = self.service.get_state().unwrap_or_default();
-
-            // 同步配置中的缩略图大小到布局
-            state.gallery.layout.thumbnail_size = state.config.gallery.thumbnail_size;
-
-            match state.view.view_mode {
+            let view_mode = self.service.get_view_mode().unwrap_or(ViewMode::Gallery);
+            match view_mode {
                 ViewMode::Gallery => {
-                    if let Some(index) = self.gallery_widget.ui(ui, &state.gallery, ctx, language) {
-                        if let Some(image) = state.gallery.gallery.get_image(index) {
+                    let gallery_state = match self.service.get_gallery_state_for_render() {
+                        Ok(state) => state,
+                        Err(e) => {
+                            tracing::error!(error = %e, "读取图库状态失败");
+                            return;
+                        }
+                    };
+                    if let Some(index) = self.gallery_widget.ui(ui, &gallery_state, ctx, language) {
+                        if let Some(image) = gallery_state.gallery.get_image(index) {
                             self.pending_clicked_image = Some(image.path().to_path_buf());
                         }
                     }
                 }
                 ViewMode::Viewer => {
+                    let mut view_state = match self.service.get_view_state() {
+                        Ok(state) => state,
+                        Err(e) => {
+                            tracing::error!(error = %e, "读取查看状态失败");
+                            return;
+                        }
+                    };
+                    let viewer_settings = self.service.get_viewer_settings().unwrap_or_default();
                     self.pending_double_click = self.viewer_widget.ui(
                         ui,
-                        &mut state.view,
-                        &state.config.viewer,
+                        &mut view_state,
+                        &viewer_settings,
                         texture_ref,
                         language,
                     );
+                    if let Err(e) = self.service.set_view_state(view_state) {
+                        tracing::error!(error = %e, "更新查看状态失败");
+                    }
                 }
-            }
-
-            if let Err(e) = self.service.update_state(|s| *s = state) {
-                tracing::error!(error = %e, "更新状态失败");
             }
         })
     }
@@ -527,8 +510,7 @@ impl EguiApp {
             let rect = ctx.viewport_rect();
             let fit_to_window = self
                 .service
-                .get_state()
-                .map(|s| s.config.viewer.fit_to_window)
+                .is_fit_to_window_enabled()
                 .unwrap_or(true);
 
             let path = path.clone();
@@ -550,18 +532,9 @@ impl EguiApp {
         response: &egui::Response,
         language: Language,
     ) {
-        let Ok(state) = self.service.get_state() else {
+        let Ok(Some(path)) = self.service.get_current_view_image_path_if_viewer() else {
             return;
         };
-
-        if state.view.view_mode != ViewMode::Viewer {
-            return;
-        }
-
-        let Some(ref image) = state.view.current_image else {
-            return;
-        };
-        let path = image.path().to_path_buf();
 
         response.context_menu(|ui: &mut egui::Ui| {
             ui.set_min_width(150.0);

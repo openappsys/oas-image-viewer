@@ -3,8 +3,8 @@
 //! 协调领域对象和端口，实现核心业务逻辑
 
 use crate::core::domain::{
-    Gallery, GalleryLayout, Image, NavigationDirection, Position, Scale, ViewMode, ViewerSettings,
-    WindowState,
+    Gallery, GalleryLayout, Image, Language, NavigationDirection, Position, Scale, Theme, ViewMode,
+    ViewerSettings, WindowState,
 };
 use crate::core::ports::{AppConfig, ImageSource, Storage};
 use crate::core::{CoreError, Result};
@@ -470,6 +470,122 @@ impl OASImageViewerService {
             .lock()
             .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
             .map(|s| s.clone())
+    }
+
+    pub fn get_view_mode(&self) -> Result<ViewMode> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.view.view_mode)
+    }
+
+    pub fn get_gallery_state_for_render(&self) -> Result<GalleryState> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                let mut gallery = s.gallery.clone();
+                gallery.layout.thumbnail_size = s.config.gallery.thumbnail_size;
+                gallery
+            })
+    }
+
+    pub fn get_view_state(&self) -> Result<ViewState> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.view.clone())
+    }
+
+    pub fn set_view_state(&self, view: ViewState) -> Result<()> {
+        self.update_state(|state| {
+            state.view = view;
+        })
+    }
+
+    pub fn get_viewer_settings(&self) -> Result<ViewerSettings> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.config.viewer)
+    }
+
+    pub fn is_fit_to_window_enabled(&self) -> Result<bool> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.config.viewer.fit_to_window)
+    }
+
+    pub fn get_language(&self) -> Result<Language> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.config.language)
+    }
+
+    pub fn get_theme(&self) -> Result<Theme> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.config.theme)
+    }
+
+    pub fn get_selected_gallery_image_for_open(&self) -> Result<Option<(PathBuf, bool)>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                if s.view.view_mode != ViewMode::Gallery {
+                    return None;
+                }
+                s.gallery.gallery.selected_index().and_then(|index| {
+                    s.gallery
+                        .gallery
+                        .get_image(index)
+                        .map(|img| (img.path().to_path_buf(), s.config.viewer.fit_to_window))
+                })
+            })
+    }
+
+    pub fn get_current_view_image_path_and_language(&self) -> Result<Option<(PathBuf, Language)>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                s.view
+                    .current_image
+                    .as_ref()
+                    .map(|image| (image.path().to_path_buf(), s.config.language))
+            })
+    }
+
+    pub fn get_current_view_image_path_if_viewer(&self) -> Result<Option<PathBuf>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                if s.view.view_mode != ViewMode::Viewer {
+                    return None;
+                }
+                s.view
+                    .current_image
+                    .as_ref()
+                    .map(|image| image.path().to_path_buf())
+            })
+    }
+
+    pub fn get_gallery_thumbnail_size_if_gallery_mode(&self) -> Result<Option<u32>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                if s.view.view_mode == ViewMode::Gallery {
+                    Some(s.config.gallery.thumbnail_size)
+                } else {
+                    None
+                }
+            })
     }
 
     /// 更新状态
