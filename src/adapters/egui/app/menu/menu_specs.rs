@@ -1,5 +1,5 @@
 use crate::adapters::egui::i18n::get_text;
-use crate::adapters::egui::shortcut_labels::{open_file, quit, ShortcutTextStyle};
+use crate::adapters::egui::shortcut_labels::{open_file, open_folder, quit, ShortcutTextStyle};
 use crate::core::domain::Language;
 
 pub(super) fn popup_item_specs(idx: usize, language: Language) -> Vec<(String, Option<String>)> {
@@ -8,6 +8,10 @@ pub(super) fn popup_item_specs(idx: usize, language: Language) -> Vec<(String, O
             (
                 get_text("open", language).to_string(),
                 Some(open_file(ShortcutTextStyle::Compact)),
+            ),
+            (
+                get_text("open_folder", language).to_string(),
+                Some(open_folder(ShortcutTextStyle::Compact)),
             ),
             (
                 get_text("exit", language).to_string(),

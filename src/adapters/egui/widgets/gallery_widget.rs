@@ -245,7 +245,8 @@ impl GalleryWidget {
             if let Some(texture) = self.thumbnail_cache.get(index) {
                 // 有缩略图，渲染它
                 let texture_size = texture.size_vec2();
-                let scale = (size as f32 / texture_size.x.max(texture_size.y)).min(1.0);
+                let max_side = texture_size.x.max(texture_size.y).max(1.0);
+                let scale = size as f32 / max_side;
                 let display_size = texture_size * scale * 0.9; // 留出边距
 
                 let center = rect.center();

@@ -1,8 +1,8 @@
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::egui::shortcut_labels::{
-    copy_image, copy_path, fit_to_window, open_file, original_size, quit, zoom_in, zoom_out,
-    ShortcutTextStyle,
+    copy_image, copy_path, fit_to_window, open_file, open_folder, original_size, quit, zoom_in,
+    zoom_out, ShortcutTextStyle,
 };
 use crate::adapters::platform::SystemIntegration;
 use crate::core::domain::{Language, NavigationDirection, Theme, ViewMode};
@@ -433,6 +433,18 @@ impl EguiApp {
             true,
         ) {
             self.handle_open_dialog();
+            clicked = true;
+        }
+
+        if self.render_menu_item(
+            ui,
+            "🗂",
+            get_text("open_folder", language),
+            Some(&open_folder(ShortcutTextStyle::Compact)),
+            style,
+            true,
+        ) {
+            self.handle_open_directory_dialog();
             clicked = true;
         }
 

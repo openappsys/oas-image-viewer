@@ -242,7 +242,7 @@ impl GalleryLayout {
 
         Self {
             thumbnail_size: self.thumbnail_size.clamp(MIN_THUMBNAIL, MAX_THUMBNAIL),
-            items_per_row: self.items_per_row.max(1),
+            items_per_row: self.items_per_row,
             grid_spacing: self.grid_spacing.max(0.0),
             show_filenames: self.show_filenames,
         }
@@ -262,7 +262,7 @@ impl GalleryLayout {
 
     /// 基于可用宽度计算每行项目数
     pub fn calculate_items_per_row(&self, available_width: f32) -> usize {
-        if self.items_per_row > 0 {
+        if self.items_per_row > 1 {
             return self.items_per_row;
         }
         let item_width = self.thumbnail_size as f32 + self.grid_spacing;
@@ -466,7 +466,7 @@ mod tests {
         };
         let validated = layout.validated();
         assert_eq!(validated.thumbnail_size, 60); // 被限制到最小值
-        assert_eq!(validated.items_per_row, 1); // 被限制到最小值
+        assert_eq!(validated.items_per_row, 0); // 0 表示自动计算列数
         assert_eq!(validated.grid_spacing, 0.0); // 负数被修正
     }
 
@@ -479,6 +479,18 @@ mod tests {
             show_filenames: true,
         };
         // 可用宽度 500，每个项目 110，应该能放 4 个
+        let items = layout.calculate_items_per_row(500.0);
+        assert_eq!(items, 4);
+    }
+
+    #[test]
+    fn test_gallery_layout_calculate_items_with_legacy_single_column_value() {
+        let layout = GalleryLayout {
+            thumbnail_size: 100,
+            items_per_row: 1,
+            grid_spacing: 10.0,
+            show_filenames: true,
+        };
         let items = layout.calculate_items_per_row(500.0);
         assert_eq!(items, 4);
     }
