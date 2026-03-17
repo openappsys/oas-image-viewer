@@ -1,4 +1,6 @@
-use crate::core::domain::{Image, Language, NavigationDirection, Theme, ViewMode, ViewerSettings};
+use crate::core::domain::{
+    Image, Language, NavigationDirection, Position, Theme, ViewMode, ViewerSettings,
+};
 use crate::core::ports::{AppConfig, ImageSource};
 use crate::core::{CoreError, Result};
 use std::path::{Path, PathBuf};
@@ -9,10 +11,10 @@ use super::{
 };
 
 pub struct OASImageViewerService {
-    pub view_use_case: ViewImageUseCase,
-    pub navigate_use_case: NavigateGalleryUseCase,
-    pub config_use_case: ManageConfigUseCase,
-    pub state: Mutex<AppState>,
+    view_use_case: ViewImageUseCase,
+    navigate_use_case: NavigateGalleryUseCase,
+    config_use_case: ManageConfigUseCase,
+    state: Mutex<AppState>,
 }
 
 impl OASImageViewerService {
@@ -211,6 +213,12 @@ impl OASImageViewerService {
         })
     }
 
+    pub fn set_view_mode(&self, mode: ViewMode) -> Result<()> {
+        self.update_state(|state| {
+            self.view_use_case.set_view_mode(&mut state.view, mode);
+        })
+    }
+
     pub fn add_image_to_gallery(&self, path: &Path) -> Result<()> {
         let file_name = path
             .file_stem()
@@ -294,6 +302,65 @@ impl OASImageViewerService {
         self.update_state(|state| {
             self.view_use_case
                 .fit_to_window(&mut state.view, window_width, window_height);
+        })
+    }
+
+    pub fn set_info_panel_visible(&self, visible: bool) -> Result<()> {
+        self.update_config(|config| {
+            let mut viewer = config.viewer;
+            viewer.show_info_panel = visible;
+            self.config_use_case.update_viewer_settings(config, viewer);
+        })
+    }
+
+    pub fn toggle_info_panel_visible(&self) -> Result<()> {
+        self.update_config(|config| {
+            let mut viewer = config.viewer;
+            viewer.show_info_panel = !viewer.show_info_panel;
+            self.config_use_case.update_viewer_settings(config, viewer);
+        })
+    }
+
+    pub fn set_theme(&self, theme: Theme) -> Result<()> {
+        self.update_config(|config| {
+            config.theme = theme;
+        })
+    }
+
+    pub fn set_language(&self, language: Language) -> Result<()> {
+        self.update_config(|config| {
+            config.language = language;
+        })
+    }
+
+    pub fn set_thumbnail_size(&self, thumbnail_size: u32) -> Result<()> {
+        self.update_config(|config| {
+            let mut layout = config.gallery;
+            layout.thumbnail_size = thumbnail_size;
+            self.config_use_case.update_gallery_layout(config, layout);
+        })
+    }
+
+    pub fn set_last_opened_directory(&self, path: PathBuf) -> Result<()> {
+        self.update_config(|config| {
+            self.config_use_case.set_last_directory(config, path);
+        })
+    }
+
+    pub fn set_window_position(&self, x: f32, y: f32) -> Result<()> {
+        self.update_config(|config| {
+            let mut window = config.window;
+            window.x = Some(x);
+            window.y = Some(y);
+            self.config_use_case.update_window_state(config, window);
+        })
+    }
+
+    pub fn set_about_window_position(&self, pos: Option<Position>) -> Result<()> {
+        self.update_config(|config| {
+            let mut viewer = config.viewer;
+            viewer.about_window_pos = pos;
+            self.config_use_case.update_viewer_settings(config, viewer);
         })
     }
 }
