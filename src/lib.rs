@@ -57,7 +57,7 @@ pub(crate) mod infrastructure;
 pub(crate) mod utils;
 
 // 从 infrastructure 重新导出需要的类型
-pub use infrastructure::{FsImageSource, JsonStorage};
+pub use infrastructure::{FsImageSource, JsonStorage, RfdFileDialog};
 
 pub use adapters::clipboard;
 pub use adapters::info_panel;

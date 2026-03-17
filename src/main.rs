@@ -13,11 +13,11 @@ use oas_image_viewer::adapters::egui::EguiApp;
 #[cfg(target_os = "macos")]
 use oas_image_viewer::adapters::macos_file_open;
 use oas_image_viewer::core::domain::Image;
-use oas_image_viewer::core::ports::{AppConfig, Storage};
+use oas_image_viewer::core::ports::{AppConfig, FileDialogPort, ImageSource, Storage};
 use oas_image_viewer::core::use_cases::{
     ManageConfigUseCase, NavigateGalleryUseCase, OASImageViewerService, ViewImageUseCase,
 };
-use oas_image_viewer::{FsImageSource, JsonStorage};
+use oas_image_viewer::{FsImageSource, JsonStorage, RfdFileDialog};
 
 struct LogPaths {
     app: PathBuf,
@@ -204,14 +204,17 @@ fn apply_initial_path(service: &Arc<OASImageViewerService>, initial_path: &Optio
     if let Some(path) = initial_path {
         info!("加载初始路径: {:?}", path);
         log_to_file(&format!("加载初始路径: {:?}", path));
-        let _ = service.update_state(|state| {
+        let mut operation_error = None;
+        if let Err(e) = service.update_state(|state| {
             if path.is_dir() {
                 let image_source = FsImageSource::new();
-                let _ = service.navigate_use_case.load_directory(
+                if let Err(err) = service.navigate_use_case.load_directory(
                     &mut state.gallery,
                     &image_source,
                     path,
-                );
+                ) {
+                    operation_error = Some(err);
+                }
             } else {
                 let image = Image::new(
                     path.file_stem()
@@ -222,15 +225,24 @@ fn apply_initial_path(service: &Arc<OASImageViewerService>, initial_path: &Optio
                 );
                 state.gallery.gallery.add_image(image);
                 let fit_to_window = state.config.viewer.fit_to_window;
-                let _ = service.view_use_case.open_image(
+                if let Err(err) = service.view_use_case.open_image(
                     path,
                     &mut state.view,
                     None,
                     None,
                     fit_to_window,
-                );
+                ) {
+                    operation_error = Some(err);
+                }
             }
-        });
+        }) {
+            tracing::error!(path = %path.display(), error = %e, "更新初始路径状态失败");
+            return;
+        }
+
+        if let Some(e) = operation_error {
+            tracing::error!(path = %path.display(), error = %e, "处理初始路径失败");
+        }
     }
 }
 
@@ -271,6 +283,8 @@ fn run_app() -> Result<()> {
     info!("[步骤3] 创建图像源...");
     log_to_file("[步骤3] 创建图像源");
     let image_source = Arc::new(FsImageSource::new());
+    let image_source_port: Arc<dyn ImageSource> = image_source.clone();
+    let file_dialog: Arc<dyn FileDialogPort> = Arc::new(RfdFileDialog::new());
 
     info!("[步骤4] 创建存储...");
     log_to_file("[步骤4] 创建存储");
@@ -313,6 +327,8 @@ fn run_app() -> Result<()> {
     info!("[步骤10] 启动UI...");
     log_to_file("[步骤10] 启动UI");
     let service_clone = service.clone();
+    let file_dialog_clone = file_dialog.clone();
+    let image_source_port_clone = image_source_port.clone();
     let initial_path_clone = initial_path.clone();
     eframe::run_native(
         "OAS Image Viewer",
@@ -324,6 +340,8 @@ fn run_app() -> Result<()> {
             Ok(Box::new(EguiApp::new(
                 cc,
                 service_clone,
+                file_dialog_clone,
+                image_source_port_clone,
                 initial_path_clone,
             )))
         }),

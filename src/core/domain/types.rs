@@ -235,13 +235,16 @@ impl Default for Color {
 }
 
 impl GalleryLayout {
+    pub const MIN_THUMBNAIL_SIZE: u32 = 60;
+    pub const MAX_THUMBNAIL_SIZE: u32 = 200;
+    pub const DEFAULT_THUMBNAIL_SIZE: u32 = 100;
+
     /// 验证并修正配置
     pub fn validated(&self) -> Self {
-        const MIN_THUMBNAIL: u32 = 60;
-        const MAX_THUMBNAIL: u32 = 200;
-
         Self {
-            thumbnail_size: self.thumbnail_size.clamp(MIN_THUMBNAIL, MAX_THUMBNAIL),
+            thumbnail_size: self
+                .thumbnail_size
+                .clamp(Self::MIN_THUMBNAIL_SIZE, Self::MAX_THUMBNAIL_SIZE),
             items_per_row: self.items_per_row,
             grid_spacing: self.grid_spacing.max(0.0),
             show_filenames: self.show_filenames,
@@ -250,14 +253,15 @@ impl GalleryLayout {
 
     /// 增加缩略图大小（用于 Ctrl+滚轮）
     pub fn increase_thumbnail_size(&mut self, delta: u32) {
-        const MAX_THUMBNAIL: u32 = 200;
-        self.thumbnail_size = (self.thumbnail_size + delta).min(MAX_THUMBNAIL);
+        self.thumbnail_size = (self.thumbnail_size + delta).min(Self::MAX_THUMBNAIL_SIZE);
     }
 
     /// 减小缩略图大小（用于 Ctrl+滚轮）
     pub fn decrease_thumbnail_size(&mut self, delta: u32) {
-        const MIN_THUMBNAIL: u32 = 60;
-        self.thumbnail_size = self.thumbnail_size.saturating_sub(delta).max(MIN_THUMBNAIL);
+        self.thumbnail_size = self
+            .thumbnail_size
+            .saturating_sub(delta)
+            .max(Self::MIN_THUMBNAIL_SIZE);
     }
 
     /// 基于可用宽度计算每行项目数
@@ -273,7 +277,7 @@ impl GalleryLayout {
 impl Default for GalleryLayout {
     fn default() -> Self {
         Self {
-            thumbnail_size: 100, // 默认 100，范围 60-200
+            thumbnail_size: Self::DEFAULT_THUMBNAIL_SIZE, // 默认 100，范围 60-200
             items_per_row: 0,    // 自动计算
             grid_spacing: 12.0,
             show_filenames: true,

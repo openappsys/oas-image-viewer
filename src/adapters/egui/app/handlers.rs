@@ -2,7 +2,6 @@
 
 use super::types::EguiApp;
 use crate::core::domain::{is_image_file, NavigationDirection, ViewMode};
-use crate::core::ports::FileDialogPort;
 
 use egui::Context;
 use std::path::{Path, PathBuf};
@@ -10,8 +9,7 @@ use std::path::{Path, PathBuf};
 impl EguiApp {
     /// 处理文件对话框打开
     pub(crate) fn handle_open_dialog(&mut self) {
-        let dialog = crate::infrastructure::RfdFileDialog::new();
-        if let Some(paths) = dialog.open_files() {
+        if let Some(paths) = self.file_dialog.open_files() {
             tracing::debug!(count = paths.len(), "打开文件对话框选择了文件");
             for path in paths {
                 if path.exists() {
@@ -28,27 +26,37 @@ impl EguiApp {
     }
 
     pub(crate) fn handle_open_directory_dialog(&mut self) {
-        let dialog = crate::infrastructure::RfdFileDialog::new();
-        let Some(path) = dialog.open_directory() else {
+        let Some(path) = self.file_dialog.open_directory() else {
             tracing::debug!("目录对话框被取消或未选择目录");
             return;
         };
 
-        let image_source = crate::infrastructure::FsImageSource::new();
+        let mut load_error = None;
         if let Err(e) = self.service.update_state(|state| {
-            if self
+            match self
                 .service
                 .navigate_use_case
-                .load_directory(&mut state.gallery, &image_source, &path)
-                .is_ok()
+                .load_directory(&mut state.gallery, self.image_source.as_ref(), &path)
             {
-                let _ = state.gallery.gallery.select_image(0);
+                Ok(count) => {
+                    if count > 0 && !state.gallery.gallery.select_image(0) {
+                        tracing::warn!(path = ?path, "目录加载成功但无法选中首张图片");
+                    }
+                }
+                Err(e) => {
+                    load_error = Some(e);
+                }
             }
             self.service
                 .view_use_case
                 .set_view_mode(&mut state.view, ViewMode::Gallery);
         }) {
             tracing::error!(path = ?path, error = %e, "打开目录失败");
+            return;
+        }
+
+        if let Some(e) = load_error {
+            tracing::error!(path = ?path, error = %e, "扫描目录失败");
             return;
         }
 
@@ -111,16 +119,22 @@ impl EguiApp {
             .map(|s| s.config.viewer.fit_to_window)
             .unwrap_or(true);
 
+        let mut open_error = None;
         if let Err(e) = self.service.update_state(|state| {
-            let _ = self.service.view_use_case.open_image(
+            if let Err(err) = self.service.view_use_case.open_image(
                 path,
                 &mut state.view,
                 Some(win_w),
                 Some(win_h),
                 fit_to_window,
-            );
+            ) {
+                open_error = Some(err);
+            }
         }) {
             tracing::error!(error = %e, "打开图片失败");
+        }
+        if let Some(e) = open_error {
+            tracing::error!(path = %path.display(), error = %e, "更新查看状态失败");
         }
 
         self.update_texture_cache(load_result, path_str);

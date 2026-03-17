@@ -4,6 +4,7 @@ use crate::adapters::clipboard::ClipboardManager;
 use crate::adapters::egui::widgets::{GalleryWidget, ViewerWidget};
 use crate::adapters::info_panel::InfoPanel;
 use crate::adapters::shortcuts_help::ShortcutsHelpPanel;
+use crate::core::ports::{FileDialogPort, ImageSource};
 use crate::core::use_cases::OASImageViewerService;
 
 use egui::Context;
@@ -14,6 +15,8 @@ use std::sync::Arc;
 /// egui 应用程序适配器
 pub struct EguiApp {
     pub(crate) service: Arc<OASImageViewerService>,
+    pub(crate) file_dialog: Arc<dyn FileDialogPort>,
+    pub(crate) image_source: Arc<dyn ImageSource>,
     pub(crate) viewer_widget: ViewerWidget,
     pub(crate) gallery_widget: GalleryWidget,
     pub(crate) info_panel: InfoPanel,
@@ -42,6 +45,8 @@ impl EguiApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         service: Arc<OASImageViewerService>,
+        file_dialog: Arc<dyn FileDialogPort>,
+        image_source: Arc<dyn ImageSource>,
         initial_file: Option<PathBuf>,
     ) -> Self {
         Self::configure_styles(&cc.egui_ctx);
@@ -62,6 +67,8 @@ impl EguiApp {
 
         Self {
             service,
+            file_dialog,
+            image_source,
             viewer_widget: ViewerWidget::default(),
             gallery_widget: GalleryWidget::default(),
             info_panel: InfoPanel::new(),

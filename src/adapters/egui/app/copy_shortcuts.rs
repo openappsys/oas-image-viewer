@@ -135,17 +135,22 @@ mod tests {
     };
 
     fn copy_modifiers(shift: bool) -> egui::Modifiers {
-        let mut modifiers = egui::Modifiers::default();
-        modifiers.shift = shift;
         #[cfg(target_os = "macos")]
         {
-            modifiers.mac_cmd = true;
+            egui::Modifiers {
+                shift,
+                mac_cmd: true,
+                ..Default::default()
+            }
         }
         #[cfg(not(target_os = "macos"))]
         {
-            modifiers.ctrl = true;
+            egui::Modifiers {
+                shift,
+                ctrl: true,
+                ..Default::default()
+            }
         }
-        modifiers
     }
 
     #[test]

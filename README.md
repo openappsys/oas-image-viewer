@@ -274,7 +274,7 @@ cargo clippy -- -D warnings
 ### v0.3.x (Current)
 - ✅ Multi-format image support
 - ✅ Gallery view
-- ✅ Basic image editing (rotate, flip)
+- ✅ Metadata panel and clipboard workflows
 - ✅ Drag & drop support
 - ✅ Keyboard shortcuts
 

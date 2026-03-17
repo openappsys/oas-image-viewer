@@ -2,7 +2,7 @@
 
 use crate::adapters::egui::i18n::{format_thumbnail_hint, get_text};
 use crate::adapters::egui::thumbnail_loader::ThumbnailCache;
-use crate::core::domain::Language;
+use crate::core::domain::{GalleryLayout, Language};
 use crate::core::use_cases::GalleryState;
 use egui::{Color32, Response, Sense, Ui, Vec2};
 use std::time::{Duration, Instant};
@@ -26,7 +26,7 @@ impl Default for GalleryWidget {
             items_per_row: 4,
             thumbnail_cache: ThumbnailCache::default(),
             size_hint_until: None,
-            last_thumbnail_size: 100,
+            last_thumbnail_size: GalleryLayout::DEFAULT_THUMBNAIL_SIZE,
         }
     }
 }
@@ -64,10 +64,12 @@ impl GalleryWidget {
 
         let new_size = if total_delta > 0.0 {
             // 向上滚动 - 放大
-            (current_size + 10).min(200)
+            (current_size + 10).min(GalleryLayout::MAX_THUMBNAIL_SIZE)
         } else {
             // 向下滚动 - 缩小
-            current_size.saturating_sub(10).max(60)
+            current_size
+                .saturating_sub(10)
+                .max(GalleryLayout::MIN_THUMBNAIL_SIZE)
         };
 
         if new_size != current_size {
