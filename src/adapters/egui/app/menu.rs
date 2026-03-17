@@ -599,8 +599,7 @@ impl EguiApp {
         // 获取当前主题设置
         let current_theme = self
             .service
-            .get_state()
-            .map(|s| s.config.theme)
+            .get_theme()
             .unwrap_or_default();
 
         // 跟随系统选项
@@ -774,13 +773,7 @@ impl EguiApp {
         let copy_path_shortcut = copy_path(ShortcutTextStyle::Compact);
 
         // 获取当前图片路径
-        let path = self.service.get_state().ok().and_then(|state| {
-            state
-                .view
-                .current_image
-                .as_ref()
-                .map(|img| img.path().to_path_buf())
-        });
+        let path = self.service.get_current_view_image_path().ok().flatten();
         let has_image = path.is_some();
 
         if self.render_menu_item(

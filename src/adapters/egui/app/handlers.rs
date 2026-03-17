@@ -1,7 +1,7 @@
 //! 事件处理模块
 
 use super::types::EguiApp;
-use crate::core::domain::{is_image_file, NavigationDirection, ViewMode};
+use crate::core::domain::{is_image_file, NavigationDirection};
 
 use egui::Context;
 use std::path::{Path, PathBuf};
@@ -83,11 +83,7 @@ impl EguiApp {
         let path_str = path.to_string_lossy().to_string();
         let load_result = self.load_image_with_data(ctx, path);
 
-        let fit_to_window = self
-            .service
-            .get_state()
-            .map(|s| s.config.viewer.fit_to_window)
-            .unwrap_or(true);
+        let fit_to_window = self.service.is_fit_to_window_enabled().unwrap_or(true);
 
         if let Err(e) =
             self.service
@@ -209,19 +205,13 @@ impl EguiApp {
     fn open_navigated_image(&mut self, ctx: &Context, index: Option<usize>) {
         let Some(idx) = index else { return };
 
-        let Ok(state) = self.service.get_state() else {
-            return;
-        };
-        if state.view.view_mode != ViewMode::Viewer {
-            return;
-        }
-
-        let Some(image) = state.gallery.gallery.get_image(idx) else {
+        let Ok(Some((path, fit_to_window))) =
+            self.service.get_gallery_image_path_and_fit_if_viewer(idx)
+        else {
             return;
         };
 
-        let path = image.path().to_path_buf();
-        self.open_image(ctx, &path, state.config.viewer.fit_to_window);
+        self.open_image(ctx, &path, fit_to_window);
     }
 
     /// 打开图片

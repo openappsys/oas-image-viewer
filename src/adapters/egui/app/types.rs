@@ -52,18 +52,16 @@ impl EguiApp {
         Self::configure_styles(&cc.egui_ctx);
 
         let about_window_pos = service
-            .get_state()
+            .get_about_window_position()
             .ok()
-            .and_then(|state| state.config.viewer.about_window_pos)
+            .flatten()
             .map(|p| egui::pos2(p.x, p.y));
 
-        let last_saved_window_pos = service.get_state().ok().and_then(|state| {
-            let w = &state.config.window;
-            match (w.x, w.y) {
-                (Some(x), Some(y)) => Some(egui::pos2(x, y)),
-                _ => None,
-            }
-        });
+        let last_saved_window_pos = service
+            .get_window_position()
+            .ok()
+            .flatten()
+            .map(|(x, y)| egui::pos2(x, y));
 
         Self {
             service,

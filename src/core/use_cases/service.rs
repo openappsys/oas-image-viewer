@@ -151,6 +151,13 @@ impl OASImageViewerService {
             })
     }
 
+    pub fn get_current_view_image_path(&self) -> Result<Option<PathBuf>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.view.current_image.as_ref().map(|image| image.path().to_path_buf()))
+    }
+
     pub fn get_current_view_image_path_if_viewer(&self) -> Result<Option<PathBuf>> {
         self.state
             .lock()
@@ -202,6 +209,43 @@ impl OASImageViewerService {
                 } else {
                     None
                 }
+            })
+    }
+
+    pub fn get_about_window_position(&self) -> Result<Option<Position>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.config.viewer.about_window_pos)
+    }
+
+    pub fn get_window_position(&self) -> Result<Option<(f32, f32)>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| match (s.config.window.x, s.config.window.y) {
+                (Some(x), Some(y)) => Some((x, y)),
+                _ => None,
+            })
+    }
+
+    pub fn get_gallery_image_path_and_fit_if_viewer(
+        &self,
+        index: usize,
+    ) -> Result<Option<(PathBuf, bool)>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                if s.view.view_mode != ViewMode::Viewer {
+                    return None;
+                }
+                s.gallery.gallery.get_image(index).map(|image| {
+                    (
+                        image.path().to_path_buf(),
+                        s.config.viewer.fit_to_window,
+                    )
+                })
             })
     }
 
