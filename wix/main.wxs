@@ -3,7 +3,7 @@
     <Product Id="*"
              Name="OAS Image Viewer"
              Language="1033"
-             Version="0.3.3"
+             Version="0.3.4"
              Manufacturer="OpenAppSys"
              UpgradeCode="A3F5B2C1-D4E6-7890-ABCD-EF1234567890">
         <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine"/>

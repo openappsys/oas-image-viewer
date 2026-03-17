@@ -27,6 +27,35 @@ impl EguiApp {
         }
     }
 
+    pub(crate) fn handle_open_directory_dialog(&mut self) {
+        let dialog = crate::infrastructure::RfdFileDialog::new();
+        let Some(path) = dialog.open_directory() else {
+            tracing::debug!("目录对话框被取消或未选择目录");
+            return;
+        };
+
+        let image_source = crate::infrastructure::FsImageSource::new();
+        if let Err(e) = self.service.update_state(|state| {
+            if self
+                .service
+                .navigate_use_case
+                .load_directory(&mut state.gallery, &image_source, &path)
+                .is_ok()
+            {
+                let _ = state.gallery.gallery.select_image(0);
+            }
+            state.config.last_opened_directory = Some(path.clone());
+            state.view.view_mode = ViewMode::Gallery;
+        }) {
+            tracing::error!(path = ?path, error = %e, "打开目录失败");
+            return;
+        }
+
+        if let Ok(state) = self.service.get_state() {
+            let _ = self.service.config_use_case.request_save(&state.config);
+        }
+    }
+
     pub(crate) fn add_image_to_gallery(&mut self, path: &Path) {
         let file_name = path
             .file_stem()

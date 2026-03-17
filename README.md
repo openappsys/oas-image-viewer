@@ -162,6 +162,9 @@ RUST_LOG=debug oas-image-viewer /path/to/image.png
 | `→` | Next image | All |
 | `←` | Previous image | All |
 | `Ctrl + O` | Open file dialog | All |
+| `Ctrl + Shift + O` | Open folder dialog | All |
+| `Ctrl + C` | Copy current image | Viewer |
+| `Ctrl + Shift + C` | Copy current image path | Viewer |
 | `Ctrl + + / Ctrl + -` | Zoom in/out | Viewer |
 | `Ctrl + 0` | Fit to window | Viewer |
 | `Ctrl + 1` | Actual size (100%) | Viewer |

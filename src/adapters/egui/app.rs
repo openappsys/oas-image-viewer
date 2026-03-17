@@ -33,10 +33,12 @@ impl EguiApp {
         }
 
         self.handle_g_key(ctx);
+        self.handle_ctrl_shift_o(ctx);
         self.handle_ctrl_o(ctx);
         self.handle_navigation_keys(ctx);
         self.handle_f11(ctx);
         self.handle_f_key(ctx);
+        self.handle_copy_shortcuts(ctx);
         self.handle_esc(ctx);
         self.handle_zoom_keys(ctx);
         self.handle_enter(ctx);
@@ -95,8 +97,18 @@ impl EguiApp {
         }
     }
 
+    fn handle_ctrl_shift_o(&mut self, ctx: &Context) {
+        if ctx.input(|i| {
+            i.key_pressed(egui::Key::O) && Self::is_primary_modifier(i) && i.modifiers.shift
+        }) {
+            self.handle_open_directory_dialog();
+        }
+    }
+
     fn handle_ctrl_o(&mut self, ctx: &Context) {
-        if ctx.input(|i| i.key_pressed(egui::Key::O) && i.modifiers.ctrl) {
+        if ctx.input(|i| {
+            i.key_pressed(egui::Key::O) && Self::is_primary_modifier(i) && !i.modifiers.shift
+        }) {
             self.handle_open_dialog();
         }
     }
@@ -129,6 +141,133 @@ impl EguiApp {
                 tracing::error!(error = %e, "切换信息面板失败");
             }
         }
+    }
+
+    fn handle_copy_shortcuts(&mut self, ctx: &Context) {
+        let wants_keyboard_input = ctx.wants_keyboard_input();
+        let (has_copy_event, key_copy_path, key_copy_image, active_shift) = ctx.input(|i| {
+            let mut copy_path = false;
+            let mut copy_image = false;
+            for event in &i.events {
+                if let egui::Event::Key {
+                    key,
+                    pressed,
+                    modifiers,
+                    ..
+                } = event
+                {
+                    if !pressed || *key != egui::Key::C {
+                        continue;
+                    }
+                    if !Self::is_copy_modifier(modifiers) {
+                        continue;
+                    }
+                    if modifiers.shift {
+                        copy_path = true;
+                    } else {
+                        copy_image = true;
+                    }
+                }
+            }
+            let copy_event = i
+                .events
+                .iter()
+                .any(|event| matches!(event, egui::Event::Copy));
+            (copy_event, copy_path, copy_image, i.modifiers.shift)
+        });
+
+        let copy_path_shortcut = ctx.input_mut(|i| {
+            #[cfg(target_os = "macos")]
+            {
+                i.consume_shortcut(&egui::KeyboardShortcut {
+                    modifiers: egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                    logical_key: egui::Key::C,
+                })
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                i.consume_shortcut(&egui::KeyboardShortcut {
+                    modifiers: egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
+                    logical_key: egui::Key::C,
+                })
+            }
+        });
+
+        let copy_image_shortcut = if !copy_path_shortcut {
+            ctx.input_mut(|i| {
+                #[cfg(target_os = "macos")]
+                {
+                    i.consume_shortcut(&egui::KeyboardShortcut {
+                        modifiers: egui::Modifiers::COMMAND,
+                        logical_key: egui::Key::C,
+                    })
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    i.consume_shortcut(&egui::KeyboardShortcut {
+                        modifiers: egui::Modifiers::CTRL,
+                        logical_key: egui::Key::C,
+                    })
+                }
+            })
+        } else {
+            false
+        };
+
+        if wants_keyboard_input {
+            if copy_path_shortcut || key_copy_path || (has_copy_event && active_shift) {
+                ctx.input_mut(|i| {
+                    i.events.retain(|event| !matches!(event, egui::Event::Copy));
+                });
+                self.last_context_menu_result = None;
+                return;
+            }
+            if copy_image_shortcut || key_copy_image || has_copy_event {
+                self.last_context_menu_result = None;
+                return;
+            }
+        }
+
+        let copy_path_triggered =
+            copy_path_shortcut || key_copy_path || (has_copy_event && active_shift);
+        let copy_image_triggered =
+            !copy_path_triggered && (copy_image_shortcut || key_copy_image || has_copy_event);
+
+        if !copy_path_triggered && !copy_image_triggered {
+            return;
+        }
+
+        let (path, language) = match self.service.get_state() {
+            Ok(state) => match state.view.current_image {
+                Some(ref image) => (image.path().to_path_buf(), state.config.language),
+                None => return,
+            },
+            Err(_) => return,
+        };
+
+        if copy_path_triggered {
+            let result = ClipboardPort::copy_path(&self.clipboard_manager, &path);
+            let success_msg = get_text("copy_path", language).to_string();
+            self.handle_copy_result(result, &success_msg, language);
+        } else {
+            let result = self.copy_image_to_clipboard(&path);
+            let success_msg = get_text("copy_image", language).to_string();
+            self.handle_copy_result(result, &success_msg, language);
+        }
+    }
+
+    fn is_primary_modifier(input: &egui::InputState) -> bool {
+        input.modifiers.command || input.modifiers.ctrl
+    }
+
+    #[cfg(target_os = "macos")]
+    fn is_copy_modifier(modifiers: &egui::Modifiers) -> bool {
+        modifiers.mac_cmd
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn is_copy_modifier(modifiers: &egui::Modifiers) -> bool {
+        modifiers.ctrl
     }
 
     fn handle_esc(&mut self, ctx: &Context) {

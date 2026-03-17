@@ -93,11 +93,24 @@ impl ShortcutsHelpPanel {
                             ui.style_mut().spacing.item_spacing = Vec2::new(8.0, 10.0);
 
                             // 文件操作
+                            let copy_image_shortcut = if cfg!(target_os = "macos") {
+                                "Cmd + C"
+                            } else {
+                                "Ctrl + C"
+                            };
+                            let copy_path_shortcut = if cfg!(target_os = "macos") {
+                                "Cmd + Shift + C"
+                            } else {
+                                "Ctrl + Shift + C"
+                            };
                             render_shortcut_category(
                                 ui,
                                 &format!("📁 {}", get_text("file_ops", language)),
                                 &[
-                                    ("Ctrl + O", get_text("shortcut_open", language)),
+                                    ("Cmd/Ctrl + O", get_text("shortcut_open", language)),
+                                    ("Cmd/Ctrl + Shift + O", get_text("shortcut_open", language)),
+                                    (copy_image_shortcut, get_text("copy_image", language)),
+                                    (copy_path_shortcut, get_text("copy_path", language)),
                                     ("Esc", get_text("shortcut_exit_fullscreen", language)),
                                 ],
                             );

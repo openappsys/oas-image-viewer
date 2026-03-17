@@ -1,6 +1,6 @@
 [package]
 name = "oas-image-viewer"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 authors = ["OpenAppSys Team <team@openappsys.com>"]
 description = "A modern image viewer built with Rust and egui"
@@ -69,7 +69,7 @@ once_cell = "1.19"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "windef"] }
-winreg = "0.55"
+winreg = "0.56"
 
 [dev-dependencies]
 # Testing
@@ -114,7 +114,7 @@ icon = [
 # Info.plist 路径
 info_plist_path = "macos/Info.plist"
 # 版本
-version = "0.3.3"
+version = "0.3.4"
 # 版权信息
 copyright = "Copyright (c) 2026 OpenAppSys Team"
 # 应用类别
