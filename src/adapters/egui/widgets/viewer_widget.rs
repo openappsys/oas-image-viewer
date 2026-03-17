@@ -7,6 +7,7 @@ use crate::core::domain::Scale;
 use crate::core::domain::ViewerSettings;
 use crate::core::ports::ClipboardPort;
 use crate::core::use_cases::ViewState;
+use crate::utils::format_file_size;
 use egui::{Color32, Rect, Sense, Ui, Vec2};
 
 /// 查看器组件
@@ -387,7 +388,7 @@ impl ViewerWidget {
 
             // 获取文件大小
             let size_str = if let Ok(metadata) = std::fs::metadata(image.path()) {
-                Self::format_size(metadata.len())
+                format_file_size(metadata.len())
             } else {
                 "-".to_string()
             };
@@ -485,23 +486,6 @@ impl ViewerWidget {
             name.to_string()
         } else {
             format!("{}...{}", &name[..15], &name[name.len() - 5..])
-        }
-    }
-
-    /// 格式化文件大小
-    fn format_size(bytes: u64) -> String {
-        const KB: u64 = 1024;
-        const MB: u64 = KB * 1024;
-        const GB: u64 = MB * 1024;
-
-        if bytes >= GB {
-            format!("{:.1} GB", bytes as f64 / GB as f64)
-        } else if bytes >= MB {
-            format!("{:.1} MB", bytes as f64 / MB as f64)
-        } else if bytes >= KB {
-            format!("{:.1} KB", bytes as f64 / KB as f64)
-        } else {
-            format!("{} B", bytes)
         }
     }
 }

@@ -81,6 +81,7 @@ type:
 - **所有文档使用中文**
 - 文档位置: `docs/`
 - 包含: PRD.md, BUILD.md, DEVELOPMENT.md, USAGE.md
+- 发布前按清单核对: `docs/DOCS_CONSISTENCY_CHECKLIST.md`
 
 ---
 

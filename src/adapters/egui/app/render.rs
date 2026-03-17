@@ -137,9 +137,7 @@ impl EguiApp {
         let closed_by_user = self.info_panel.ui(ctx, language);
 
         if closed_by_user {
-            if let Err(e) = self.service.update_state(|state| {
-                state.config.viewer.show_info_panel = false;
-            }) {
+            if let Err(e) = self.set_info_panel_visible(false) {
                 tracing::error!(error = %e, "关闭信息面板失败");
             }
         }

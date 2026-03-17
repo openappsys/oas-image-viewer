@@ -4,6 +4,10 @@
 //! 按 ? 键打开/关闭帮助面板。
 
 use crate::adapters::egui::i18n::get_text;
+use crate::adapters::egui::shortcut_labels::{
+    copy_image, copy_path, fit_to_window, open_file, open_folder, original_size, zoom_in, zoom_out,
+    ShortcutTextStyle,
+};
 use crate::core::domain::Language;
 use egui::{Color32, Context, FontId, RichText, Vec2, Window};
 
@@ -93,24 +97,18 @@ impl ShortcutsHelpPanel {
                             ui.style_mut().spacing.item_spacing = Vec2::new(8.0, 10.0);
 
                             // 文件操作
-                            let copy_image_shortcut = if cfg!(target_os = "macos") {
-                                "Cmd + C"
-                            } else {
-                                "Ctrl + C"
-                            };
-                            let copy_path_shortcut = if cfg!(target_os = "macos") {
-                                "Cmd + Shift + C"
-                            } else {
-                                "Ctrl + Shift + C"
-                            };
+                            let open_file_shortcut = open_file(ShortcutTextStyle::Spaced);
+                            let open_folder_shortcut = open_folder(ShortcutTextStyle::Spaced);
+                            let copy_image_shortcut = copy_image(ShortcutTextStyle::Spaced);
+                            let copy_path_shortcut = copy_path(ShortcutTextStyle::Spaced);
                             render_shortcut_category(
                                 ui,
                                 &format!("📁 {}", get_text("file_ops", language)),
                                 &[
-                                    ("Cmd/Ctrl + O", get_text("shortcut_open", language)),
-                                    ("Cmd/Ctrl + Shift + O", get_text("shortcut_open", language)),
-                                    (copy_image_shortcut, get_text("copy_image", language)),
-                                    (copy_path_shortcut, get_text("copy_path", language)),
+                                    (&open_file_shortcut, get_text("shortcut_open", language)),
+                                    (&open_folder_shortcut, get_text("shortcut_open", language)),
+                                    (&copy_image_shortcut, get_text("copy_image", language)),
+                                    (&copy_path_shortcut, get_text("copy_path", language)),
                                     ("Esc", get_text("shortcut_exit_fullscreen", language)),
                                 ],
                             );
@@ -130,15 +128,25 @@ impl ShortcutsHelpPanel {
                             ui.add_space(6.0);
 
                             // 视图操作
+                            let zoom_in_shortcut = zoom_in(ShortcutTextStyle::Spaced);
+                            let zoom_out_shortcut = zoom_out(ShortcutTextStyle::Spaced);
+                            let fit_to_window_shortcut = fit_to_window(ShortcutTextStyle::Spaced);
+                            let original_size_shortcut = original_size(ShortcutTextStyle::Spaced);
                             render_shortcut_category(
                                 ui,
                                 &format!("👁 {}", get_text("view", language)),
                                 &[
                                     ("F11", get_text("shortcut_fullscreen", language)),
-                                    ("Ctrl + +", get_text("shortcut_zoom_in", language)),
-                                    ("Ctrl + -", get_text("shortcut_zoom_out", language)),
-                                    ("Ctrl + 0", get_text("shortcut_fit_window", language)),
-                                    ("Ctrl + 1", get_text("shortcut_original", language)),
+                                    (&zoom_in_shortcut, get_text("shortcut_zoom_in", language)),
+                                    (&zoom_out_shortcut, get_text("shortcut_zoom_out", language)),
+                                    (
+                                        &fit_to_window_shortcut,
+                                        get_text("shortcut_fit_window", language),
+                                    ),
+                                    (
+                                        &original_size_shortcut,
+                                        get_text("shortcut_original", language),
+                                    ),
                                     ("F", get_text("shortcut_info_panel", language)),
                                     (
                                         get_text("shortcut_dbl_click", language),

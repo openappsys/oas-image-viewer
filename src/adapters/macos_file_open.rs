@@ -31,6 +31,18 @@ pub fn setup_file_open_handler() {
     use objc::runtime::{Object, Sel};
     use objc::{class, msg_send, sel, sel_impl};
 
+    unsafe fn nsstring_to_path(filename: id) -> Option<PathBuf> {
+        if filename == nil {
+            return None;
+        }
+        let utf8_string: *const std::os::raw::c_char = msg_send![filename, UTF8String];
+        if utf8_string.is_null() {
+            return None;
+        }
+        let c_str = std::ffi::CStr::from_ptr(utf8_string);
+        c_str.to_str().ok().map(PathBuf::from)
+    }
+
     /// Objective-C 回调 `application:openFile:` 委托方法
     ///
     /// # Safety
@@ -42,19 +54,10 @@ pub fn setup_file_open_handler() {
         filename: id,
     ) -> objc::runtime::BOOL {
         unsafe {
-            if filename != nil {
-                // 从 NSString 获取 UTF-8 字符串
-                let utf8_string: *const std::os::raw::c_char = msg_send![filename, UTF8String];
-                if !utf8_string.is_null() {
-                    let c_str = std::ffi::CStr::from_ptr(utf8_string);
-                    if let Ok(path_str) = c_str.to_str() {
-                        let path = PathBuf::from(path_str);
-                        tracing::info!("接收到单个文件打开事件: {:?}", path);
-                        // 将路径存储在全局待处理文件列表中
-                        if let Ok(mut pending) = PENDING_FILES.lock() {
-                            pending.push(path);
-                        }
-                    }
+            if let Some(path) = nsstring_to_path(filename) {
+                tracing::info!("接收到单个文件打开事件: {:?}", path);
+                if let Ok(mut pending) = PENDING_FILES.lock() {
+                    pending.push(path);
                 }
             }
             objc::runtime::YES
@@ -74,17 +77,9 @@ pub fn setup_file_open_handler() {
                 if let Ok(mut pending) = PENDING_FILES.lock() {
                     for i in 0..count {
                         let filename: id = msg_send![filenames, objectAtIndex: i];
-                        if filename != nil {
-                            let utf8_string: *const std::os::raw::c_char =
-                                msg_send![filename, UTF8String];
-                            if !utf8_string.is_null() {
-                                let c_str = std::ffi::CStr::from_ptr(utf8_string);
-                                if let Ok(path_str) = c_str.to_str() {
-                                    let path = PathBuf::from(path_str);
-                                    tracing::info!("处理文件[{}]: {:?}", i, path);
-                                    pending.push(path);
-                                }
-                            }
+                        if let Some(path) = nsstring_to_path(filename) {
+                            tracing::info!("处理文件[{}]: {:?}", i, path);
+                            pending.push(path);
                         }
                     }
                 }

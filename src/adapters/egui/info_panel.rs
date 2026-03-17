@@ -8,9 +8,16 @@ use crate::core::domain::Language;
 use crate::utils::format_file_size;
 use egui::{Context, Frame, RichText, ScrollArea, SidePanel};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver};
-use std::thread;
-use tracing::{debug, error, warn};
+use std::sync::mpsc::Receiver;
+use tracing::{debug, warn};
+
+mod helpers;
+mod metadata;
+mod receiver;
+
+use helpers::{format_camera_info, render_label_value};
+use metadata::{get_file_metadata, read_exif_data};
+use receiver::{poll_exif_receiver, spawn_exif_loader, ExifReceiveState};
 
 /// 图像信息面板
 pub struct InfoPanel {
@@ -126,7 +133,7 @@ impl InfoPanel {
             .to_string();
 
         // 获取文件元数据
-        let (file_size, modified_time) = Self::get_file_metadata(path);
+        let (file_size, modified_time) = get_file_metadata(path);
 
         // 创建基本信息
         let info = ImageInfo {
@@ -180,19 +187,17 @@ impl InfoPanel {
     /// 检查并接收异步加载的EXIF数据
     fn check_exif_receiver(&mut self) {
         if let Some(receiver) = &self.exif_receiver {
-            match receiver.try_recv() {
-                Ok(exif_data) => {
+            match poll_exif_receiver(receiver) {
+                ExifReceiveState::Loaded(exif_data) => {
                     if let Some(ref mut info) = self.current_info {
-                        info.exif = Some(exif_data);
+                        info.exif = Some(*exif_data);
                     }
                     self.loading_exif = false;
                     self.exif_receiver = None;
                     debug!("EXIF数据加载完成");
                 }
-                Err(std::sync::mpsc::TryRecvError::Empty) => {
-                    // 仍在加载中
-                }
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                ExifReceiveState::Pending => {}
+                ExifReceiveState::Disconnected => {
                     // 通道断开，加载失败
                     self.loading_exif = false;
                     self.exif_receiver = None;
@@ -441,115 +446,7 @@ impl InfoPanel {
 
     /// 异步加载EXIF数据
     fn load_exif_async(&mut self, path: &Path) {
-        let path = path.to_path_buf();
-        let (sender, receiver) = channel::<ExifData>();
-
-        self.exif_receiver = Some(receiver);
-
-        thread::spawn(move || {
-            let exif_data = Self::read_exif_data(&path);
-            if let Err(e) = sender.send(exif_data) {
-                error!("发送EXIF数据失败: {:?}", e);
-            }
-        });
-    }
-
-    /// 读取EXIF数据
-    fn read_exif_data(path: &Path) -> ExifData {
-        use exif::{Reader, Tag};
-
-        let mut exif_data = ExifData::default();
-
-        let file = match std::fs::File::open(path) {
-            Ok(f) => f,
-            Err(e) => {
-                debug!("无法打开文件读取EXIF: {}", e);
-                return exif_data;
-            }
-        };
-
-        let mut bufreader = std::io::BufReader::new(&file);
-        let exifreader = Reader::new();
-
-        let exif = match exifreader.read_from_container(&mut bufreader) {
-            Ok(e) => e,
-            Err(e) => {
-                debug!("读取EXIF失败: {}", e);
-                return exif_data;
-            }
-        };
-
-        for field in exif.fields() {
-            match field.tag {
-                Tag::DateTime | Tag::DateTimeOriginal => {
-                    if exif_data.date_time.is_none() {
-                        exif_data.date_time =
-                            Some(field.display_value().with_unit(&exif).to_string());
-                    }
-                }
-                Tag::Make => {
-                    exif_data.camera_make =
-                        Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::Model => {
-                    exif_data.camera_model =
-                        Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::LensModel => {
-                    exif_data.lens_model = Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::ISOSpeed => {
-                    if let Some(val) = field.value.get_uint(0) {
-                        exif_data.iso = Some(val);
-                    }
-                }
-                Tag::FNumber => {
-                    exif_data.aperture = Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::ExposureTime => {
-                    exif_data.shutter_speed =
-                        Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::FocalLength => {
-                    exif_data.focal_length =
-                        Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::GPSLatitude => {
-                    exif_data.gps_latitude =
-                        Some(field.display_value().with_unit(&exif).to_string());
-                }
-                Tag::GPSLongitude => {
-                    exif_data.gps_longitude =
-                        Some(field.display_value().with_unit(&exif).to_string());
-                }
-                _ => {}
-            }
-        }
-
-        exif_data
-    }
-
-    /// 获取文件元数据
-    fn get_file_metadata(path: &Path) -> (u64, Option<String>) {
-        let metadata = match std::fs::metadata(path) {
-            Ok(m) => m,
-            Err(e) => {
-                warn!("无法获取文件元数据: {}", e);
-                return (0, None);
-            }
-        };
-
-        let size = metadata.len();
-        let modified = metadata.modified().ok().and_then(|t| {
-            use std::time::SystemTime;
-            let duration = t.duration_since(SystemTime::UNIX_EPOCH).ok()?;
-            let secs = duration.as_secs();
-            // 格式化为本地时间字符串
-            let datetime = chrono::DateTime::from_timestamp(secs as i64, 0)?;
-            Some(datetime.format("%Y-%m-%d %H:%M:%S").to_string())
-        });
-
-        (size, modified)
+        self.exif_receiver = Some(spawn_exif_loader(path, read_exif_data));
     }
 }
 
@@ -559,61 +456,19 @@ impl Default for InfoPanel {
     }
 }
 
-/// 渲染标签-值对
-///
-/// 使用 TextEdit（只读模式）替代普通 Label，支持文本选中功能。
-/// 这样当用户选中文本时，ctx.wants_keyboard_input() 会返回 true，
-/// 从而让复制快捷键正确处理（复制选中的文本而非复制图片）。
-fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
-    let text_color = ui.style().visuals.text_color();
-    let weak_color = ui.style().visuals.weak_text_color();
-    ui.horizontal(|ui| {
-        ui.label(RichText::new(label).size(13.0).color(weak_color));
-        // 使用 TextEdit（只读模式）让文本可选中
-        // 通过设置 text_edit_multiline 为 false 实现单行显示
-        // 使用 lock_focus 防止焦点问题
-        let mut text = value.to_string();
-        let text_edit = egui::TextEdit::singleline(&mut text)
-            .text_color(text_color)
-            .font(egui::TextStyle::Body)
-            .desired_width(ui.available_width());
-
-        // 渲染 TextEdit，但忽略输出（因为是只读的）
-        let _response = ui.add(text_edit);
-    });
-}
-
-/// 格式化相机信息
-fn format_camera_info(make: Option<&str>, model: Option<&str>) -> String {
-    match (make, model) {
-        (Some(m), Some(n)) => {
-            let make = m.trim();
-            let model = n.trim();
-            if model.starts_with(make) {
-                model.to_string()
-            } else {
-                format!("{} {}", make, model)
-            }
-        }
-        (Some(m), None) => m.trim().to_string(),
-        (None, Some(n)) => n.trim().to_string(),
-        (None, None) => "Unknown".to_string(),
+#[cfg(test)]
+fn format_test_path(path: &Path) -> String {
+    let path_str = path.display().to_string();
+    if path_str.len() > 40 {
+        format!("...{}", &path_str[path_str.len() - 37..])
+    } else {
+        path_str
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // 测试辅助函数：格式化路径（截断长路径）
-    fn format_path(path: &Path) -> String {
-        let path_str = path.display().to_string();
-        if path_str.len() > 40 {
-            format!("...{}", &path_str[path_str.len() - 37..])
-        } else {
-            path_str
-        }
-    }
 
     // =========================================================================
     // 基础初始化测试
@@ -752,13 +607,13 @@ mod tests {
     #[test]
     fn test_format_path_short() {
         let path = Path::new("/test/image.png");
-        assert_eq!(format_path(path), "/test/image.png");
+        assert_eq!(format_test_path(path), "/test/image.png");
     }
 
     #[test]
     fn test_format_path_long() {
         let path = Path::new("/very/long/path/to/the/image/file/that/needs/truncating.png");
-        let result = format_path(path);
+        let result = format_test_path(path);
         assert!(result.starts_with("..."));
         assert!(result.len() <= 40);
     }
@@ -883,16 +738,7 @@ mod tests {
 #[cfg(test)]
 mod additional_tests {
     use super::*;
-
-    // 测试辅助函数：格式化路径（截断长路径）
-    fn format_path(path: &Path) -> String {
-        let path_str = path.display().to_string();
-        if path_str.len() > 40 {
-            format!("...{}", &path_str[path_str.len() - 37..])
-        } else {
-            path_str
-        }
-    }
+    use std::sync::mpsc::channel;
 
     #[test]
     fn test_exif_data_full() {
@@ -946,14 +792,14 @@ mod additional_tests {
     fn test_format_path_exact_40() {
         // 测试恰好40个字符的路径
         let path = Path::new("/123456789/123456789/123456789/123456789.png");
-        let result = format_path(path);
+        let result = format_test_path(path);
         assert_eq!(result.len(), 40);
     }
 
     #[test]
     fn test_format_path_unicode() {
         let path = Path::new("/图片/照片/test.png");
-        let result = format_path(path);
+        let result = format_test_path(path);
         assert!(result.contains("test.png"));
     }
 

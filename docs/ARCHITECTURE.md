@@ -639,7 +639,7 @@ cargo tarpaulin --out Html
 
 ## 总结
 
-OAS-Image-Viewer v0.3.0 通过 Clean Architecture 实现了：
+OAS-Image-Viewer v0.3.4 通过 Clean Architecture 实现了：
 
 1. **清晰的代码组织**：Core / Infrastructure / Adapters 三层架构
 2. **高可测试性**：250+ 单元测试，Core 层可纯单元测试

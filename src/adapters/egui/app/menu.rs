@@ -1,5 +1,9 @@
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
+use crate::adapters::egui::shortcut_labels::{
+    copy_image, copy_path, fit_to_window, open_file, original_size, quit, zoom_in, zoom_out,
+    ShortcutTextStyle,
+};
 use crate::adapters::platform::SystemIntegration;
 use crate::core::domain::{Language, NavigationDirection, Theme, ViewMode};
 use crate::core::ports::ClipboardPort;
@@ -7,158 +11,15 @@ use egui::{Color32, Context, CornerRadius, RichText, Stroke, Vec2};
 use std::sync::mpsc;
 use std::thread;
 
-struct MenuStyle {
-    bg_color: Color32,
-    hover_bg: Color32,
-    active_bg: Color32,
-    text_color: Color32,
-    shortcut_color: Color32,
-    icon_color: Color32,
-    corner_radius: u8,
-    item_height: f32,
-    menu_min_width: f32,
-    menu_max_width: f32,
-}
+mod integration;
+mod menu_specs;
+mod style;
 
-#[derive(Clone, Copy)]
-enum IntegrationAction {
-    SetDefault,
-    UnsetDefault,
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    AddContextMenu,
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    RemoveContextMenu,
-    #[cfg(target_os = "macos")]
-    RefreshOpenWith,
-}
-
-impl MenuStyle {
-    fn new(ctx: &Context) -> Self {
-        let is_dark = ctx.style().visuals.dark_mode;
-
-        if is_dark {
-            Self {
-                bg_color: Color32::from_rgb(45, 45, 48),
-                hover_bg: Color32::from_rgb(60, 60, 65),
-                active_bg: Color32::from_rgb(0, 122, 204),
-                text_color: Color32::from_rgb(240, 240, 240),
-                shortcut_color: Color32::from_rgb(160, 160, 160),
-                icon_color: Color32::from_rgb(200, 200, 200),
-                corner_radius: 6,
-                item_height: 28.0,
-                menu_min_width: 220.0,
-                menu_max_width: 320.0,
-            }
-        } else {
-            Self {
-                bg_color: Color32::from_rgb(250, 250, 250),
-                hover_bg: Color32::from_rgb(230, 240, 250),
-                active_bg: Color32::from_rgb(0, 122, 204),
-                text_color: Color32::from_rgb(30, 30, 30),
-                shortcut_color: Color32::from_rgb(120, 120, 120),
-                icon_color: Color32::from_rgb(80, 80, 80),
-                corner_radius: 6,
-                item_height: 28.0,
-                menu_min_width: 220.0,
-                menu_max_width: 320.0,
-            }
-        }
-    }
-}
+use integration::{integration_success_text, perform_integration_action, IntegrationAction};
+use menu_specs::popup_item_specs;
+use style::MenuStyle;
 
 impl EguiApp {
-    fn popup_item_specs(&self, idx: usize, language: Language) -> Vec<(String, Option<String>)> {
-        match idx {
-            0 => vec![
-                (
-                    get_text("open", language).to_string(),
-                    Some("Ctrl+O".to_string()),
-                ),
-                (
-                    get_text("exit", language).to_string(),
-                    Some(if cfg!(target_os = "macos") {
-                        "Cmd+Q".to_string()
-                    } else {
-                        "Alt+F4".to_string()
-                    }),
-                ),
-            ],
-            1 => vec![
-                (
-                    get_text("gallery", language).to_string(),
-                    Some("G".to_string()),
-                ),
-                (
-                    get_text("viewer", language).to_string(),
-                    Some("V".to_string()),
-                ),
-                (
-                    get_text("fullscreen", language).to_string(),
-                    Some("F11".to_string()),
-                ),
-                (get_text("language_chinese", language).to_string(), None),
-                (get_text("language_english", language).to_string(), None),
-                (get_text("theme_system", language).to_string(), None),
-                (get_text("theme_light", language).to_string(), None),
-                (get_text("theme_dark", language).to_string(), None),
-                (get_text("theme_oled", language).to_string(), None),
-            ],
-            2 => vec![
-                (
-                    get_text("previous", language).to_string(),
-                    Some("←".to_string()),
-                ),
-                (
-                    get_text("next", language).to_string(),
-                    Some("→".to_string()),
-                ),
-                (
-                    get_text("zoom_in", language).to_string(),
-                    Some("+".to_string()),
-                ),
-                (
-                    get_text("zoom_out", language).to_string(),
-                    Some("-".to_string()),
-                ),
-                (
-                    get_text("fit_to_window", language).to_string(),
-                    Some("F".to_string()),
-                ),
-                (
-                    get_text("original_size", language).to_string(),
-                    Some("1".to_string()),
-                ),
-            ],
-            3 => {
-                let mut items = vec![
-                    (
-                        get_text("shortcuts_title", language).to_string(),
-                        Some("?".to_string()),
-                    ),
-                    (get_text("set_default_app", language).to_string(), None),
-                    (get_text("unset_default_app", language).to_string(), None),
-                    (get_text("about_app", language).to_string(), None),
-                ];
-                #[cfg(target_os = "windows")]
-                {
-                    items.push((get_text("add_context_menu", language).to_string(), None));
-                    items.push((get_text("remove_context_menu", language).to_string(), None));
-                }
-                #[cfg(target_os = "linux")]
-                {
-                    items.push((get_text("add_context_menu", language).to_string(), None));
-                    items.push((get_text("remove_context_menu", language).to_string(), None));
-                }
-                #[cfg(target_os = "macos")]
-                {
-                    items.push((get_text("refresh_open_with", language).to_string(), None));
-                }
-                items
-            }
-            _ => Vec::new(),
-        }
-    }
-
     fn calculate_popup_width(
         &self,
         ui: &egui::Ui,
@@ -171,7 +32,7 @@ impl EguiApp {
         let shortcut_gap = 16.0;
         let mut required = style.menu_min_width;
 
-        for (label, shortcut) in self.popup_item_specs(idx, language) {
+        for (label, shortcut) in popup_item_specs(idx, language) {
             let label_width = ui
                 .painter()
                 .layout_no_wrap(
@@ -203,25 +64,6 @@ impl EguiApp {
         required.clamp(style.menu_min_width, style.menu_max_width)
     }
 
-    fn integration_success_text(action: IntegrationAction, language: Language) -> String {
-        match action {
-            IntegrationAction::SetDefault => get_text("default_app_set", language).to_string(),
-            IntegrationAction::UnsetDefault => get_text("default_app_unset", language).to_string(),
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            IntegrationAction::AddContextMenu => {
-                get_text("context_menu_added", language).to_string()
-            }
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            IntegrationAction::RemoveContextMenu => {
-                get_text("context_menu_removed", language).to_string()
-            }
-            #[cfg(target_os = "macos")]
-            IntegrationAction::RefreshOpenWith => {
-                get_text("open_with_refreshed", language).to_string()
-            }
-        }
-    }
-
     fn run_integration_action_async(&mut self, action: IntegrationAction, language: Language) {
         if self.integration_task_running {
             return;
@@ -235,22 +77,10 @@ impl EguiApp {
         self.integration_task_receiver = Some(rx);
 
         thread::spawn(move || {
-            let integration = crate::adapters::platform::PlatformIntegration::new();
-            let result = match action {
-                IntegrationAction::SetDefault => integration.set_as_default(language),
-                IntegrationAction::UnsetDefault => integration.unset_default(language),
-                #[cfg(any(target_os = "windows", target_os = "linux"))]
-                IntegrationAction::AddContextMenu => integration.add_context_menu(language),
-                #[cfg(any(target_os = "windows", target_os = "linux"))]
-                IntegrationAction::RemoveContextMenu => integration.remove_context_menu(language),
-                #[cfg(target_os = "macos")]
-                IntegrationAction::RefreshOpenWith => {
-                    integration.refresh_open_with_registration(language)
-                }
-            };
+            let result = perform_integration_action(action, language);
 
             let message = match result {
-                Ok(()) => Self::integration_success_text(action, language),
+                Ok(()) => integration_success_text(action, language),
                 Err(e) => format!("{}: {}", get_text("operation_failed", language), e),
             };
 
@@ -598,7 +428,7 @@ impl EguiApp {
             ui,
             "📂",
             get_text("open", language),
-            Some("Ctrl+O"),
+            Some(&open_file(ShortcutTextStyle::Compact)),
             style,
             true,
         ) {
@@ -615,16 +445,12 @@ impl EguiApp {
         );
         ui.add_space(4.0);
 
-        let quit_shortcut = if cfg!(target_os = "macos") {
-            "Cmd+Q"
-        } else {
-            "Alt+F4"
-        };
+        let quit_shortcut = quit(ShortcutTextStyle::Compact);
         if self.render_menu_item(
             ui,
             "❌",
             get_text("exit", language),
-            Some(quit_shortcut),
+            Some(&quit_shortcut),
             style,
             true,
         ) {
@@ -659,10 +485,7 @@ impl EguiApp {
             style,
             true,
         ) {
-            if let Err(e) = self
-                .service
-                .update_state(|s| s.view.view_mode = ViewMode::Gallery)
-            {
+            if let Err(e) = self.update_view_mode(ViewMode::Gallery) {
                 tracing::error!(error = %e, "切换到图库视图失败");
             }
             clicked = true;
@@ -676,10 +499,7 @@ impl EguiApp {
             style,
             true,
         ) {
-            if let Err(e) = self
-                .service
-                .update_state(|s| s.view.view_mode = ViewMode::Viewer)
-            {
+            if let Err(e) = self.update_view_mode(ViewMode::Viewer) {
                 tracing::error!(error = %e, "切换到查看器视图失败");
             }
             clicked = true;
@@ -728,19 +548,10 @@ impl EguiApp {
             style,
             language != Language::Chinese,
         ) {
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.language = Language::Chinese;
-                // 同时更新中文字体支持标志
-                crate::set_chinese_supported(true);
-            }) {
+            if let Err(e) = self.set_language_and_save(Language::Chinese) {
                 tracing::error!(error = %e, "切换语言失败");
             }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
-            }
+            crate::set_chinese_supported(true);
             clicked = true;
         }
 
@@ -754,19 +565,10 @@ impl EguiApp {
             style,
             language != Language::English,
         ) {
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.language = Language::English;
-                // 同时更新中文字体支持标志
-                crate::set_chinese_supported(false);
-            }) {
+            if let Err(e) = self.set_language_and_save(Language::English) {
                 tracing::error!(error = %e, "切换语言失败");
             }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
-            }
+            crate::set_chinese_supported(false);
             clicked = true;
         }
 
@@ -797,16 +599,8 @@ impl EguiApp {
             style,
             current_theme != Theme::System,
         ) {
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.theme = Theme::System;
-            }) {
+            if let Err(e) = self.set_theme_and_save(Theme::System) {
                 tracing::error!(error = %e, "切换主题失败");
-            }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
             }
             clicked = true;
         }
@@ -821,16 +615,8 @@ impl EguiApp {
             style,
             current_theme != Theme::Light,
         ) {
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.theme = Theme::Light;
-            }) {
+            if let Err(e) = self.set_theme_and_save(Theme::Light) {
                 tracing::error!(error = %e, "切换主题失败");
-            }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
             }
             clicked = true;
         }
@@ -845,16 +631,8 @@ impl EguiApp {
             style,
             current_theme != Theme::Dark,
         ) {
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.theme = Theme::Dark;
-            }) {
+            if let Err(e) = self.set_theme_and_save(Theme::Dark) {
                 tracing::error!(error = %e, "切换主题失败");
-            }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
             }
             clicked = true;
         }
@@ -869,16 +647,8 @@ impl EguiApp {
             style,
             current_theme != Theme::OLED,
         ) {
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.theme = Theme::OLED;
-            }) {
+            if let Err(e) = self.set_theme_and_save(Theme::OLED) {
                 tracing::error!(error = %e, "切换主题失败");
-            }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
             }
             clicked = true;
         }
@@ -932,7 +702,7 @@ impl EguiApp {
             ui,
             "🔍+",
             get_text("zoom_in", language),
-            Some("Ctrl++"),
+            Some(&zoom_in(ShortcutTextStyle::Compact)),
             style,
             true,
         ) {
@@ -944,7 +714,7 @@ impl EguiApp {
             ui,
             "🔍-",
             get_text("zoom_out", language),
-            Some("Ctrl+-"),
+            Some(&zoom_out(ShortcutTextStyle::Compact)),
             style,
             true,
         ) {
@@ -956,7 +726,7 @@ impl EguiApp {
             ui,
             "📐",
             get_text("fit_to_window", language),
-            Some("Ctrl+0"),
+            Some(&fit_to_window(ShortcutTextStyle::Compact)),
             style,
             true,
         ) {
@@ -968,7 +738,7 @@ impl EguiApp {
             ui,
             "🔢",
             get_text("original_size", language),
-            Some("Ctrl+1"),
+            Some(&original_size(ShortcutTextStyle::Compact)),
             style,
             true,
         ) {
@@ -986,30 +756,24 @@ impl EguiApp {
         );
         ui.add_space(4.0);
 
-        let copy_image_shortcut = if cfg!(target_os = "macos") {
-            "Cmd+C"
-        } else {
-            "Ctrl+C"
-        };
-        let copy_path_shortcut = if cfg!(target_os = "macos") {
-            "Cmd+Shift+C"
-        } else {
-            "Ctrl+Shift+C"
-        };
+        let copy_image_shortcut = copy_image(ShortcutTextStyle::Compact);
+        let copy_path_shortcut = copy_path(ShortcutTextStyle::Compact);
 
         // 获取当前图片路径
-        let path = self
-            .service
-            .get_state()
-            .ok()
-            .and_then(|state| state.view.current_image.as_ref().map(|img| img.path().to_path_buf()));
+        let path = self.service.get_state().ok().and_then(|state| {
+            state
+                .view
+                .current_image
+                .as_ref()
+                .map(|img| img.path().to_path_buf())
+        });
         let has_image = path.is_some();
 
         if self.render_menu_item(
             ui,
             "📋",
             get_text("copy_image", language),
-            Some(copy_image_shortcut),
+            Some(&copy_image_shortcut),
             style,
             has_image,
         ) {
@@ -1025,7 +789,7 @@ impl EguiApp {
             ui,
             "📂",
             get_text("copy_path", language),
-            Some(copy_path_shortcut),
+            Some(&copy_path_shortcut),
             style,
             has_image,
         ) {

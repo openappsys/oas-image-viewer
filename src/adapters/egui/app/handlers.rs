@@ -44,15 +44,16 @@ impl EguiApp {
             {
                 let _ = state.gallery.gallery.select_image(0);
             }
-            state.config.last_opened_directory = Some(path.clone());
-            state.view.view_mode = ViewMode::Gallery;
+            self.service
+                .view_use_case
+                .set_view_mode(&mut state.view, ViewMode::Gallery);
         }) {
             tracing::error!(path = ?path, error = %e, "打开目录失败");
             return;
         }
 
-        if let Ok(state) = self.service.get_state() {
-            let _ = self.service.config_use_case.request_save(&state.config);
+        if let Err(e) = self.set_last_opened_directory_and_save(path) {
+            tracing::error!(error = %e, "更新最近目录失败");
         }
     }
 

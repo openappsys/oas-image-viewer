@@ -13,39 +13,22 @@ use std::path::PathBuf;
 use std::sync::mpsc::TryRecvError;
 
 use crate::adapters::egui::i18n::get_text;
-use crate::core::domain::{Language, NavigationDirection, ViewMode};
+use crate::core::domain::{Language, NavigationDirection, Theme, ViewMode};
 use crate::core::ports::{ClipboardPort, UiPort};
 use crate::core::use_cases::{AppState, GalleryState, ViewState};
 
+mod copy_shortcuts;
 mod handlers;
 mod menu;
 mod render;
+mod state_sync;
 mod types;
 mod utils;
 
+use copy_shortcuts::{
+    collect_copy_shortcut_signals, resolve_copy_action, CopyAction, CopyShortcutState,
+};
 pub use types::EguiApp;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CopyAction {
-    Image,
-    Path,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct CopyShortcutState {
-    wants_keyboard_input: bool,
-    has_copy_event: bool,
-    key_copy_path: bool,
-    key_copy_image: bool,
-    active_shift: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct CopyDecision {
-    action: Option<CopyAction>,
-    clear_hint: bool,
-    consume_copy_event: bool,
-}
 
 impl EguiApp {
     /// 处理快捷键
@@ -110,9 +93,7 @@ impl EguiApp {
             .unwrap_or_else(|| (PathBuf::new(), true));
 
         if !selected_path.as_os_str().is_empty() {
-            if let Err(e) = self.service.update_state(|state| {
-                state.view.view_mode = ViewMode::Viewer;
-            }) {
+            if let Err(e) = self.update_view_mode(ViewMode::Viewer) {
                 tracing::error!(error = %e, "切换到查看器模式失败");
             }
             self.open_image(ctx, &selected_path, fit_to_window);
@@ -157,52 +138,21 @@ impl EguiApp {
 
     fn handle_f_key(&mut self, ctx: &Context) {
         if ctx.input(|i| i.key_pressed(egui::Key::F) && !i.modifiers.any()) {
-            if let Err(e) = self.service.update_state(|state| {
-                state.config.viewer.show_info_panel = !state.config.viewer.show_info_panel;
-            }) {
+            if let Err(e) = self.toggle_info_panel_visible() {
                 tracing::error!(error = %e, "切换信息面板失败");
             }
         }
     }
 
     fn handle_copy_shortcuts(&mut self, ctx: &Context) {
-        let (has_copy_event, key_copy_path, key_copy_image, active_shift) = ctx.input(|i| {
-            let mut copy_path = false;
-            let mut copy_image = false;
-            for event in &i.events {
-                if let egui::Event::Key {
-                    key,
-                    pressed,
-                    modifiers,
-                    ..
-                } = event
-                {
-                    if !pressed || *key != egui::Key::C {
-                        continue;
-                    }
-                    if !Self::is_copy_modifier(modifiers) {
-                        continue;
-                    }
-                    if modifiers.shift {
-                        copy_path = true;
-                    } else {
-                        copy_image = true;
-                    }
-                }
-            }
-            let copy_event = i
-                .events
-                .iter()
-                .any(|event| matches!(event, egui::Event::Copy));
-            (copy_event, copy_path, copy_image, i.modifiers.shift)
-        });
+        let signals = ctx.input(|i| collect_copy_shortcut_signals(&i.events, i.modifiers.shift));
 
-        let decision = Self::resolve_copy_action(CopyShortcutState {
+        let decision = resolve_copy_action(CopyShortcutState {
             wants_keyboard_input: ctx.wants_keyboard_input(),
-            has_copy_event,
-            key_copy_path,
-            key_copy_image,
-            active_shift,
+            has_copy_event: signals.has_copy_event,
+            key_copy_path: signals.key_copy_path,
+            key_copy_image: signals.key_copy_image,
+            active_shift: signals.active_shift,
         });
 
         if decision.consume_copy_event {
@@ -237,66 +187,8 @@ impl EguiApp {
         }
     }
 
-    fn resolve_copy_action(state: CopyShortcutState) -> CopyDecision {
-        if state.wants_keyboard_input {
-            if state.key_copy_path || (state.has_copy_event && state.active_shift) {
-                return CopyDecision {
-                    action: None,
-                    clear_hint: true,
-                    consume_copy_event: state.has_copy_event && state.active_shift,
-                };
-            }
-            if state.key_copy_image || state.has_copy_event {
-                return CopyDecision {
-                    action: None,
-                    clear_hint: true,
-                    consume_copy_event: false,
-                };
-            }
-            return CopyDecision {
-                action: None,
-                clear_hint: false,
-                consume_copy_event: false,
-            };
-        }
-
-        let copy_path = state.key_copy_path || (state.has_copy_event && state.active_shift);
-        if copy_path {
-            return CopyDecision {
-                action: Some(CopyAction::Path),
-                clear_hint: false,
-                consume_copy_event: false,
-            };
-        }
-
-        let copy_image = state.key_copy_image || (state.has_copy_event && !state.active_shift);
-        if copy_image {
-            return CopyDecision {
-                action: Some(CopyAction::Image),
-                clear_hint: false,
-                consume_copy_event: false,
-            };
-        }
-
-        CopyDecision {
-            action: None,
-            clear_hint: false,
-            consume_copy_event: false,
-        }
-    }
-
     fn is_primary_modifier(input: &egui::InputState) -> bool {
         input.modifiers.command || input.modifiers.ctrl
-    }
-
-    #[cfg(target_os = "macos")]
-    fn is_copy_modifier(modifiers: &egui::Modifiers) -> bool {
-        modifiers.mac_cmd
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    fn is_copy_modifier(modifiers: &egui::Modifiers) -> bool {
-        modifiers.ctrl
     }
 
     fn handle_esc(&mut self, ctx: &Context) {
@@ -307,12 +199,15 @@ impl EguiApp {
         let is_fullscreen = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
         if is_fullscreen {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
-        } else if let Err(e) = self.service.update_state(|state| {
-            if state.view.view_mode == ViewMode::Viewer {
-                state.view.view_mode = ViewMode::Gallery;
+        } else if self
+            .service
+            .get_state()
+            .map(|state| state.view.view_mode == ViewMode::Viewer)
+            .unwrap_or(false)
+        {
+            if let Err(e) = self.update_view_mode(ViewMode::Gallery) {
+                tracing::error!(error = %e, "切换到图库模式失败");
             }
-        }) {
-            tracing::error!(error = %e, "切换到图库模式失败");
         }
     }
 
@@ -346,17 +241,8 @@ impl EguiApp {
             // 只在窗口停止移动时保存（位置变化后）
             if self.last_saved_window_pos != Some(pos) {
                 self.last_saved_window_pos = Some(pos);
-                if let Err(e) = self.service.update_state(|state| {
-                    state.config.window.x = Some(pos.x);
-                    state.config.window.y = Some(pos.y);
-                }) {
+                if let Err(e) = self.set_window_position_and_save(pos.x, pos.y) {
                     tracing::error!(error = %e, "保存窗口位置失败");
-                }
-                // 使用 request_save 启用防抖（500ms延迟）
-                if let Ok(state) = self.service.get_state() {
-                    if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                        tracing::error!(error = %e, "请求保存配置失败");
-                    }
                 }
             }
         }
@@ -389,8 +275,6 @@ impl EguiApp {
 
     /// 应用主题设置
     fn apply_theme(&self, ctx: &Context) {
-        use crate::core::domain::Theme;
-
         let theme = self
             .service
             .get_state()
@@ -508,27 +392,15 @@ impl eframe::App for EguiApp {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         // 使用最后一次保存的窗口位置
         if let Some(pos) = self.last_saved_window_pos {
-            if let Err(e) = self.service.update_state(|state| {
-                state.config.window.x = Some(pos.x);
-                state.config.window.y = Some(pos.y);
-            }) {
+            if let Err(e) = self.set_window_position_and_save(pos.x, pos.y) {
                 tracing::error!(error = %e, "更新窗口位置失败");
             }
         }
 
-        if let Err(e) = self.service.update_state(|state| {
-            if let Some(pos) = self.about_window_pos {
-                state.config.viewer.about_window_pos =
-                    Some(crate::core::domain::Position::new(pos.x, pos.y));
-            }
-            if let Err(save_err) = self.service.config_use_case.save_config(&state.config) {
-                tracing::error!(error = %save_err, "保存配置失败");
-            } else {
-                tracing::info!("配置已保存");
-            }
-        }) {
+        if let Err(e) = self.set_about_window_position(self.about_window_pos) {
             tracing::error!(error = %e, "更新状态失败");
         }
+        self.save_config_now();
     }
 }
 
@@ -592,17 +464,8 @@ impl EguiApp {
             .gallery_widget
             .handle_scroll(ctx, current_size, language)
         {
-            // 更新配置中的缩略图大小
-            if let Err(e) = self.service.update_state(|s| {
-                s.config.gallery.thumbnail_size = new_size;
-            }) {
+            if let Err(e) = self.set_thumbnail_size_and_save(new_size) {
                 tracing::error!(error = %e, "更新缩略图大小失败");
-            }
-            // 请求保存配置
-            if let Ok(state) = self.service.get_state() {
-                if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                    tracing::error!(error = %e, "请求保存配置失败");
-                }
             }
         }
     }
@@ -818,7 +681,7 @@ impl Default for AppState {
 
 #[cfg(test)]
 mod tests {
-    use super::{CopyAction, CopyShortcutState, EguiApp};
+    use super::copy_shortcuts::{resolve_copy_action, CopyAction, CopyShortcutState};
 
     fn state(
         wants_keyboard_input: bool,
@@ -838,45 +701,45 @@ mod tests {
 
     #[test]
     fn matrix_ctrl_c_no_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(false, false, false, true, false));
+        let decision = resolve_copy_action(state(false, false, false, true, false));
         assert_eq!(decision.action, Some(CopyAction::Image));
     }
 
     #[test]
     fn matrix_ctrl_shift_c_no_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(false, false, true, false, true));
+        let decision = resolve_copy_action(state(false, false, true, false, true));
         assert_eq!(decision.action, Some(CopyAction::Path));
     }
 
     #[test]
     fn matrix_ctrl_c_with_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(true, false, false, true, false));
+        let decision = resolve_copy_action(state(true, false, false, true, false));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
     }
 
     #[test]
     fn matrix_ctrl_shift_c_with_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(true, false, true, false, true));
+        let decision = resolve_copy_action(state(true, false, true, false, true));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
     }
 
     #[test]
     fn matrix_cmd_c_no_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(false, true, false, false, false));
+        let decision = resolve_copy_action(state(false, true, false, false, false));
         assert_eq!(decision.action, Some(CopyAction::Image));
     }
 
     #[test]
     fn matrix_cmd_shift_c_no_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(false, true, false, false, true));
+        let decision = resolve_copy_action(state(false, true, false, false, true));
         assert_eq!(decision.action, Some(CopyAction::Path));
     }
 
     #[test]
     fn matrix_cmd_c_with_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(true, true, false, false, false));
+        let decision = resolve_copy_action(state(true, true, false, false, false));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
         assert!(!decision.consume_copy_event);
@@ -884,7 +747,7 @@ mod tests {
 
     #[test]
     fn matrix_cmd_shift_c_with_text_selected() {
-        let decision = EguiApp::resolve_copy_action(state(true, true, false, false, true));
+        let decision = resolve_copy_action(state(true, true, false, false, true));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
         assert!(decision.consume_copy_event);

@@ -141,20 +141,9 @@ fn log_to_file(msg: &str) {
     }
 }
 
-fn run_app() -> Result<()> {
-    info!("[步骤1] 开始初始化...");
-    log_to_file("[步骤1] 开始初始化");
-
-    // 先初始化国际化系统
-    info!("[步骤1.5] 初始化国际化系统...");
-    log_to_file("[步骤1.5] 初始化国际化系统");
-    oas_image_viewer::adapters::egui::i18n::initialize();
-
-    // 解析命令行参数
-    info!("[步骤2] 解析命令行参数...");
-    log_to_file("[步骤2] 解析命令行参数");
+fn parse_initial_path() -> Option<PathBuf> {
     let args: Vec<String> = env::args().collect();
-    let initial_path = if args.len() > 1 {
+    if args.len() > 1 {
         let path = PathBuf::from(&args[1]);
         info!("从命令行打开: {:?}", path);
         log_to_file(&format!("命令行路径: {:?}", path));
@@ -162,16 +151,11 @@ fn run_app() -> Result<()> {
     } else {
         log_to_file("无命令行参数");
         None
-    };
+    }
+}
 
-    // 创建依赖
-    info!("[步骤3] 创建图像源...");
-    log_to_file("[步骤3] 创建图像源");
-    let image_source = Arc::new(FsImageSource::new());
-
-    info!("[步骤4] 创建存储...");
-    log_to_file("[步骤4] 创建存储");
-    let storage: Arc<dyn Storage> = match JsonStorage::new() {
+fn create_storage() -> Arc<dyn Storage> {
+    match JsonStorage::new() {
         Ok(s) => {
             info!("存储初始化成功");
             log_to_file("存储初始化成功");
@@ -184,12 +168,11 @@ fn run_app() -> Result<()> {
             log_to_file(&format!("使用临时路径: {:?}", temp_path));
             Arc::new(JsonStorage::from_path(temp_path))
         }
-    };
+    }
+}
 
-    // 加载配置（仅加载一次）
-    info!("[步骤5] 加载配置...");
-    log_to_file("[步骤5] 加载配置");
-    let config = match storage.load_config() {
+fn load_app_config(storage: &Arc<dyn Storage>) -> AppConfig {
+    match storage.load_config() {
         Ok(cfg) => {
             info!("配置加载成功");
             log_to_file("配置加载成功");
@@ -200,23 +183,110 @@ fn run_app() -> Result<()> {
             log_to_file(&format!("配置加载失败: {}", e));
             AppConfig::default()
         }
-    };
+    }
+}
+
+fn create_service(
+    image_source: Arc<FsImageSource>,
+    storage: Arc<dyn Storage>,
+) -> Arc<OASImageViewerService> {
+    let view_use_case = ViewImageUseCase::new(image_source, storage.clone());
+    let navigate_use_case = NavigateGalleryUseCase;
+    let config_use_case = ManageConfigUseCase::new(storage);
+    Arc::new(OASImageViewerService::new(
+        view_use_case,
+        navigate_use_case,
+        config_use_case,
+    ))
+}
+
+fn apply_initial_path(service: &Arc<OASImageViewerService>, initial_path: &Option<PathBuf>) {
+    if let Some(path) = initial_path {
+        info!("加载初始路径: {:?}", path);
+        log_to_file(&format!("加载初始路径: {:?}", path));
+        let _ = service.update_state(|state| {
+            if path.is_dir() {
+                let image_source = FsImageSource::new();
+                let _ = service.navigate_use_case.load_directory(
+                    &mut state.gallery,
+                    &image_source,
+                    path,
+                );
+            } else {
+                let image = Image::new(
+                    path.file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown")
+                        .to_string(),
+                    path.clone(),
+                );
+                state.gallery.gallery.add_image(image);
+                let fit_to_window = state.config.viewer.fit_to_window;
+                let _ = service.view_use_case.open_image(
+                    path,
+                    &mut state.view,
+                    None,
+                    None,
+                    fit_to_window,
+                );
+            }
+        });
+    }
+}
+
+fn build_native_options(config: &AppConfig) -> NativeOptions {
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([config.window.width, config.window.height])
+        .with_min_inner_size([400.0, 300.0]);
+
+    if let Some([x, y]) = config.window.position() {
+        viewport = viewport.with_position([x, y]);
+    }
+
+    if config.window.maximized {
+        viewport = viewport.with_maximized(true);
+    }
+
+    NativeOptions {
+        viewport,
+        ..Default::default()
+    }
+}
+
+fn run_app() -> Result<()> {
+    info!("[步骤1] 开始初始化...");
+    log_to_file("[步骤1] 开始初始化");
+
+    // 先初始化国际化系统
+    info!("[步骤1.5] 初始化国际化系统...");
+    log_to_file("[步骤1.5] 初始化国际化系统");
+    oas_image_viewer::adapters::egui::i18n::initialize();
+
+    // 解析命令行参数
+    info!("[步骤2] 解析命令行参数...");
+    log_to_file("[步骤2] 解析命令行参数");
+    let initial_path = parse_initial_path();
+
+    // 创建依赖
+    info!("[步骤3] 创建图像源...");
+    log_to_file("[步骤3] 创建图像源");
+    let image_source = Arc::new(FsImageSource::new());
+
+    info!("[步骤4] 创建存储...");
+    log_to_file("[步骤4] 创建存储");
+    let storage = create_storage();
+
+    // 加载配置（仅加载一次）
+    info!("[步骤5] 加载配置...");
+    log_to_file("[步骤5] 加载配置");
+    let config = load_app_config(&storage);
 
     // 创建用例
     info!("[步骤6] 创建用例...");
     log_to_file("[步骤6] 创建用例");
-    let view_use_case = ViewImageUseCase::new(image_source.clone(), storage.clone());
-    let navigate_use_case = NavigateGalleryUseCase;
-    let config_use_case = ManageConfigUseCase::new(storage.clone());
-
-    // 创建应用服务
     info!("[步骤7] 创建应用服务...");
     log_to_file("[步骤7] 创建应用服务");
-    let service = Arc::new(OASImageViewerService::new(
-        view_use_case,
-        navigate_use_case,
-        config_use_case,
-    ));
+    let service = create_service(image_source, storage);
 
     // 初始化服务（复用已加载配置，避免重复加载）
     info!("[步骤8] 初始化服务...");
@@ -232,60 +302,12 @@ fn run_app() -> Result<()> {
     }
 
     // 如果存在初始路径则执行加载
-    if let Some(ref path) = initial_path {
-        info!("加载初始路径: {:?}", path);
-        log_to_file(&format!("加载初始路径: {:?}", path));
-        let _ = service.update_state(|state| {
-            if path.is_dir() {
-                let image_source = FsImageSource::new();
-                let _ = service.navigate_use_case.load_directory(
-                    &mut state.gallery,
-                    &image_source,
-                    path,
-                );
-            } else {
-                // 打开单图并加入图库（仅加入当前图片，不扫描整个目录）
-                let image = Image::new(
-                    path.file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("unknown")
-                        .to_string(),
-                    path.clone(),
-                );
-                state.gallery.gallery.add_image(image);
-
-                // 初次加载使用默认窗口尺寸（后续会被真实窗口尺寸覆盖）
-                let fit_to_window = state.config.viewer.fit_to_window;
-                let _ = service.view_use_case.open_image(
-                    path,
-                    &mut state.view,
-                    None,
-                    None,
-                    fit_to_window,
-                );
-            }
-        });
-    }
+    apply_initial_path(&service, &initial_path);
 
     // 配置窗口
     info!("[步骤9] 配置窗口...");
     log_to_file("[步骤9] 配置窗口");
-    let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([config.window.width, config.window.height])
-        .with_min_inner_size([400.0, 300.0]);
-
-    if let Some([x, y]) = config.window.position() {
-        viewport = viewport.with_position([x, y]);
-    }
-
-    if config.window.maximized {
-        viewport = viewport.with_maximized(true);
-    }
-
-    let native_options = NativeOptions {
-        viewport,
-        ..Default::default()
-    };
+    let native_options = build_native_options(&config);
 
     // 启动应用
     info!("[步骤10] 启动UI...");

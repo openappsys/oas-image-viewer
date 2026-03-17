@@ -31,9 +31,11 @@ impl std::fmt::Display for ClipboardError {
 
 impl std::error::Error for ClipboardError {}
 
+const CLIPBOARD_ERROR_CODE: &str = "CLIPBOARD_ERROR";
+
 impl From<ClipboardError> for crate::core::CoreError {
     fn from(e: ClipboardError) -> Self {
-        crate::core::CoreError::technical("STORAGE_ERROR", e.to_string())
+        crate::core::CoreError::technical(CLIPBOARD_ERROR_CODE, e.to_string())
     }
 }
 
