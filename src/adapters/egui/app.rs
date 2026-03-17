@@ -594,7 +594,9 @@ impl EguiApp {
     ) {
         let label = format!("📁 {}", get_text("show_in_folder", language));
         if ui.button(label).clicked() {
-            let _ = ClipboardPort::show_in_folder(&self.clipboard_manager, path);
+            if let Err(e) = ClipboardPort::show_in_folder(&self.clipboard_manager, path) {
+                tracing::warn!(path = %path.display(), error = %e, "在文件夹中显示失败");
+            }
             ui.close();
         }
     }

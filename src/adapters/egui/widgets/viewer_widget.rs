@@ -97,7 +97,9 @@ impl ViewerWidget {
             if copy_image_btn.clicked() {
                 if let Some(ref image) = state.current_image {
                     let path = image.path();
-                    let _ = self.clipboard.copy_image_from_file(path);
+                    if let Err(e) = self.clipboard.copy_image_from_file(path) {
+                        tracing::warn!(path = %path.display(), error = %e, "复制图片失败");
+                    }
                 }
                 ui.close();
             }
@@ -111,7 +113,9 @@ impl ViewerWidget {
             if copy_path_btn.clicked() {
                 if let Some(ref image) = state.current_image {
                     let path = image.path();
-                    let _ = self.clipboard.copy_path(path);
+                    if let Err(e) = self.clipboard.copy_path(path) {
+                        tracing::warn!(path = %path.display(), error = %e, "复制路径失败");
+                    }
                 }
                 ui.close();
             }
@@ -125,7 +129,9 @@ impl ViewerWidget {
             if show_in_folder_btn.clicked() {
                 if let Some(ref image) = state.current_image {
                     let path = image.path();
-                    let _ = ClipboardPort::show_in_folder(&self.clipboard, path);
+                    if let Err(e) = ClipboardPort::show_in_folder(&self.clipboard, path) {
+                        tracing::warn!(path = %path.display(), error = %e, "在文件夹中显示失败");
+                    }
                 }
                 ui.close();
             }

@@ -84,7 +84,9 @@ impl EguiApp {
                 Err(e) => format!("{}: {}", get_text("operation_failed", language), e),
             };
 
-            let _ = tx.send(message);
+            if tx.send(message).is_err() {
+                tracing::debug!("集成任务结果发送失败：接收端已关闭");
+            }
         });
     }
 

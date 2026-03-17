@@ -588,6 +588,27 @@ impl OASImageViewerService {
             })
     }
 
+    pub fn get_config(&self) -> Result<AppConfig> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| s.config.clone())
+    }
+
+    pub fn update_config(&self, updater: impl FnOnce(&mut AppConfig)) -> Result<()> {
+        self.update_state(|state| updater(&mut state.config))
+    }
+
+    pub fn request_save_config(&self) -> Result<()> {
+        let config = self.get_config()?;
+        self.config_use_case.request_save(&config)
+    }
+
+    pub fn save_config_now(&self) -> Result<()> {
+        let config = self.get_config()?;
+        self.config_use_case.save_config(&config)
+    }
+
     /// 更新状态
     pub fn update_state(&self, f: impl FnOnce(&mut AppState)) -> Result<()> {
         let mut state = self
@@ -1444,50 +1465,48 @@ mod tests {
         assert!(validated.viewer.zoom_step >= 1.01);
     }
 
-    // OASImageViewerService 测试
+    struct TestImageSource;
+    impl ImageSource for TestImageSource {
+        fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {
+            Ok(ImageMetadata::default())
+        }
+        fn load_image_data(&self, _path: &Path) -> Result<(u32, u32, Vec<u8>)> {
+            Ok((100, 100, vec![0u8; 40000]))
+        }
+        fn scan_directory(&self, _path: &Path) -> Result<Vec<PathBuf>> {
+            Ok(vec![])
+        }
+        fn is_supported(&self, _path: &Path) -> bool {
+            true
+        }
+        fn generate_thumbnail(&self, _path: &Path, _max_size: u32) -> Result<(u32, u32, Vec<u8>)> {
+            Ok((100, 100, vec![0u8; 40000]))
+        }
+    }
+
+    struct TestStorage;
+    impl Storage for TestStorage {
+        fn load_config(&self) -> Result<AppConfig> {
+            Ok(AppConfig::default())
+        }
+        fn save_config(&self, _config: &AppConfig) -> Result<()> {
+            Ok(())
+        }
+        fn request_save(&self, _config: &AppConfig) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    fn build_test_service() -> OASImageViewerService {
+        let view_use_case = ViewImageUseCase::new(Arc::new(TestImageSource), Arc::new(TestStorage));
+        let navigate_use_case = NavigateGalleryUseCase;
+        let config_use_case = ManageConfigUseCase::new(Arc::new(TestStorage));
+        OASImageViewerService::new(view_use_case, navigate_use_case, config_use_case)
+    }
+
     #[test]
     fn test_oas_image_viewer_service_new() {
-        struct MockImageSource;
-        impl ImageSource for MockImageSource {
-            fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {
-                Ok(ImageMetadata::default())
-            }
-            fn load_image_data(&self, _path: &Path) -> Result<(u32, u32, Vec<u8>)> {
-                Ok((100, 100, vec![0u8; 40000]))
-            }
-            fn scan_directory(&self, _path: &Path) -> Result<Vec<PathBuf>> {
-                Ok(vec![])
-            }
-            fn is_supported(&self, _path: &Path) -> bool {
-                true
-            }
-            fn generate_thumbnail(
-                &self,
-                _path: &Path,
-                _max_size: u32,
-            ) -> Result<(u32, u32, Vec<u8>)> {
-                Ok((100, 100, vec![0u8; 40000]))
-            }
-        }
-
-        struct MockStorage;
-        impl Storage for MockStorage {
-            fn load_config(&self) -> Result<AppConfig> {
-                Ok(AppConfig::default())
-            }
-            fn save_config(&self, _config: &AppConfig) -> Result<()> {
-                Ok(())
-            }
-            fn request_save(&self, _config: &AppConfig) -> Result<()> {
-                Ok(())
-            }
-        }
-
-        let view_use_case = ViewImageUseCase::new(Arc::new(MockImageSource), Arc::new(MockStorage));
-        let navigate_use_case = NavigateGalleryUseCase;
-        let config_use_case = ManageConfigUseCase::new(Arc::new(MockStorage));
-
-        let service = OASImageViewerService::new(view_use_case, navigate_use_case, config_use_case);
+        let service = build_test_service();
 
         let state = service.get_state().unwrap();
         assert_eq!(state.view.view_mode, ViewMode::Gallery);
@@ -1495,47 +1514,7 @@ mod tests {
 
     #[test]
     fn test_oas_image_viewer_service_update_state() {
-        struct MockImageSource;
-        impl ImageSource for MockImageSource {
-            fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {
-                Ok(ImageMetadata::default())
-            }
-            fn load_image_data(&self, _path: &Path) -> Result<(u32, u32, Vec<u8>)> {
-                Ok((100, 100, vec![0u8; 40000]))
-            }
-            fn scan_directory(&self, _path: &Path) -> Result<Vec<PathBuf>> {
-                Ok(vec![])
-            }
-            fn is_supported(&self, _path: &Path) -> bool {
-                true
-            }
-            fn generate_thumbnail(
-                &self,
-                _path: &Path,
-                _max_size: u32,
-            ) -> Result<(u32, u32, Vec<u8>)> {
-                Ok((100, 100, vec![0u8; 40000]))
-            }
-        }
-
-        struct MockStorage;
-        impl Storage for MockStorage {
-            fn load_config(&self) -> Result<AppConfig> {
-                Ok(AppConfig::default())
-            }
-            fn save_config(&self, _config: &AppConfig) -> Result<()> {
-                Ok(())
-            }
-            fn request_save(&self, _config: &AppConfig) -> Result<()> {
-                Ok(())
-            }
-        }
-
-        let view_use_case = ViewImageUseCase::new(Arc::new(MockImageSource), Arc::new(MockStorage));
-        let navigate_use_case = NavigateGalleryUseCase;
-        let config_use_case = ManageConfigUseCase::new(Arc::new(MockStorage));
-
-        let service = OASImageViewerService::new(view_use_case, navigate_use_case, config_use_case);
+        let service = build_test_service();
 
         service
             .update_state(|state| {
@@ -1545,6 +1524,53 @@ mod tests {
 
         let state = service.get_state().unwrap();
         assert_eq!(state.view.view_mode, ViewMode::Viewer);
+    }
+
+    #[test]
+    fn test_oas_image_viewer_service_get_selected_gallery_image_for_open() {
+        let service = build_test_service();
+        service
+            .update_state(|state| {
+                state.gallery.gallery.add_image(Image::new("a", "/a.png"));
+                state.gallery.gallery.select_image(0);
+                state.view.view_mode = ViewMode::Gallery;
+                state.config.viewer.fit_to_window = false;
+            })
+            .unwrap();
+
+        let selected = service.get_selected_gallery_image_for_open().unwrap();
+        assert_eq!(
+            selected,
+            Some((PathBuf::from("/a.png"), false))
+        );
+    }
+
+    #[test]
+    fn test_oas_image_viewer_service_get_current_view_image_path_if_viewer() {
+        let service = build_test_service();
+        service
+            .update_state(|state| {
+                state.view.current_image = Some(Image::new("a", "/a.png"));
+                state.view.view_mode = ViewMode::Viewer;
+            })
+            .unwrap();
+
+        let path = service.get_current_view_image_path_if_viewer().unwrap();
+        assert_eq!(path, Some(PathBuf::from("/a.png")));
+    }
+
+    #[test]
+    fn test_oas_image_viewer_service_update_and_get_config() {
+        let service = build_test_service();
+        service
+            .update_config(|config| {
+                config.language = Language::English;
+                config.theme = Theme::Light;
+            })
+            .unwrap();
+
+        assert_eq!(service.get_language().unwrap(), Language::English);
+        assert_eq!(service.get_theme().unwrap(), Theme::Light);
     }
 
     // ViewState 测试

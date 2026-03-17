@@ -16,8 +16,7 @@ impl EguiApp {
     where
         F: FnOnce(&mut AppConfig),
     {
-        self.service
-            .update_state(|state| updater(&mut state.config))
+        self.service.update_config(updater)
     }
 
     fn update_config_and_request_save<F>(&self, updater: F) -> crate::core::Result<()>
@@ -30,20 +29,16 @@ impl EguiApp {
     }
 
     fn request_save_config(&self) {
-        if let Ok(state) = self.service.get_state() {
-            if let Err(e) = self.service.config_use_case.request_save(&state.config) {
-                tracing::error!(error = %e, "请求保存配置失败");
-            }
+        if let Err(e) = self.service.request_save_config() {
+            tracing::error!(error = %e, "请求保存配置失败");
         }
     }
 
     pub(super) fn save_config_now(&self) {
-        if let Ok(state) = self.service.get_state() {
-            if let Err(e) = self.service.config_use_case.save_config(&state.config) {
-                tracing::error!(error = %e, "保存配置失败");
-            } else {
-                tracing::info!("配置已保存");
-            }
+        if let Err(e) = self.service.save_config_now() {
+            tracing::error!(error = %e, "保存配置失败");
+        } else {
+            tracing::info!("配置已保存");
         }
     }
 

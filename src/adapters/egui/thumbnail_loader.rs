@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{debug, error, info};
+use crate::core::domain::GalleryLayout;
 
 /// 缩略图加载请求
 struct ThumbnailRequest {
@@ -36,7 +37,10 @@ impl ThumbnailLoader {
                 let texture = Self::load_thumbnail_internal(&path, &ctx);
 
                 // 发送结果回主线程
-                let _ = result_tx.send(ThumbnailResult { index, texture });
+                if result_tx.send(ThumbnailResult { index, texture }).is_err() {
+                    debug!("缩略图结果发送失败：接收端已关闭");
+                    break;
+                }
 
                 // 触发重绘以更新UI
                 ctx.request_repaint();
@@ -50,8 +54,6 @@ impl ThumbnailLoader {
     }
 
     fn load_thumbnail_internal(path: &PathBuf, ctx: &egui::Context) -> Option<egui::TextureHandle> {
-        const THUMBNAIL_SIZE: u32 = 120;
-
         // 首先尝试使用 image::open 加载
         let img_result = image::open(path);
 
@@ -81,8 +83,8 @@ impl ThumbnailLoader {
 
         // 调整为缩略图大小
         let resized = img.resize(
-            THUMBNAIL_SIZE,
-            THUMBNAIL_SIZE,
+            GalleryLayout::DEFAULT_THUMBNAIL_SIZE,
+            GalleryLayout::DEFAULT_THUMBNAIL_SIZE,
             image::imageops::FilterType::Lanczos3,
         );
 
@@ -98,7 +100,9 @@ impl ThumbnailLoader {
 
     /// 请求加载缩略图
     pub fn request(&self, index: usize, path: PathBuf) {
-        let _ = self.sender.send(ThumbnailRequest { path, index });
+        if self.sender.send(ThumbnailRequest { path, index }).is_err() {
+            debug!("缩略图请求发送失败：加载线程已退出");
+        }
     }
 
     /// 处理已完成的缩略图加载 - 返回处理的数量
