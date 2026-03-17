@@ -10,6 +10,8 @@ use super::{
     AppState, GalleryState, ManageConfigUseCase, NavigateGalleryUseCase, ViewImageUseCase, ViewState,
 };
 
+pub type CurrentImageInfo = (PathBuf, (u32, u32), String);
+
 pub struct OASImageViewerService {
     view_use_case: ViewImageUseCase,
     navigate_use_case: NavigateGalleryUseCase,
@@ -161,6 +163,32 @@ impl OASImageViewerService {
                     .current_image
                     .as_ref()
                     .map(|image| image.path().to_path_buf())
+            })
+    }
+
+    pub fn should_show_info_panel(&self) -> Result<bool> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                s.config.viewer.show_info_panel
+                    && s.view.current_image.is_some()
+                    && s.view.view_mode == ViewMode::Viewer
+            })
+    }
+
+    pub fn get_current_view_image_info(&self) -> Result<Option<CurrentImageInfo>> {
+        self.state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
+            .map(|s| {
+                s.view.current_image.as_ref().map(|image| {
+                    (
+                        image.path().to_path_buf(),
+                        (image.metadata().width, image.metadata().height),
+                        format!("{:?}", image.metadata().format),
+                    )
+                })
             })
     }
 

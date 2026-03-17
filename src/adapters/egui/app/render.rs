@@ -2,7 +2,7 @@
 
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
-use crate::core::domain::{Language, ViewMode};
+use crate::core::domain::Language;
 use egui::Context;
 
 impl EguiApp {
@@ -144,13 +144,9 @@ impl EguiApp {
     }
 
     fn sync_info_panel_visibility(&mut self) {
-        let Ok(state) = self.service.get_state() else {
+        let Ok(should_show) = self.service.should_show_info_panel() else {
             return;
         };
-
-        let should_show = state.config.viewer.show_info_panel
-            && state.view.current_image.is_some()
-            && state.view.view_mode == ViewMode::Viewer;
 
         if should_show != self.info_panel.is_visible() {
             if should_show {
@@ -162,19 +158,15 @@ impl EguiApp {
     }
 
     fn update_info_panel_content(&mut self) {
-        let Ok(state) = self.service.get_state() else {
+        let Ok(image_info) = self.service.get_current_view_image_info() else {
             return;
         };
 
-        if let Some(ref image) = state.view.current_image {
-            let new_path = image.path().to_path_buf();
+        if let Some((new_path, dimensions, format)) = image_info {
             if self.current_image_path.as_ref() != Some(&new_path) {
                 self.current_image_path = Some(new_path.clone());
-                self.info_panel.set_image_info(
-                    &new_path,
-                    (image.metadata().width, image.metadata().height),
-                    &format!("{:?}", image.metadata().format),
-                );
+                self.info_panel
+                    .set_image_info(&new_path, dimensions, &format);
             }
         } else if self.current_image_path.is_some() {
             self.current_image_path = None;
