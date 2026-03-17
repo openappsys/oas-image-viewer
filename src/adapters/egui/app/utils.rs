@@ -31,6 +31,8 @@ pub fn log_panel(msg: &str) {
         .append(true)
         .open("debug.log")
     {
-        let _ = writeln!(file, "{}", msg);
+        if let Err(e) = writeln!(file, "{}", msg) {
+            tracing::warn!(error = %e, "写入调试日志失败");
+        }
     }
 }
