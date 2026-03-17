@@ -577,7 +577,7 @@ fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
             .text_color(text_color)
             .font(egui::TextStyle::Body)
             .desired_width(ui.available_width());
-        
+
         // 渲染 TextEdit，但忽略输出（因为是只读的）
         let _response = ui.add(text_edit);
     });

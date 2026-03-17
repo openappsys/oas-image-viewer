@@ -25,6 +25,28 @@ mod utils;
 
 pub use types::EguiApp;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CopyAction {
+    Image,
+    Path,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CopyShortcutState {
+    wants_keyboard_input: bool,
+    has_copy_event: bool,
+    key_copy_path: bool,
+    key_copy_image: bool,
+    active_shift: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CopyDecision {
+    action: Option<CopyAction>,
+    clear_hint: bool,
+    consume_copy_event: bool,
+}
+
 impl EguiApp {
     /// 处理快捷键
     fn handle_shortcuts(&mut self, ctx: &Context) {
@@ -144,7 +166,6 @@ impl EguiApp {
     }
 
     fn handle_copy_shortcuts(&mut self, ctx: &Context) {
-        let wants_keyboard_input = ctx.wants_keyboard_input();
         let (has_copy_event, key_copy_path, key_copy_image, active_shift) = ctx.input(|i| {
             let mut copy_path = false;
             let mut copy_image = false;
@@ -176,66 +197,23 @@ impl EguiApp {
             (copy_event, copy_path, copy_image, i.modifiers.shift)
         });
 
-        let copy_path_shortcut = ctx.input_mut(|i| {
-            #[cfg(target_os = "macos")]
-            {
-                i.consume_shortcut(&egui::KeyboardShortcut {
-                    modifiers: egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
-                    logical_key: egui::Key::C,
-                })
-            }
-            #[cfg(not(target_os = "macos"))]
-            {
-                i.consume_shortcut(&egui::KeyboardShortcut {
-                    modifiers: egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
-                    logical_key: egui::Key::C,
-                })
-            }
+        let decision = Self::resolve_copy_action(CopyShortcutState {
+            wants_keyboard_input: ctx.wants_keyboard_input(),
+            has_copy_event,
+            key_copy_path,
+            key_copy_image,
+            active_shift,
         });
 
-        let copy_image_shortcut = if !copy_path_shortcut {
-            ctx.input_mut(|i| {
-                #[cfg(target_os = "macos")]
-                {
-                    i.consume_shortcut(&egui::KeyboardShortcut {
-                        modifiers: egui::Modifiers::COMMAND,
-                        logical_key: egui::Key::C,
-                    })
-                }
-                #[cfg(not(target_os = "macos"))]
-                {
-                    i.consume_shortcut(&egui::KeyboardShortcut {
-                        modifiers: egui::Modifiers::CTRL,
-                        logical_key: egui::Key::C,
-                    })
-                }
-            })
-        } else {
-            false
-        };
-
-        if wants_keyboard_input {
-            if copy_path_shortcut || key_copy_path || (has_copy_event && active_shift) {
-                ctx.input_mut(|i| {
-                    i.events.retain(|event| !matches!(event, egui::Event::Copy));
-                });
-                self.last_context_menu_result = None;
-                return;
-            }
-            if copy_image_shortcut || key_copy_image || has_copy_event {
-                self.last_context_menu_result = None;
-                return;
-            }
+        if decision.consume_copy_event {
+            ctx.input_mut(|i| i.events.retain(|event| !matches!(event, egui::Event::Copy)));
         }
-
-        let copy_path_triggered =
-            copy_path_shortcut || key_copy_path || (has_copy_event && active_shift);
-        let copy_image_triggered =
-            !copy_path_triggered && (copy_image_shortcut || key_copy_image || has_copy_event);
-
-        if !copy_path_triggered && !copy_image_triggered {
+        if decision.clear_hint {
+            self.last_context_menu_result = None;
+        }
+        let Some(action) = decision.action else {
             return;
-        }
+        };
 
         let (path, language) = match self.service.get_state() {
             Ok(state) => match state.view.current_image {
@@ -245,14 +223,65 @@ impl EguiApp {
             Err(_) => return,
         };
 
-        if copy_path_triggered {
-            let result = ClipboardPort::copy_path(&self.clipboard_manager, &path);
-            let success_msg = get_text("copy_path", language).to_string();
-            self.handle_copy_result(result, &success_msg, language);
-        } else {
-            let result = self.copy_image_to_clipboard(&path);
-            let success_msg = get_text("copy_image", language).to_string();
-            self.handle_copy_result(result, &success_msg, language);
+        match action {
+            CopyAction::Path => {
+                let result = ClipboardPort::copy_path(&self.clipboard_manager, &path);
+                let success_msg = get_text("copy_path", language).to_string();
+                self.handle_copy_result(result, &success_msg, language);
+            }
+            CopyAction::Image => {
+                let result = self.copy_image_to_clipboard(&path);
+                let success_msg = get_text("copy_image", language).to_string();
+                self.handle_copy_result(result, &success_msg, language);
+            }
+        }
+    }
+
+    fn resolve_copy_action(state: CopyShortcutState) -> CopyDecision {
+        if state.wants_keyboard_input {
+            if state.key_copy_path || (state.has_copy_event && state.active_shift) {
+                return CopyDecision {
+                    action: None,
+                    clear_hint: true,
+                    consume_copy_event: state.has_copy_event && state.active_shift,
+                };
+            }
+            if state.key_copy_image || state.has_copy_event {
+                return CopyDecision {
+                    action: None,
+                    clear_hint: true,
+                    consume_copy_event: false,
+                };
+            }
+            return CopyDecision {
+                action: None,
+                clear_hint: false,
+                consume_copy_event: false,
+            };
+        }
+
+        let copy_path = state.key_copy_path || (state.has_copy_event && state.active_shift);
+        if copy_path {
+            return CopyDecision {
+                action: Some(CopyAction::Path),
+                clear_hint: false,
+                consume_copy_event: false,
+            };
+        }
+
+        let copy_image = state.key_copy_image || (state.has_copy_event && !state.active_shift);
+        if copy_image {
+            return CopyDecision {
+                action: Some(CopyAction::Image),
+                clear_hint: false,
+                consume_copy_event: false,
+            };
+        }
+
+        CopyDecision {
+            action: None,
+            clear_hint: false,
+            consume_copy_event: false,
         }
     }
 
@@ -788,4 +817,76 @@ impl Default for AppState {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::{CopyAction, CopyShortcutState, EguiApp};
+
+    fn state(
+        wants_keyboard_input: bool,
+        has_copy_event: bool,
+        key_copy_path: bool,
+        key_copy_image: bool,
+        active_shift: bool,
+    ) -> CopyShortcutState {
+        CopyShortcutState {
+            wants_keyboard_input,
+            has_copy_event,
+            key_copy_path,
+            key_copy_image,
+            active_shift,
+        }
+    }
+
+    #[test]
+    fn matrix_ctrl_c_no_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(false, false, false, true, false));
+        assert_eq!(decision.action, Some(CopyAction::Image));
+    }
+
+    #[test]
+    fn matrix_ctrl_shift_c_no_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(false, false, true, false, true));
+        assert_eq!(decision.action, Some(CopyAction::Path));
+    }
+
+    #[test]
+    fn matrix_ctrl_c_with_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(true, false, false, true, false));
+        assert_eq!(decision.action, None);
+        assert!(decision.clear_hint);
+    }
+
+    #[test]
+    fn matrix_ctrl_shift_c_with_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(true, false, true, false, true));
+        assert_eq!(decision.action, None);
+        assert!(decision.clear_hint);
+    }
+
+    #[test]
+    fn matrix_cmd_c_no_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(false, true, false, false, false));
+        assert_eq!(decision.action, Some(CopyAction::Image));
+    }
+
+    #[test]
+    fn matrix_cmd_shift_c_no_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(false, true, false, false, true));
+        assert_eq!(decision.action, Some(CopyAction::Path));
+    }
+
+    #[test]
+    fn matrix_cmd_c_with_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(true, true, false, false, false));
+        assert_eq!(decision.action, None);
+        assert!(decision.clear_hint);
+        assert!(!decision.consume_copy_event);
+    }
+
+    #[test]
+    fn matrix_cmd_shift_c_with_text_selected() {
+        let decision = EguiApp::resolve_copy_action(state(true, true, false, false, true));
+        assert_eq!(decision.action, None);
+        assert!(decision.clear_hint);
+        assert!(decision.consume_copy_event);
+    }
+}

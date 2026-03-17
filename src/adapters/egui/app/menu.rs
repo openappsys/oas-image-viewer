@@ -2,6 +2,7 @@ use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::platform::SystemIntegration;
 use crate::core::domain::{Language, NavigationDirection, Theme, ViewMode};
+use crate::core::ports::ClipboardPort;
 use egui::{Color32, Context, CornerRadius, RichText, Stroke, Vec2};
 use std::sync::mpsc;
 use std::thread;
@@ -973,6 +974,67 @@ impl EguiApp {
         ) {
             self.handle_reset_zoom();
             clicked = true;
+        }
+
+        self.render_menu_separator(ui, style);
+
+        // 复制操作
+        ui.label(
+            RichText::new(get_text("clipboard", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        let copy_image_shortcut = if cfg!(target_os = "macos") {
+            "Cmd+C"
+        } else {
+            "Ctrl+C"
+        };
+        let copy_path_shortcut = if cfg!(target_os = "macos") {
+            "Cmd+Shift+C"
+        } else {
+            "Ctrl+Shift+C"
+        };
+
+        // 获取当前图片路径
+        let path = self
+            .service
+            .get_state()
+            .ok()
+            .and_then(|state| state.view.current_image.as_ref().map(|img| img.path().to_path_buf()));
+        let has_image = path.is_some();
+
+        if self.render_menu_item(
+            ui,
+            "📋",
+            get_text("copy_image", language),
+            Some(copy_image_shortcut),
+            style,
+            has_image,
+        ) {
+            if let Some(ref path) = path {
+                let result = self.copy_image_to_clipboard(path);
+                let success_msg = get_text("copy_image", language).to_string();
+                self.handle_copy_result(result, &success_msg, language);
+                clicked = true;
+            }
+        }
+
+        if self.render_menu_item(
+            ui,
+            "📂",
+            get_text("copy_path", language),
+            Some(copy_path_shortcut),
+            style,
+            has_image,
+        ) {
+            if let Some(ref path) = path {
+                let result = ClipboardPort::copy_path(&self.clipboard_manager, path);
+                let success_msg = get_text("copy_path", language).to_string();
+                self.handle_copy_result(result, &success_msg, language);
+                clicked = true;
+            }
         }
 
         clicked
