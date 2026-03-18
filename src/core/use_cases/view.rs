@@ -110,12 +110,32 @@ impl ViewImageUseCase {
     }
 
     pub fn fit_to_window(&self, state: &mut ViewState, window_width: f32, window_height: f32) {
+        self.apply_fit_scale(state, window_width, window_height, FitStrategy::Window);
+    }
+
+    pub fn fit_to_width(&self, state: &mut ViewState, window_width: f32) {
+        self.apply_fit_scale(state, window_width, 0.0, FitStrategy::Width);
+    }
+
+    pub fn fit_to_height(&self, state: &mut ViewState, window_height: f32) {
+        self.apply_fit_scale(state, 0.0, window_height, FitStrategy::Height);
+    }
+
+    fn apply_fit_scale(
+        &self,
+        state: &mut ViewState,
+        window_width: f32,
+        window_height: f32,
+        strategy: FitStrategy,
+    ) {
         if let Some(ref image) = state.current_image {
-            let img_w = image.metadata().width as f32;
-            let img_h = image.metadata().height as f32;
-            let scale_x = window_width / img_w;
-            let scale_y = window_height / img_h;
-            let fit_scale = scale_x.min(scale_y).min(1.0);
+            let fit_scale = Self::calculate_fit_scale_by_strategy(
+                image.metadata().width,
+                image.metadata().height,
+                window_width,
+                window_height,
+                strategy,
+            );
             state.scale = Scale::new(fit_scale, 0.1, 20.0);
         }
         state.offset.reset();
@@ -128,11 +148,41 @@ impl ViewImageUseCase {
         window_width: f32,
         window_height: f32,
     ) -> f32 {
-        let img_w = image_width as f32;
-        let img_h = image_height as f32;
-        let scale_x = window_width / img_w;
-        let scale_y = window_height / img_h;
-        scale_x.min(scale_y).min(1.0)
+        Self::calculate_fit_scale_by_strategy(
+            image_width,
+            image_height,
+            window_width,
+            window_height,
+            FitStrategy::Window,
+        )
+    }
+
+    pub fn calculate_fit_width_scale(image_width: u32, window_width: f32) -> f32 {
+        Self::calculate_fit_scale_by_strategy(image_width, 1, window_width, 0.0, FitStrategy::Width)
+    }
+
+    pub fn calculate_fit_height_scale(image_height: u32, window_height: f32) -> f32 {
+        Self::calculate_fit_scale_by_strategy(1, image_height, 0.0, window_height, FitStrategy::Height)
+    }
+
+    fn calculate_fit_scale_by_strategy(
+        image_width: u32,
+        image_height: u32,
+        window_width: f32,
+        window_height: f32,
+        strategy: FitStrategy,
+    ) -> f32 {
+        let img_w = image_width.max(1) as f32;
+        let img_h = image_height.max(1) as f32;
+        match strategy {
+            FitStrategy::Window => {
+                let scale_x = window_width / img_w;
+                let scale_y = window_height / img_h;
+                scale_x.min(scale_y).min(1.0)
+            }
+            FitStrategy::Width => (window_width / img_w).min(1.0),
+            FitStrategy::Height => (window_height / img_h).min(1.0),
+        }
     }
 
     pub fn pan(&self, state: &mut ViewState, delta_x: f32, delta_y: f32) {
@@ -149,4 +199,11 @@ impl ViewImageUseCase {
     pub fn set_view_mode(&self, state: &mut ViewState, mode: ViewMode) {
         state.view_mode = mode;
     }
+}
+
+#[derive(Clone, Copy)]
+enum FitStrategy {
+    Window,
+    Width,
+    Height,
 }

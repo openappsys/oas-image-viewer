@@ -262,4 +262,18 @@ impl EguiApp {
             tracing::error!(error = %e, "适应窗口失败");
         }
     }
+
+    pub(crate) fn handle_fit_to_width(&mut self, ctx: &Context) {
+        let rect = ctx.viewport_rect();
+        if let Err(e) = self.service.fit_to_width(rect.width()) {
+            tracing::error!(error = %e, "适应宽度失败");
+        }
+    }
+
+    pub(crate) fn handle_fit_to_height(&mut self, ctx: &Context) {
+        let rect = ctx.viewport_rect();
+        if let Err(e) = self.service.fit_to_height(rect.height()) {
+            tracing::error!(error = %e, "适应高度失败");
+        }
+    }
 }

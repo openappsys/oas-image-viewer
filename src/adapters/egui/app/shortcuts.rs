@@ -248,18 +248,25 @@ impl EguiApp {
 
     fn handle_zoom_keys(&mut self, ctx: &Context) {
         if ctx.input(|i| {
-            (i.key_pressed(egui::Key::Plus) || i.key_pressed(egui::Key::Equals)) && i.modifiers.ctrl
+            (i.key_pressed(egui::Key::Plus) || i.key_pressed(egui::Key::Equals))
+                && Self::is_primary_modifier(i)
         }) {
             self.handle_zoom_in();
         }
-        if ctx.input(|i| i.key_pressed(egui::Key::Minus) && i.modifiers.ctrl) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Minus) && Self::is_primary_modifier(i)) {
             self.handle_zoom_out();
         }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num0) && i.modifiers.ctrl) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Num0) && Self::is_primary_modifier(i)) {
             self.handle_fit_to_window(ctx);
         }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num1) && i.modifiers.ctrl) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Num1) && Self::is_primary_modifier(i)) {
             self.handle_reset_zoom();
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num2) && Self::is_primary_modifier(i)) {
+            self.handle_fit_to_width(ctx);
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num3) && Self::is_primary_modifier(i)) {
+            self.handle_fit_to_height(ctx);
         }
     }
 

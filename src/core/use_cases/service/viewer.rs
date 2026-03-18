@@ -118,4 +118,16 @@ impl OASImageViewerService {
                 .fit_to_window(&mut state.view, window_width, window_height);
         })
     }
+
+    pub fn fit_to_width(&self, window_width: f32) -> Result<()> {
+        self.update_state(|state| {
+            self.view_use_case.fit_to_width(&mut state.view, window_width);
+        })
+    }
+
+    pub fn fit_to_height(&self, window_height: f32) -> Result<()> {
+        self.update_state(|state| {
+            self.view_use_case.fit_to_height(&mut state.view, window_height);
+        })
+    }
 }

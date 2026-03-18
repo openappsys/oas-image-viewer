@@ -344,6 +344,124 @@ mod tests {
     }
 
     #[test]
+    fn test_view_use_case_fit_to_width() {
+        struct MockImageSource;
+        impl ImageSource for MockImageSource {
+            fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {
+                Ok(ImageMetadata::default())
+            }
+            fn load_image_data(&self, _path: &Path) -> Result<(u32, u32, Vec<u8>)> {
+                Ok((100, 100, vec![0u8; 40000]))
+            }
+            fn scan_directory(&self, _path: &Path) -> Result<Vec<PathBuf>> {
+                Ok(vec![])
+            }
+            fn is_supported(&self, _path: &Path) -> bool {
+                true
+            }
+            fn generate_thumbnail(
+                &self,
+                _path: &Path,
+                _max_size: u32,
+            ) -> Result<(u32, u32, Vec<u8>)> {
+                Ok((100, 100, vec![0u8; 40000]))
+            }
+        }
+
+        struct MockStorage;
+        impl Storage for MockStorage {
+            fn load_config(&self) -> Result<AppConfig> {
+                Ok(AppConfig::default())
+            }
+            fn save_config(&self, _config: &AppConfig) -> Result<()> {
+                Ok(())
+            }
+            fn request_save(&self, _config: &AppConfig) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        let use_case = ViewImageUseCase::new(Arc::new(MockImageSource), Arc::new(MockStorage));
+        let mut state = ViewState::default();
+        let mut image = Image::new("test", "/test.jpg");
+        let metadata = ImageMetadata {
+            width: 2000,
+            height: 1000,
+            ..Default::default()
+        };
+        image.set_metadata(metadata);
+        state.current_image = Some(image);
+        state.scale.zoom_in(2.0, 10.0);
+        state.offset.translate(50.0, 25.0);
+        state.user_zoomed = true;
+
+        use_case.fit_to_width(&mut state, 1000.0);
+        assert!((state.scale.value() - 0.5).abs() < 0.001);
+        assert_eq!(state.offset.x, 0.0);
+        assert_eq!(state.offset.y, 0.0);
+        assert!(!state.user_zoomed);
+    }
+
+    #[test]
+    fn test_view_use_case_fit_to_height() {
+        struct MockImageSource;
+        impl ImageSource for MockImageSource {
+            fn load_metadata(&self, _path: &Path) -> Result<ImageMetadata> {
+                Ok(ImageMetadata::default())
+            }
+            fn load_image_data(&self, _path: &Path) -> Result<(u32, u32, Vec<u8>)> {
+                Ok((100, 100, vec![0u8; 40000]))
+            }
+            fn scan_directory(&self, _path: &Path) -> Result<Vec<PathBuf>> {
+                Ok(vec![])
+            }
+            fn is_supported(&self, _path: &Path) -> bool {
+                true
+            }
+            fn generate_thumbnail(
+                &self,
+                _path: &Path,
+                _max_size: u32,
+            ) -> Result<(u32, u32, Vec<u8>)> {
+                Ok((100, 100, vec![0u8; 40000]))
+            }
+        }
+
+        struct MockStorage;
+        impl Storage for MockStorage {
+            fn load_config(&self) -> Result<AppConfig> {
+                Ok(AppConfig::default())
+            }
+            fn save_config(&self, _config: &AppConfig) -> Result<()> {
+                Ok(())
+            }
+            fn request_save(&self, _config: &AppConfig) -> Result<()> {
+                Ok(())
+            }
+        }
+
+        let use_case = ViewImageUseCase::new(Arc::new(MockImageSource), Arc::new(MockStorage));
+        let mut state = ViewState::default();
+        let mut image = Image::new("test", "/test.jpg");
+        let metadata = ImageMetadata {
+            width: 1000,
+            height: 2000,
+            ..Default::default()
+        };
+        image.set_metadata(metadata);
+        state.current_image = Some(image);
+        state.scale.zoom_in(2.0, 10.0);
+        state.offset.translate(50.0, 25.0);
+        state.user_zoomed = true;
+
+        use_case.fit_to_height(&mut state, 1000.0);
+        assert!((state.scale.value() - 0.5).abs() < 0.001);
+        assert_eq!(state.offset.x, 0.0);
+        assert_eq!(state.offset.y, 0.0);
+        assert!(!state.user_zoomed);
+    }
+
+    #[test]
     fn test_view_use_case_pan() {
         struct MockImageSource;
         impl ImageSource for MockImageSource {
