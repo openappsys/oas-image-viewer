@@ -1,6 +1,7 @@
 //! 应用生命周期与主界面编排逻辑
 
 use super::types::EguiApp;
+use super::types::UiTaskStatus;
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::{Language, Theme, ViewMode};
 use crate::core::ports::ClipboardPort;
@@ -76,7 +77,13 @@ impl EguiApp {
         }
 
         if let Some(msg) = message {
-            self.last_context_menu_result = Some(msg);
+            if msg.contains(get_text("operation_failed", language)) {
+                self.task_state.status = UiTaskStatus::Failed;
+            } else {
+                self.task_state.status = UiTaskStatus::Succeeded;
+            }
+            self.task_state.message = Some(msg);
+            self.last_context_menu_result = self.task_state.message.clone();
             ctx.request_repaint();
         }
     }

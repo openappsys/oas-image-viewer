@@ -12,6 +12,21 @@ use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum UiTaskStatus {
+    Idle,
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct UiTaskState {
+    pub(crate) status: UiTaskStatus,
+    pub(crate) message: Option<String>,
+}
+
 /// egui 应用程序适配器
 pub struct EguiApp {
     pub(crate) service: Arc<OASImageViewerService>,
@@ -39,6 +54,7 @@ pub struct EguiApp {
     pub(crate) initial_file_processed: bool,
     pub(crate) integration_task_receiver: Option<Receiver<String>>,
     pub(crate) integration_task_running: bool,
+    pub(crate) task_state: UiTaskState,
 }
 
 impl EguiApp {
@@ -89,6 +105,10 @@ impl EguiApp {
             initial_file_processed: false,
             integration_task_receiver: None,
             integration_task_running: false,
+            task_state: UiTaskState {
+                status: UiTaskStatus::Idle,
+                message: None,
+            },
         }
     }
 

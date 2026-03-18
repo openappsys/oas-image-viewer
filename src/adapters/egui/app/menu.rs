@@ -1,6 +1,7 @@
 //! 顶部菜单与下拉交互渲染逻辑
 
 use super::types::EguiApp;
+use super::types::UiTaskStatus;
 use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::Language;
 use egui::{Color32, Context, CornerRadius, RichText, Stroke, Vec2};
@@ -69,12 +70,15 @@ impl EguiApp {
 
     fn run_integration_action_async(&mut self, action: IntegrationAction, language: Language) {
         if self.integration_task_running {
+            self.task_state.status = UiTaskStatus::Cancelled;
+            self.task_state.message = Some(get_text("integration_processing", language).to_string());
             return;
         }
 
         self.integration_task_running = true;
-        self.last_context_menu_result =
-            Some(get_text("integration_processing", language).to_string());
+        self.task_state.status = UiTaskStatus::Running;
+        self.task_state.message = Some(get_text("integration_processing", language).to_string());
+        self.last_context_menu_result = self.task_state.message.clone();
 
         let (tx, rx) = mpsc::channel::<String>();
         self.integration_task_receiver = Some(rx);

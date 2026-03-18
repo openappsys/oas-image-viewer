@@ -1,12 +1,16 @@
 //! 用例层模块导出与聚合入口
 
+mod batch;
 mod config;
+mod edit;
 mod navigate;
 mod service;
 mod state;
 mod view;
 
+pub use batch::BatchUseCase;
 pub use config::ManageConfigUseCase;
+pub use edit::EditImageUseCase;
 pub use navigate::NavigateGalleryUseCase;
 pub use service::OASImageViewerService;
 pub use state::{AppState, GalleryState, ViewState};
@@ -14,11 +18,11 @@ pub use view::ViewImageUseCase;
 
 #[cfg(test)]
 use crate::core::domain::{
-    GalleryLayout, Image, Language, NavigationDirection, Position, Scale, Theme, ViewMode,
-    WindowState,
+    BatchExecutionReport, BatchPreviewItem, BatchRenamePlan, ExportOptions, GalleryLayout, Image,
+    ImageTransform, Language, NavigationDirection, Position, Scale, Theme, ViewMode, WindowState,
 };
 #[cfg(test)]
-use crate::core::ports::{AppConfig, ImageSource, Storage};
+use crate::core::ports::{AppConfig, BatchPort, ImageExportPort, ImageSource, Storage};
 #[cfg(test)]
 use crate::core::Result;
 #[cfg(test)]
@@ -929,11 +933,58 @@ mod tests {
         }
     }
 
+    struct TestImageExportPort;
+    impl ImageExportPort for TestImageExportPort {
+        fn export_with_transforms(
+            &self,
+            source: &Path,
+            _transforms: &[ImageTransform],
+            _options: &ExportOptions,
+        ) -> Result<PathBuf> {
+            Ok(source.to_path_buf())
+        }
+
+        fn convert_format(&self, source: &Path, _options: &ExportOptions) -> Result<PathBuf> {
+            Ok(source.to_path_buf())
+        }
+    }
+
+    struct TestBatchPort;
+    impl BatchPort for TestBatchPort {
+        fn preview_rename(
+            &self,
+            _sources: &[PathBuf],
+            _plan: &BatchRenamePlan,
+        ) -> Result<Vec<BatchPreviewItem>> {
+            Ok(Vec::new())
+        }
+
+        fn execute_rename(
+            &self,
+            sources: &[PathBuf],
+            _plan: &BatchRenamePlan,
+        ) -> Result<BatchExecutionReport> {
+            Ok(BatchExecutionReport {
+                total: sources.len(),
+                succeeded: sources.len(),
+                failed: Vec::new(),
+            })
+        }
+    }
+
     fn build_test_service() -> OASImageViewerService {
         let view_use_case = ViewImageUseCase::new(Arc::new(TestImageSource), Arc::new(TestStorage));
         let navigate_use_case = NavigateGalleryUseCase;
         let config_use_case = ManageConfigUseCase::new(Arc::new(TestStorage));
-        OASImageViewerService::new(view_use_case, navigate_use_case, config_use_case)
+        let edit_use_case = EditImageUseCase::new(Arc::new(TestImageExportPort));
+        let batch_use_case = BatchUseCase::new(Arc::new(TestBatchPort));
+        OASImageViewerService::new(
+            view_use_case,
+            navigate_use_case,
+            config_use_case,
+            edit_use_case,
+            batch_use_case,
+        )
     }
 
     #[test]

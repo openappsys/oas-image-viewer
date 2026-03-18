@@ -24,6 +24,8 @@ impl OASImageViewerService {
         view_use_case: super::ViewImageUseCase,
         navigate_use_case: super::NavigateGalleryUseCase,
         config_use_case: super::ManageConfigUseCase,
+        edit_use_case: super::EditImageUseCase,
+        batch_use_case: super::BatchUseCase,
     ) -> Self {
         let config = AppConfig::default();
         let state = AppState {
@@ -36,6 +38,8 @@ impl OASImageViewerService {
             view_use_case,
             navigate_use_case,
             config_use_case,
+            edit_use_case,
+            batch_use_case,
             state: std::sync::Mutex::new(state),
         }
     }

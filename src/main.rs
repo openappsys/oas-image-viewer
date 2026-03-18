@@ -14,9 +14,10 @@ use oas_image_viewer::adapters::egui::EguiApp;
 use oas_image_viewer::adapters::macos_file_open;
 use oas_image_viewer::core::ports::{AppConfig, FileDialogPort, ImageSource, Storage};
 use oas_image_viewer::core::use_cases::{
-    ManageConfigUseCase, NavigateGalleryUseCase, OASImageViewerService, ViewImageUseCase,
+    BatchUseCase, EditImageUseCase, ManageConfigUseCase, NavigateGalleryUseCase,
+    OASImageViewerService, ViewImageUseCase,
 };
-use oas_image_viewer::{FsImageSource, JsonStorage, RfdFileDialog};
+use oas_image_viewer::{FsBatchPort, FsImageExportPort, FsImageSource, JsonStorage, RfdFileDialog};
 
 struct LogPaths {
     app: PathBuf,
@@ -200,10 +201,14 @@ fn create_service(
     let view_use_case = ViewImageUseCase::new(image_source, storage.clone());
     let navigate_use_case = NavigateGalleryUseCase;
     let config_use_case = ManageConfigUseCase::new(storage);
+    let edit_use_case = EditImageUseCase::new(Arc::new(FsImageExportPort::new()));
+    let batch_use_case = BatchUseCase::new(Arc::new(FsBatchPort::new()));
     Arc::new(OASImageViewerService::new(
         view_use_case,
         navigate_use_case,
         config_use_case,
+        edit_use_case,
+        batch_use_case,
     ))
 }
 

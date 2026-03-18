@@ -1,6 +1,7 @@
 use super::integration::IntegrationAction;
 use super::style::MenuStyle;
 use super::EguiApp;
+use crate::adapters::egui::app::types::UiTaskStatus;
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::platform::SystemIntegration;
 use crate::core::domain::Language;
@@ -38,7 +39,7 @@ impl EguiApp {
         ui.add_space(4.0);
 
         let integration = crate::adapters::platform::PlatformIntegration::new();
-        let integration_enabled = !self.integration_task_running;
+        let integration_enabled = !matches!(self.task_state.status, UiTaskStatus::Running);
         let is_default = integration.is_default();
         let default_label = if is_default {
             format!("✓ {}", get_text("set_default_app", language))
