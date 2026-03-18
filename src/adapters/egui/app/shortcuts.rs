@@ -7,7 +7,8 @@ use crate::core::ports::ClipboardPort;
 use egui::Context;
 
 use super::copy_shortcuts::{
-    collect_copy_shortcut_signals, resolve_copy_action, CopyAction, CopyShortcutState,
+    collect_copy_shortcut_signals, resolve_copy_action, should_block_shift_copy_in_focused_context,
+    CopyAction, CopyShortcutState,
 };
 
 impl EguiApp {
@@ -16,16 +17,46 @@ impl EguiApp {
             return;
         }
 
+        self.suppress_shift_copy_shortcut_before_widgets(ctx);
         self.handle_g_key(ctx);
         self.handle_ctrl_shift_o(ctx);
         self.handle_ctrl_o(ctx);
         self.handle_navigation_keys(ctx);
         self.handle_f11(ctx);
         self.handle_f_key(ctx);
-        self.handle_copy_shortcuts(ctx);
         self.handle_esc(ctx);
         self.handle_zoom_keys(ctx);
         self.handle_enter(ctx);
+    }
+
+    fn suppress_shift_copy_shortcut_before_widgets(&mut self, ctx: &Context) {
+        let signals = ctx.input(|i| collect_copy_shortcut_signals(&i.events, i.modifiers.shift));
+        let state = CopyShortcutState {
+            wants_keyboard_input: ctx.wants_keyboard_input(),
+            has_focused_widget: ctx.memory(|m| m.focused().is_some()),
+            has_copy_event: signals.has_copy_event,
+            key_copy_path: signals.key_copy_path,
+            key_copy_image: signals.key_copy_image,
+            active_shift: signals.active_shift,
+        };
+
+        if !should_block_shift_copy_in_focused_context(state) {
+            return;
+        }
+
+        ctx.input_mut(|i| {
+            i.events.retain(|event| {
+                !matches!(
+                    event,
+                    egui::Event::Key {
+                        key: egui::Key::C,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } if modifiers.shift && is_primary_copy_modifier(*modifiers)
+                ) && !matches!(event, egui::Event::Copy)
+            });
+        });
     }
 
     fn handle_g_key(&mut self, ctx: &Context) {
@@ -109,11 +140,12 @@ impl EguiApp {
         }
     }
 
-    fn handle_copy_shortcuts(&mut self, ctx: &Context) {
+    pub(super) fn handle_copy_shortcuts(&mut self, ctx: &Context) {
         let signals = ctx.input(|i| collect_copy_shortcut_signals(&i.events, i.modifiers.shift));
 
         let decision = resolve_copy_action(CopyShortcutState {
             wants_keyboard_input: ctx.wants_keyboard_input(),
+            has_focused_widget: ctx.memory(|m| m.focused().is_some()),
             has_copy_event: signals.has_copy_event,
             key_copy_path: signals.key_copy_path,
             key_copy_image: signals.key_copy_image,
@@ -122,6 +154,21 @@ impl EguiApp {
 
         if decision.consume_copy_event {
             ctx.input_mut(|i| i.events.retain(|event| !matches!(event, egui::Event::Copy)));
+        }
+        if decision.consume_shift_copy_key_event {
+            ctx.input_mut(|i| {
+                i.events.retain(|event| {
+                    !matches!(
+                        event,
+                        egui::Event::Key {
+                            key: egui::Key::C,
+                            pressed: true,
+                            modifiers,
+                            ..
+                        } if modifiers.shift && is_primary_copy_modifier(*modifiers)
+                    )
+                });
+            });
         }
         if decision.clear_hint {
             self.last_context_menu_result = None;
@@ -208,5 +255,16 @@ impl EguiApp {
             return;
         };
         self.open_image(ctx, &image_path, fit_to_window);
+    }
+}
+
+fn is_primary_copy_modifier(modifiers: egui::Modifiers) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        modifiers.mac_cmd
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        modifiers.ctrl
     }
 }

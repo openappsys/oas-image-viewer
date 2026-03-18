@@ -78,6 +78,7 @@ impl eframe::App for EguiApp {
         self.render_drag_overlay(ctx, language);
         self.render_about_window(ctx, language);
         self.render_shortcuts_help(ctx, language);
+        self.handle_copy_shortcuts(ctx);
         self.render_integration_result(ctx, language);
     }
 
@@ -112,6 +113,7 @@ mod tests {
 
     fn state(
         wants_keyboard_input: bool,
+        has_focused_widget: bool,
         has_copy_event: bool,
         key_copy_path: bool,
         key_copy_image: bool,
@@ -119,6 +121,7 @@ mod tests {
     ) -> CopyShortcutState {
         CopyShortcutState {
             wants_keyboard_input,
+            has_focused_widget,
             has_copy_event,
             key_copy_path,
             key_copy_image,
@@ -128,55 +131,66 @@ mod tests {
 
     #[test]
     fn matrix_ctrl_c_no_text_selected() {
-        let decision = resolve_copy_action(state(false, false, false, true, false));
+        let decision = resolve_copy_action(state(false, false, false, false, true, false));
         assert_eq!(decision.action, Some(CopyAction::Image));
     }
 
     #[test]
     fn matrix_ctrl_shift_c_no_text_selected() {
-        let decision = resolve_copy_action(state(false, false, true, false, true));
+        let decision = resolve_copy_action(state(false, false, false, true, false, true));
         assert_eq!(decision.action, Some(CopyAction::Path));
     }
 
     #[test]
     fn matrix_ctrl_c_with_text_selected() {
-        let decision = resolve_copy_action(state(true, false, false, true, false));
+        let decision = resolve_copy_action(state(true, true, false, false, true, false));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
     }
 
     #[test]
     fn matrix_ctrl_shift_c_with_text_selected() {
-        let decision = resolve_copy_action(state(true, false, true, false, true));
+        let decision = resolve_copy_action(state(true, true, false, true, false, true));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
     }
 
     #[test]
     fn matrix_cmd_c_no_text_selected() {
-        let decision = resolve_copy_action(state(false, true, false, false, false));
+        let decision = resolve_copy_action(state(false, false, true, false, false, false));
         assert_eq!(decision.action, Some(CopyAction::Image));
     }
 
     #[test]
     fn matrix_cmd_shift_c_no_text_selected() {
-        let decision = resolve_copy_action(state(false, true, false, false, true));
+        let decision = resolve_copy_action(state(false, false, true, false, false, true));
         assert_eq!(decision.action, Some(CopyAction::Path));
     }
 
     #[test]
     fn matrix_cmd_c_with_text_selected() {
-        let decision = resolve_copy_action(state(true, true, false, false, false));
+        let decision = resolve_copy_action(state(true, true, true, false, false, false));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
         assert!(!decision.consume_copy_event);
+        assert!(!decision.consume_shift_copy_key_event);
     }
 
     #[test]
     fn matrix_cmd_shift_c_with_text_selected() {
-        let decision = resolve_copy_action(state(true, true, false, false, true));
+        let decision = resolve_copy_action(state(true, true, true, true, false, true));
         assert_eq!(decision.action, None);
         assert!(decision.clear_hint);
         assert!(decision.consume_copy_event);
+        assert!(decision.consume_shift_copy_key_event);
+    }
+
+    #[test]
+    fn matrix_cmd_shift_c_with_focused_widget_but_no_keyboard_wants_is_blocked() {
+        let decision = resolve_copy_action(state(false, true, true, true, false, true));
+        assert_eq!(decision.action, None);
+        assert!(decision.clear_hint);
+        assert!(decision.consume_copy_event);
+        assert!(decision.consume_shift_copy_key_event);
     }
 }
