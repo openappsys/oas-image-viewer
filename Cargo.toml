@@ -1,6 +1,6 @@
 [package]
 name = "oas-image-viewer"
-version = "0.3.4"
+version = "0.3.5"
 edition = "2021"
 authors = ["OpenAppSys Team <team@openappsys.com>"]
 description = "A modern image viewer built with Rust and egui"
@@ -114,7 +114,7 @@ icon = [
 # Info.plist 路径
 info_plist_path = "macos/Info.plist"
 # 版本
-version = "0.3.4"
+version = "0.3.5"
 # 版权信息
 copyright = "Copyright (c) 2026 OpenAppSys Team"
 # 应用类别

@@ -1,5 +1,5 @@
 use super::OASImageViewerService;
-use crate::core::domain::{Language, Position, Theme, ViewMode, ViewerSettings};
+use crate::core::domain::{Color, Language, Position, Theme, ViewMode, ViewerSettings};
 use crate::core::Result;
 
 impl OASImageViewerService {
@@ -67,6 +67,14 @@ impl OASImageViewerService {
         self.update_config(|config| {
             let mut viewer = config.viewer;
             viewer.about_window_pos = pos;
+            self.config_use_case.update_viewer_settings(config, viewer);
+        })
+    }
+
+    pub fn set_viewer_background_color(&self, color: Color) -> Result<()> {
+        self.update_config(|config| {
+            let mut viewer = config.viewer;
+            viewer.background_color = color;
             self.config_use_case.update_viewer_settings(config, viewer);
         })
     }

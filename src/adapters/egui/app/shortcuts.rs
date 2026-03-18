@@ -2,7 +2,7 @@
 
 use super::types::EguiApp;
 use crate::adapters::egui::i18n::get_text;
-use crate::core::domain::{NavigationDirection, ViewMode};
+use crate::core::domain::{Color, NavigationDirection, ViewMode};
 use crate::core::ports::ClipboardPort;
 use egui::Context;
 
@@ -24,6 +24,7 @@ impl EguiApp {
         self.handle_navigation_keys(ctx);
         self.handle_f11(ctx);
         self.handle_f_key(ctx);
+        self.handle_b_key(ctx);
         self.handle_esc(ctx);
         self.handle_zoom_keys(ctx);
         self.handle_enter(ctx);
@@ -137,6 +138,27 @@ impl EguiApp {
             if let Err(e) = self.toggle_info_panel_visible() {
                 tracing::error!(error = %e, "切换信息面板失败");
             }
+        }
+    }
+
+    fn handle_b_key(&mut self, ctx: &Context) {
+        if !ctx.input(|i| i.key_pressed(egui::Key::B) && !i.modifiers.any()) {
+            return;
+        }
+        if ctx.wants_keyboard_input() || ctx.memory(|m| m.focused().is_some()) {
+            return;
+        }
+
+        let current = match self.service.get_viewer_settings() {
+            Ok(settings) => settings.background_color,
+            Err(e) => {
+                tracing::error!(error = %e, "读取查看器配置失败");
+                return;
+            }
+        };
+        let next = next_background_color(current);
+        if let Err(e) = self.set_viewer_background_color_and_save(next) {
+            tracing::error!(error = %e, "切换查看器背景色失败");
         }
     }
 
@@ -266,5 +288,40 @@ fn is_primary_copy_modifier(modifiers: egui::Modifiers) -> bool {
     #[cfg(not(target_os = "macos"))]
     {
         modifiers.ctrl
+    }
+}
+
+fn next_background_color(current: Color) -> Color {
+    let black = Color::rgb(0, 0, 0);
+    let gray = Color::rgb(30, 30, 30);
+    let white = Color::rgb(255, 255, 255);
+    if current == black {
+        gray
+    } else if current == gray {
+        white
+    } else {
+        black
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::next_background_color;
+    use crate::core::domain::Color;
+
+    #[test]
+    fn background_color_cycle_black_gray_white() {
+        let black = Color::rgb(0, 0, 0);
+        let gray = Color::rgb(30, 30, 30);
+        let white = Color::rgb(255, 255, 255);
+        assert_eq!(next_background_color(black), gray);
+        assert_eq!(next_background_color(gray), white);
+        assert_eq!(next_background_color(white), black);
+    }
+
+    #[test]
+    fn background_color_cycle_from_custom_falls_back_to_black() {
+        let custom = Color::rgb(64, 64, 64);
+        assert_eq!(next_background_color(custom), Color::rgb(0, 0, 0));
     }
 }

@@ -1,7 +1,7 @@
 //! 应用状态写回与配置持久化辅助逻辑
 
 use super::types::EguiApp;
-use crate::core::domain::{Language, Position, Theme, ViewMode};
+use crate::core::domain::{Color, Language, Position, Theme, ViewMode};
 use std::path::PathBuf;
 
 impl EguiApp {
@@ -48,6 +48,15 @@ impl EguiApp {
         thumbnail_size: u32,
     ) -> crate::core::Result<()> {
         self.service.set_thumbnail_size(thumbnail_size)?;
+        self.request_save_config();
+        Ok(())
+    }
+
+    pub(super) fn set_viewer_background_color_and_save(
+        &self,
+        color: Color,
+    ) -> crate::core::Result<()> {
+        self.service.set_viewer_background_color(color)?;
         self.request_save_config();
         Ok(())
     }
