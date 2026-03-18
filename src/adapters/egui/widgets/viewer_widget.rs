@@ -9,12 +9,16 @@ use crate::core::ports::ClipboardPort;
 use crate::core::use_cases::ViewState;
 use crate::utils::format_file_size;
 use egui::{Color32, Rect, Sense, Ui, Vec2};
+use std::time::{Duration, Instant};
+
+const ZOOM_INDICATOR_DURATION: Duration = Duration::from_millis(800);
 
 /// 查看器组件
 #[derive(Default)]
 pub struct ViewerWidget {
     dragging: bool,
     clipboard: ClipboardManager,
+    zoom_indicator_until: Option<Instant>,
 }
 
 impl ViewerWidget {
@@ -28,6 +32,7 @@ impl ViewerWidget {
         texture: Option<&(String, egui::TextureHandle)>,
         language: Language,
     ) -> bool {
+        let scale_before_interaction = state.scale.value();
         let available_size = ui.available_size();
         let bg_color = Color32::from_rgb(
             settings.background_color.r,
@@ -137,8 +142,18 @@ impl ViewerWidget {
             }
         });
 
+        self.update_zoom_indicator(scale_before_interaction, state.scale.value());
+        let show_zoom_indicator = self.should_show_zoom_indicator();
+
         if let Some(ref image) = state.current_image {
-            self.render_image(ui, image, state, rect, settings, texture);
+            self.render_image(
+                ui,
+                image,
+                state,
+                rect,
+                texture,
+                show_zoom_indicator,
+            );
         } else {
             // 无图像占位符
             let no_image_text = get_text("no_image", language);
@@ -156,6 +171,7 @@ impl ViewerWidget {
 
         // 渲染尺寸指示器
         self.render_dimensions_indicator(ui, rect, state);
+        self.schedule_zoom_indicator_repaint(ui);
 
         double_clicked
     }
@@ -167,8 +183,8 @@ impl ViewerWidget {
         image: &crate::core::domain::Image,
         state: &ViewState,
         rect: Rect,
-        _settings: &ViewerSettings,
         texture: Option<&(String, egui::TextureHandle)>,
+        show_zoom_indicator: bool,
     ) {
         // 如果有纹理，渲染实际图像
         if let Some((_, texture_handle)) = texture {
@@ -211,7 +227,7 @@ impl ViewerWidget {
         }
 
         // 缩放指示
-        if state.user_zoomed {
+        if show_zoom_indicator {
             let zoom_text = format!("{:.0}%", state.scale.percentage());
             ui.painter().text(
                 rect.center() + Vec2::new(0.0, 30.0),
@@ -221,6 +237,34 @@ impl ViewerWidget {
                 Color32::GRAY,
             );
         }
+    }
+
+    fn update_zoom_indicator(&mut self, scale_before: f32, scale_after: f32) {
+        if (scale_after - scale_before).abs() > f32::EPSILON {
+            self.zoom_indicator_until = Some(Instant::now() + ZOOM_INDICATOR_DURATION);
+        }
+    }
+
+    fn should_show_zoom_indicator(&mut self) -> bool {
+        match self.zoom_indicator_until {
+            Some(until) if Instant::now() <= until => true,
+            Some(_) => {
+                self.zoom_indicator_until = None;
+                false
+            }
+            None => false,
+        }
+    }
+
+    fn schedule_zoom_indicator_repaint(&self, ui: &Ui) {
+        let Some(until) = self.zoom_indicator_until else {
+            return;
+        };
+        if until <= Instant::now() {
+            ui.ctx().request_repaint();
+            return;
+        }
+        ui.ctx().request_repaint_after(until - Instant::now());
     }
 
     /// 渲染缩放控制面板
@@ -493,5 +537,27 @@ impl ViewerWidget {
         } else {
             format!("{}...{}", &name[..15], &name[name.len() - 5..])
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn zoom_indicator_is_visible_after_scale_change() {
+        let mut widget = ViewerWidget::default();
+        widget.update_zoom_indicator(1.0, 1.25);
+        assert!(widget.should_show_zoom_indicator());
+    }
+
+    #[test]
+    fn zoom_indicator_expires_after_timeout() {
+        let mut widget = ViewerWidget {
+            zoom_indicator_until: Some(Instant::now() - Duration::from_millis(1)),
+            ..Default::default()
+        };
+        assert!(!widget.should_show_zoom_indicator());
+        assert!(widget.zoom_indicator_until.is_none());
     }
 }
