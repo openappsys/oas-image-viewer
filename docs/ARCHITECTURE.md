@@ -129,7 +129,9 @@ src/core/
 ├── ports/           # 端口接口（traits）
 │   └── mod.rs       # ImageSource, Storage, UiPort, ClipboardPort, FileDialogPort
 └── use_cases/       # 业务用例
-    └── mod.rs       # ViewImageUseCase, NavigateGalleryUseCase, ManageConfigUseCase
+    ├── mod.rs       # 用例聚合导出
+    ├── service.rs    # 应用服务入口（按职责拆分子模块）
+    └── service/      # lifecycle/viewer/gallery/config/ui_state
 ```
 
 **职责**:
@@ -181,20 +183,29 @@ pub trait Storage: Send + Sync {
 // use_cases/mod.rs
 pub struct ViewImageUseCase {
     image_source: Arc<dyn ImageSource>,
-    storage: Arc<dyn Storage>,
 }
 
 impl ViewImageUseCase {
+    pub fn new(image_source: Arc<dyn ImageSource>, _storage: Arc<dyn Storage>) -> Self;
     pub fn open_image(&self, path: &Path, state: &mut ViewState, ...) -> Result<()>;
     pub fn zoom(&self, state: &mut ViewState, factor: f32, ...);
     pub fn reset_zoom(&self, state: &mut ViewState);
 }
 
+// use_cases/service.rs
 pub struct OASImageViewerService {
     view_use_case: ViewImageUseCase,
     navigate_use_case: NavigateGalleryUseCase,
     config_use_case: ManageConfigUseCase,
+    state: Mutex<AppState>,
 }
+
+// use_cases/service/
+// - lifecycle.rs  (初始化/状态入口)
+// - viewer.rs     (查看器行为与查询)
+// - gallery.rs    (图库行为与查询)
+// - config.rs     (配置读写与持久化)
+// - ui_state.rs   (UI 辅助状态)
 ```
 
 ### 2. Infrastructure 层（基础设施层）
