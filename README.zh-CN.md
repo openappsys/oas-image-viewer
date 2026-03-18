@@ -295,8 +295,6 @@ cargo clippy --all-targets -- -D warnings
 - [ ] 自动更新
 - [ ] 云同步（可选）
 
-完整路线图见 [ROADMAP.md](docs/ROADMAP.md)。
-
 ## 参与贡献
 
 欢迎贡献！开始前请先阅读 [开发指南](docs/DEVELOPMENT.md)。

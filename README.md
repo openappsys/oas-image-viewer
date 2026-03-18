@@ -295,8 +295,6 @@ cargo clippy --all-targets -- -D warnings
 - [ ] Auto-update
 - [ ] Cloud sync (optional)
 
-See [ROADMAP.md](docs/ROADMAP.md) for full roadmap.
-
 ## Contributing
 
 We welcome contributions! Please read our [Contributing Guide](docs/DEVELOPMENT.md) first.
