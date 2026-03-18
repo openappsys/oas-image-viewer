@@ -8,6 +8,7 @@
 - [项目结构](#项目结构)
 - [代码规范](#代码规范)
 - [调试技巧](#调试技巧)
+- [回归基线](#回归基线)
 - [提交规范](#提交规范)
 
 ---
@@ -189,6 +190,7 @@ cargo clippy --all-targets -- -D warnings -W clippy::all
 - `README.md` 与 `README.zh-CN.md` 除语言外，章节结构与信息点保持一致
 - 新增/调整功能时，同步更新中英文 README、相关 `docs/*.md` 与示例配置
 - 涉及路径、命令、测试数量等易漂移信息，必须以当前仓库实际状态为准
+- 复制快捷键行为变更需同步检查 `docs/COPY_SHORTCUT_MATRIX.md`
 
 ### 命名规范
 
@@ -289,6 +291,27 @@ use std::time::Instant;
 let start = Instant::now();
 // ... 渲染代码 ...
 tracing::debug!("Frame render time: {:?}", start.elapsed());
+```
+
+---
+
+## 回归基线
+
+### 复制快捷键矩阵（macOS）
+
+- 行为基线文档：`docs/COPY_SHORTCUT_MATRIX.md`
+- 关键回归用例：
+  - `matrix_cmd_c_no_text_selected`
+  - `matrix_cmd_shift_c_no_text_selected`
+  - `matrix_cmd_c_with_text_selected`
+  - `matrix_cmd_shift_c_with_text_selected`
+- 快速执行：
+
+```bash
+cargo test matrix_cmd_c_no_text_selected
+cargo test matrix_cmd_shift_c_no_text_selected
+cargo test matrix_cmd_c_with_text_selected
+cargo test matrix_cmd_shift_c_with_text_selected
 ```
 
 ---
