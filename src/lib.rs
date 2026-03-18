@@ -57,7 +57,10 @@ pub(crate) mod infrastructure;
 pub(crate) mod utils;
 
 // 从 infrastructure 重新导出需要的类型
-pub use infrastructure::{FsBatchPort, FsImageExportPort, FsImageSource, JsonStorage, RfdFileDialog};
+pub use infrastructure::{
+    FsBatchPort, FsImageExportPort, FsImageSource, JsonStorage, RfdFileDialog,
+    StandardImageDecoderBackend,
+};
 
 pub use adapters::clipboard;
 pub use adapters::info_panel;

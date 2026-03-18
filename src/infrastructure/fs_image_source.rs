@@ -1,15 +1,23 @@
+use super::image_decoder::{ImageDecoderBackend, StandardImageDecoderBackend};
 use crate::core::domain::{Image, ImageMetadata};
 use crate::core::ports::ImageSource;
 use crate::core::{CoreError, Result};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// 文件系统图像源实现
-pub struct FsImageSource;
+pub struct FsImageSource {
+    decoder: Arc<dyn ImageDecoderBackend>,
+}
 
 impl FsImageSource {
     /// 创建新的文件系统图像源
     pub fn new() -> Self {
-        Self
+        Self::with_decoder(Arc::new(StandardImageDecoderBackend::new()))
+    }
+
+    pub fn with_decoder(decoder: Arc<dyn ImageDecoderBackend>) -> Self {
+        Self { decoder }
     }
 
     /// 支持的图像扩展名
@@ -48,8 +56,8 @@ impl ImageSource for FsImageSource {
             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|d| d.as_secs());
 
-        let (width, height) = match self.load_image_data(path) {
-            Ok((w, h, _)) => (w, h),
+        let (width, height) = match self.decoder.dimensions(path) {
+            Ok((w, h)) => (w, h),
             Err(_) => (0, 0),
         };
 
@@ -66,24 +74,7 @@ impl ImageSource for FsImageSource {
     }
 
     fn load_image_data(&self, path: &Path) -> Result<(u32, u32, Vec<u8>)> {
-        let img_result = image::open(path);
-
-        let img = match img_result {
-            Ok(img) => img,
-            Err(_) => {
-                let data = std::fs::read(path).map_err(|e| {
-                    CoreError::technical("STORAGE_ERROR", format!("Failed to read file: {}", e))
-                })?;
-
-                image::load_from_memory(&data).map_err(|e| {
-                    CoreError::technical(
-                        "INVALID_IMAGE_FORMAT",
-                        format!("Failed to decode image: {}", e),
-                    )
-                })?
-            }
-        };
-
+        let img = self.decoder.decode_path(path)?;
         let width = img.width();
         let height = img.height();
         let rgba = img.to_rgba8();
@@ -130,9 +121,7 @@ impl ImageSource for FsImageSource {
             return Ok((width, height, data));
         }
 
-        let img = image::open(path).map_err(|e| {
-            CoreError::technical("INVALID_IMAGE_FORMAT", format!("Failed to open: {}", e))
-        })?;
+        let img = self.decoder.decode_path(path)?;
 
         let resized = img.resize(max_size, max_size, image::imageops::FilterType::Lanczos3);
         let rgba = resized.to_rgba8();

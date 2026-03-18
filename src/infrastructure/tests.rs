@@ -1,7 +1,11 @@
 use super::*;
 use super::async_image_source::AsyncFsImageSource;
+use super::image_decoder::ImageDecoderBackend;
 use crate::core::ports::ImageSource;
+use crate::core::Result;
+use image::DynamicImage;
 use std::path::Path;
+use std::sync::Arc;
 
 #[test]
 fn test_fs_image_source_is_supported() {
@@ -151,4 +155,47 @@ fn test_fs_image_source_special_chars() {
     let source = FsImageSource::new();
     assert!(source.is_supported(Path::new("my-image_file.png")));
     assert!(source.is_supported(Path::new("image+test.jpg")));
+}
+
+struct MockDecoderBackend;
+
+impl ImageDecoderBackend for MockDecoderBackend {
+    fn decode_path(&self, _path: &Path) -> Result<DynamicImage> {
+        Ok(DynamicImage::new_rgba8(4, 3))
+    }
+
+    fn decode_bytes(&self, _data: &[u8]) -> Result<DynamicImage> {
+        Ok(DynamicImage::new_rgba8(1, 1))
+    }
+
+    fn dimensions(&self, _path: &Path) -> Result<(u32, u32)> {
+        Ok((7, 9))
+    }
+}
+
+#[test]
+fn test_fs_image_source_with_custom_decoder_load_image_data() {
+    let source = FsImageSource::with_decoder(Arc::new(MockDecoderBackend));
+    let (width, height, data) = source
+        .load_image_data(Path::new("ignored.png"))
+        .expect("should decode via mock backend");
+    assert_eq!(width, 4);
+    assert_eq!(height, 3);
+    assert_eq!(data.len(), 4 * 3 * 4);
+}
+
+#[test]
+fn test_fs_image_source_with_custom_decoder_load_metadata_dimensions() {
+    let source = FsImageSource::with_decoder(Arc::new(MockDecoderBackend));
+    let file_path = std::env::temp_dir().join(format!(
+        "oas_image_viewer_decoder_test_{}.png",
+        std::process::id()
+    ));
+    std::fs::write(&file_path, [0u8; 8]).expect("should create temp file");
+    let metadata = source
+        .load_metadata(&file_path)
+        .expect("should read metadata via mock backend");
+    assert_eq!(metadata.width, 7);
+    assert_eq!(metadata.height, 9);
+    let _ = std::fs::remove_file(&file_path);
 }
