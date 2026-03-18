@@ -3,7 +3,10 @@
 //! Core 层通过这些接口与外部世界交互
 //! 实现依赖倒置原则：Core 层定义接口，外层实现接口
 
-use crate::core::domain::{Image, ImageMetadata};
+use crate::core::domain::{
+    BatchExecutionReport, BatchPreviewItem, BatchRenamePlan, ExportOptions, Image, ImageMetadata,
+    ImageTransform,
+};
 use crate::core::Result;
 use std::path::{Path, PathBuf};
 
@@ -100,6 +103,28 @@ pub trait FileDialogPort: Send + Sync {
 
     /// 打开目录选择对话框
     fn open_directory(&self) -> Option<PathBuf>;
+}
+
+pub trait ImageExportPort: Send + Sync {
+    fn export_with_transforms(
+        &self,
+        source: &Path,
+        transforms: &[ImageTransform],
+        options: &ExportOptions,
+    ) -> Result<PathBuf>;
+
+    fn convert_format(&self, source: &Path, options: &ExportOptions) -> Result<PathBuf>;
+}
+
+pub trait BatchPort: Send + Sync {
+    fn preview_rename(
+        &self,
+        sources: &[PathBuf],
+        plan: &BatchRenamePlan,
+    ) -> Result<Vec<BatchPreviewItem>>;
+
+    fn execute_rename(&self, sources: &[PathBuf], plan: &BatchRenamePlan)
+        -> Result<BatchExecutionReport>;
 }
 
 /// 图像加载完成回调
@@ -227,5 +252,11 @@ mod tests {
         assert_eq!(config.viewer.background_color.g, 30);
         assert_eq!(config.viewer.background_color.b, 30);
         assert_eq!(config.viewer.background_color.a, 255);
+    }
+
+    #[test]
+    fn test_export_options_default_quality() {
+        let options = crate::core::domain::ExportOptions::default();
+        assert_eq!(options.quality, 90);
     }
 }
