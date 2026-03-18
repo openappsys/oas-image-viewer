@@ -251,6 +251,10 @@ mod tests {
             "shortcuts_title",
             "navigation",
             "zoom",
+            "shortcut_fit_window",
+            "shortcut_fit_width",
+            "shortcut_fit_height",
+            "shortcut_cycle_background",
             "view",
             "other",
         ];

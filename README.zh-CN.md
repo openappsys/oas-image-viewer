@@ -162,9 +162,12 @@ RUST_LOG=debug oas-image-viewer /path/to/image.png
 | `Cmd/Ctrl + Shift + O` | 打开文件夹对话框 | 全部 |
 | `Cmd + C`（macOS）/ `Ctrl + C`（Windows/Linux） | 复制当前图片 | 查看器 |
 | `Cmd + Shift + C`（macOS）/ `Ctrl + Shift + C`（Windows/Linux） | 复制当前图片路径 | 查看器 |
-| `Ctrl + + / Ctrl + -` | 放大/缩小 | 查看器 |
-| `Ctrl + 0` | 适应窗口 | 查看器 |
-| `Ctrl + 1` | 原始尺寸（100%） | 查看器 |
+| `Cmd/Ctrl + + / Cmd/Ctrl + -` | 放大/缩小 | 查看器 |
+| `Cmd/Ctrl + 0` | 适应窗口 | 查看器 |
+| `Cmd/Ctrl + 1` | 原始尺寸（100%） | 查看器 |
+| `Cmd/Ctrl + 2` | 适应宽度 | 查看器 |
+| `Cmd/Ctrl + 3` | 适应高度 | 查看器 |
+| `B` | 切换背景色（黑/灰/白） | 查看器 |
 | `F11` | 切换全屏 | 全部 |
 | `G` | 切换画廊模式 | 全部 |
 | `F` | 显示/隐藏信息面板 | 查看器 |

@@ -5,8 +5,8 @@
 
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::egui::shortcut_labels::{
-    copy_image, copy_path, fit_to_window, open_file, open_folder, original_size, zoom_in, zoom_out,
-    ShortcutTextStyle,
+    copy_image, copy_path, fit_to_height, fit_to_width, fit_to_window, open_file, open_folder,
+    original_size, zoom_in, zoom_out, ShortcutTextStyle,
 };
 use crate::core::domain::Language;
 use egui::{Color32, Context, FontId, RichText, Vec2, Window};
@@ -131,6 +131,8 @@ impl ShortcutsHelpPanel {
                             let zoom_in_shortcut = zoom_in(ShortcutTextStyle::Spaced);
                             let zoom_out_shortcut = zoom_out(ShortcutTextStyle::Spaced);
                             let fit_to_window_shortcut = fit_to_window(ShortcutTextStyle::Spaced);
+                            let fit_to_width_shortcut = fit_to_width(ShortcutTextStyle::Spaced);
+                            let fit_to_height_shortcut = fit_to_height(ShortcutTextStyle::Spaced);
                             let original_size_shortcut = original_size(ShortcutTextStyle::Spaced);
                             render_shortcut_category(
                                 ui,
@@ -144,10 +146,19 @@ impl ShortcutsHelpPanel {
                                         get_text("shortcut_fit_window", language),
                                     ),
                                     (
+                                        &fit_to_width_shortcut,
+                                        get_text("shortcut_fit_width", language),
+                                    ),
+                                    (
+                                        &fit_to_height_shortcut,
+                                        get_text("shortcut_fit_height", language),
+                                    ),
+                                    (
                                         &original_size_shortcut,
                                         get_text("shortcut_original", language),
                                     ),
                                     ("F", get_text("shortcut_info_panel", language)),
+                                    ("B", get_text("shortcut_cycle_background", language)),
                                     (
                                         get_text("shortcut_dbl_click", language),
                                         get_text("shortcut_fullscreen", language),

@@ -314,6 +314,24 @@ cargo test matrix_cmd_c_with_text_selected
 cargo test matrix_cmd_shift_c_with_text_selected
 ```
 
+### v0.3.5 交互基线（背景与适应宽高）
+
+- 关键行为：
+  - `B` 在查看器模式循环背景色（黑/灰/白）并持久化
+  - `Cmd/Ctrl + 2` 适应宽度
+  - `Cmd/Ctrl + 3` 适应高度
+- 关键回归用例：
+  - `background_color_cycle_black_gray_white`
+  - `test_view_use_case_fit_to_width`
+  - `test_view_use_case_fit_to_height`
+- 快速执行：
+
+```bash
+cargo test background_color_cycle_black_gray_white
+cargo test test_view_use_case_fit_to_width
+cargo test test_view_use_case_fit_to_height
+```
+
 ---
 
 ## 提交规范

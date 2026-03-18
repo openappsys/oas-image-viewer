@@ -46,17 +46,25 @@ pub fn quit(style: ShortcutTextStyle) -> String {
 }
 
 pub fn zoom_in(style: ShortcutTextStyle) -> String {
-    format!("Ctrl{}+", plus(style))
+    format!("{}{}+", cmd_or_ctrl(), plus(style))
 }
 
 pub fn zoom_out(style: ShortcutTextStyle) -> String {
-    format!("Ctrl{}-", plus(style))
+    format!("{}{}-", cmd_or_ctrl(), plus(style))
 }
 
 pub fn fit_to_window(style: ShortcutTextStyle) -> String {
-    format!("Ctrl{}0", plus(style))
+    format!("{}{}0", cmd_or_ctrl(), plus(style))
 }
 
 pub fn original_size(style: ShortcutTextStyle) -> String {
-    format!("Ctrl{}1", plus(style))
+    format!("{}{}1", cmd_or_ctrl(), plus(style))
+}
+
+pub fn fit_to_width(style: ShortcutTextStyle) -> String {
+    format!("{}{}2", cmd_or_ctrl(), plus(style))
+}
+
+pub fn fit_to_height(style: ShortcutTextStyle) -> String {
+    format!("{}{}3", cmd_or_ctrl(), plus(style))
 }

@@ -165,9 +165,12 @@ RUST_LOG=debug oas-image-viewer /path/to/image.png
 | `Cmd/Ctrl + Shift + O` | Open folder dialog | All |
 | `Cmd + C` (macOS) / `Ctrl + C` (Windows/Linux) | Copy current image | Viewer |
 | `Cmd + Shift + C` (macOS) / `Ctrl + Shift + C` (Windows/Linux) | Copy current image path | Viewer |
-| `Ctrl + + / Ctrl + -` | Zoom in/out | Viewer |
-| `Ctrl + 0` | Fit to window | Viewer |
-| `Ctrl + 1` | Actual size (100%) | Viewer |
+| `Cmd/Ctrl + + / Cmd/Ctrl + -` | Zoom in/out | Viewer |
+| `Cmd/Ctrl + 0` | Fit to window | Viewer |
+| `Cmd/Ctrl + 1` | Actual size (100%) | Viewer |
+| `Cmd/Ctrl + 2` | Fit to width | Viewer |
+| `Cmd/Ctrl + 3` | Fit to height | Viewer |
+| `B` | Cycle background (black/gray/white) | Viewer |
 | `F11` | Toggle fullscreen | All |
 | `G` | Toggle gallery mode | All |
 | `F` | Show/hide info panel | Viewer |
