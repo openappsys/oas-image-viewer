@@ -14,6 +14,7 @@ struct ThumbnailRequest {
 /// 缩略图加载结果
 struct ThumbnailResult {
     index: usize,
+    path: PathBuf,
     texture: Option<egui::TextureHandle>,
 }
 
@@ -37,7 +38,7 @@ impl ThumbnailLoader {
                 let texture = Self::load_thumbnail_internal(&path, &ctx);
 
                 // 发送结果回主线程
-                if result_tx.send(ThumbnailResult { index, texture }).is_err() {
+                if result_tx.send(ThumbnailResult { index, path, texture }).is_err() {
                     debug!("缩略图结果发送失败：接收端已关闭");
                     break;
                 }
@@ -110,13 +111,20 @@ impl ThumbnailLoader {
         &self,
         thumbnails: &mut [Option<egui::TextureHandle>],
         loading_states: &mut [bool],
+        slot_paths: &[Option<PathBuf>],
     ) -> usize {
         let mut count = 0;
         while let Ok(result) = self.receiver.try_recv() {
             if result.index < thumbnails.len() {
-                thumbnails[result.index] = result.texture;
-                loading_states[result.index] = false;
-                count += 1;
+                let is_expected = slot_paths
+                    .get(result.index)
+                    .and_then(Option::as_ref)
+                    .is_some_and(|p| p == &result.path);
+                if is_expected {
+                    thumbnails[result.index] = result.texture;
+                    loading_states[result.index] = false;
+                    count += 1;
+                }
             }
         }
         count
@@ -133,6 +141,8 @@ pub struct ThumbnailCache {
     pub loading: Vec<bool>,
     /// 已请求的索引
     requested: Vec<bool>,
+    /// 每个索引当前对应的图片路径
+    slot_paths: Vec<Option<PathBuf>>,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -143,6 +153,7 @@ impl Default for ThumbnailCache {
             textures: Vec::new(),
             loading: Vec::new(),
             requested: Vec::new(),
+            slot_paths: Vec::new(),
         }
     }
 }
@@ -161,6 +172,7 @@ impl ThumbnailCache {
             self.textures.resize_with(count, || None);
             self.loading.resize(count, false);
             self.requested.resize(count, false);
+            self.slot_paths.resize(count, None);
         }
     }
 
@@ -168,6 +180,15 @@ impl ThumbnailCache {
     pub fn request_thumbnail(&mut self, index: usize, path: &std::path::Path) {
         if index >= self.textures.len() {
             return;
+        }
+
+        if Self::should_reset_slot(self.slot_paths[index].as_deref(), path) {
+            self.textures[index] = None;
+            self.loading[index] = false;
+            self.requested[index] = false;
+            self.slot_paths[index] = Some(path.to_path_buf());
+        } else if self.slot_paths[index].is_none() {
+            self.slot_paths[index] = Some(path.to_path_buf());
         }
 
         // 如果已加载或正在加载，则跳过
@@ -185,7 +206,7 @@ impl ThumbnailCache {
     /// 处理异步加载结果
     pub fn process_results(&mut self) -> usize {
         if let Some(ref loader) = self.loader {
-            loader.process_results(&mut self.textures, &mut self.loading)
+            loader.process_results(&mut self.textures, &mut self.loading, &self.slot_paths)
         } else {
             0
         }
@@ -201,5 +222,25 @@ impl ThumbnailCache {
         self.textures.clear();
         self.loading.clear();
         self.requested.clear();
+        self.slot_paths.clear();
+    }
+
+    fn should_reset_slot(current_path: Option<&std::path::Path>, new_path: &std::path::Path) -> bool {
+        current_path.is_some_and(|p| p != new_path)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ThumbnailCache;
+    use std::path::Path;
+
+    #[test]
+    fn should_reset_slot_when_path_changed() {
+        let old_path = Path::new("/a/old.png");
+        let new_path = Path::new("/b/new.png");
+        assert!(ThumbnailCache::should_reset_slot(Some(old_path), new_path));
+        assert!(!ThumbnailCache::should_reset_slot(Some(new_path), new_path));
+        assert!(!ThumbnailCache::should_reset_slot(None, new_path));
     }
 }
