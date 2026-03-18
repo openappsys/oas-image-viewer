@@ -245,7 +245,7 @@ src/adapters/
 ├── mod.rs
 ├── egui/
 │   ├── app.rs
-│   ├── app/               # copy_shortcuts/handlers/lifecycle/menu(render+popup+sections)/render/shortcuts/state_sync/types/utils
+│   ├── app/               # copy_shortcuts/handlers/lifecycle/menu(menu_file/menu_view/menu_image/menu_help/popup/sections)/render/shortcuts/state_sync/types/utils
 │   ├── thumbnail_loader.rs
 │   └── widgets/
 └── platform/              # linux/macos/windows 平台集成
@@ -279,6 +279,7 @@ src/
 │   ├── clipboard.rs
 │   └── egui/
 │       ├── info_panel.rs
+│       ├── info_panel/    # helpers/metadata/receiver/tests
 │       └── shortcuts_help.rs
 └── utils/
     ├── mod.rs

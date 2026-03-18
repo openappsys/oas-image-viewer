@@ -235,7 +235,12 @@ oas-image-viewer/
 │   │   ├── ports/      # Interface definitions
 │   │   └── use_cases/  # Use case implementations
 │   └── infrastructure/ # Infrastructure layer
-│       └── mod.rs
+│       ├── mod.rs
+│       ├── fs_image_source.rs
+│       ├── storage.rs
+│       ├── async_image_source.rs
+│       ├── file_dialog.rs
+│       └── tests.rs
 ├── tests/              # Integration tests
 ├── docs/               # Documentation
 ├── assets/             # Icons, resources
@@ -258,7 +263,7 @@ cargo test
 RUST_LOG=debug cargo run
 
 # Check code
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 ```
 
 ### Tech Stack
@@ -307,7 +312,7 @@ We welcome contributions! Please read our [Contributing Guide](docs/DEVELOPMENT.
 Please ensure:
 - Code follows `rustfmt` style
 - All tests pass: `cargo test`
-- No clippy warnings: `cargo clippy`
+- No clippy warnings: `cargo clippy --all-targets -- -D warnings`
 
 ## License
 

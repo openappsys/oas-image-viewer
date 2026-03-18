@@ -8,7 +8,11 @@ use std::sync::mpsc;
 use std::thread;
 
 mod integration;
+mod menu_file;
+mod menu_help;
+mod menu_image;
 mod menu_specs;
+mod menu_view;
 mod popup;
 mod sections;
 mod style;

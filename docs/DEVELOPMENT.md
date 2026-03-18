@@ -77,7 +77,7 @@ cd oas-image-viewer
 cargo fmt -- --check
 
 # 运行 clippy
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 
 # 运行测试
 cargo test
@@ -154,10 +154,10 @@ cargo fmt
 
 ```bash
 # 基本检查
-cargo clippy
+cargo clippy --all-targets
 
 # 严格模式（CI 使用）
-cargo clippy -- -D warnings -W clippy::all
+cargo clippy --all-targets -- -D warnings -W clippy::all
 ```
 
 #### 代码审查清单
@@ -181,7 +181,7 @@ cargo clippy -- -D warnings -W clippy::all
 - 目标：无明显性能问题（避免 O(n²) 热路径、避免不必要拷贝和阻塞 I/O）
 - 目标：无安全问题（禁止硬编码密钥、避免不安全系统调用与路径注入）
 - 架构：符合轻量级 DDD 分层（Entry → Adapters → Core → Infrastructure）
-- 编译：不得有任何警告（`cargo clippy -- -D warnings` 必须通过）
+- 编译：不得有任何警告（`cargo clippy --all-targets -- -D warnings` 必须通过）
 - 格式：代码格式化一致（`cargo fmt -- --check` 必须通过）
 
 ### 文档同步规范
@@ -355,7 +355,7 @@ refactor/description   # 重构
 3. 确保 CI 通过：
    ```bash
    cargo fmt -- --check
-   cargo clippy -- -D warnings
+   cargo clippy --all-targets -- -D warnings
    cargo test
    ```
 4. 推送到远程并创建 PR

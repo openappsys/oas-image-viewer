@@ -324,7 +324,7 @@ jobs:
         run: cargo fmt --check
 
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Coverage check
         run: |
