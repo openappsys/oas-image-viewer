@@ -1,5 +1,5 @@
 use super::{CurrentImageInfo, OASImageViewerService};
-use crate::core::domain::{Language, ViewMode};
+use crate::core::domain::{Language, ViewMode, ViewerSettings};
 use crate::core::use_cases::ViewState;
 use crate::core::Result;
 use std::path::{Path, PathBuf};
@@ -11,6 +11,10 @@ impl OASImageViewerService {
 
     pub fn get_view_state(&self) -> Result<ViewState> {
         self.read_state(|s| s.view.clone())
+    }
+
+    pub fn get_view_state_and_settings(&self) -> Result<(ViewState, ViewerSettings)> {
+        self.read_state(|s| (s.view.clone(), s.config.viewer))
     }
 
     pub fn set_view_state(&self, view: ViewState) -> Result<()> {

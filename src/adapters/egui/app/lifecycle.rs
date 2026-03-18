@@ -133,14 +133,14 @@ impl EguiApp {
                     }
                 }
                 ViewMode::Viewer => {
-                    let mut view_state = match self.service.get_view_state() {
-                        Ok(state) => state,
-                        Err(e) => {
-                            tracing::error!(error = %e, "读取查看状态失败");
-                            return;
-                        }
-                    };
-                    let viewer_settings = self.service.get_viewer_settings().unwrap_or_default();
+                    let (mut view_state, viewer_settings) =
+                        match self.service.get_view_state_and_settings() {
+                            Ok(data) => data,
+                            Err(e) => {
+                                tracing::error!(error = %e, "读取查看状态失败");
+                                return;
+                            }
+                        };
                     self.pending_double_click = self.viewer_widget.ui(
                         ui,
                         &mut view_state,
