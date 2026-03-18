@@ -22,6 +22,22 @@ pub struct OASImageViewerService {
 }
 
 impl OASImageViewerService {
+    fn read_state<T>(&self, f: impl FnOnce(&AppState) -> T) -> Result<T> {
+        let state = self
+            .state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))?;
+        Ok(f(&state))
+    }
+
+    fn write_state<T>(&self, f: impl FnOnce(&mut AppState) -> T) -> Result<T> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))?;
+        Ok(f(&mut state))
+    }
+
     pub fn new(
         view_use_case: ViewImageUseCase,
         navigate_use_case: NavigateGalleryUseCase,
@@ -59,35 +75,23 @@ impl OASImageViewerService {
     }
 
     pub fn get_state(&self) -> Result<AppState> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.clone())
+        self.read_state(|s| s.clone())
     }
 
     pub fn get_view_mode(&self) -> Result<ViewMode> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.view.view_mode)
+        self.read_state(|s| s.view.view_mode)
     }
 
     pub fn get_gallery_state_for_render(&self) -> Result<GalleryState> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                let mut gallery = s.gallery.clone();
-                gallery.layout.thumbnail_size = s.config.gallery.thumbnail_size;
-                gallery
-            })
+        self.read_state(|s| {
+            let mut gallery = s.gallery.clone();
+            gallery.layout.thumbnail_size = s.config.gallery.thumbnail_size;
+            gallery
+        })
     }
 
     pub fn get_view_state(&self) -> Result<ViewState> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.view.clone())
+        self.read_state(|s| s.view.clone())
     }
 
     pub fn set_view_state(&self, view: ViewState) -> Result<()> {
@@ -97,165 +101,118 @@ impl OASImageViewerService {
     }
 
     pub fn get_viewer_settings(&self) -> Result<ViewerSettings> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.config.viewer)
+        self.read_state(|s| s.config.viewer)
     }
 
     pub fn is_fit_to_window_enabled(&self) -> Result<bool> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.config.viewer.fit_to_window)
+        self.read_state(|s| s.config.viewer.fit_to_window)
     }
 
     pub fn get_language(&self) -> Result<Language> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.config.language)
+        self.read_state(|s| s.config.language)
     }
 
     pub fn get_theme(&self) -> Result<Theme> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.config.theme)
+        self.read_state(|s| s.config.theme)
     }
 
     pub fn get_selected_gallery_image_for_open(&self) -> Result<Option<(PathBuf, bool)>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                if s.view.view_mode != ViewMode::Gallery {
-                    return None;
-                }
-                s.gallery.gallery.selected_index().and_then(|index| {
-                    s.gallery
-                        .gallery
-                        .get_image(index)
-                        .map(|img| (img.path().to_path_buf(), s.config.viewer.fit_to_window))
-                })
+        self.read_state(|s| {
+            if s.view.view_mode != ViewMode::Gallery {
+                return None;
+            }
+            s.gallery.gallery.selected_index().and_then(|index| {
+                s.gallery
+                    .gallery
+                    .get_image(index)
+                    .map(|img| (img.path().to_path_buf(), s.config.viewer.fit_to_window))
             })
+        })
     }
 
     pub fn get_current_view_image_path_and_language(&self) -> Result<Option<(PathBuf, Language)>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                s.view
-                    .current_image
-                    .as_ref()
-                    .map(|image| (image.path().to_path_buf(), s.config.language))
-            })
+        self.read_state(|s| {
+            s.view
+                .current_image
+                .as_ref()
+                .map(|image| (image.path().to_path_buf(), s.config.language))
+        })
     }
 
     pub fn get_current_view_image_path(&self) -> Result<Option<PathBuf>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.view.current_image.as_ref().map(|image| image.path().to_path_buf()))
+        self.read_state(|s| s.view.current_image.as_ref().map(|image| image.path().to_path_buf()))
     }
 
     pub fn get_current_view_image_path_if_viewer(&self) -> Result<Option<PathBuf>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                if s.view.view_mode != ViewMode::Viewer {
-                    return None;
-                }
-                s.view
-                    .current_image
-                    .as_ref()
-                    .map(|image| image.path().to_path_buf())
-            })
+        self.read_state(|s| {
+            if s.view.view_mode != ViewMode::Viewer {
+                return None;
+            }
+            s.view
+                .current_image
+                .as_ref()
+                .map(|image| image.path().to_path_buf())
+        })
     }
 
     pub fn should_show_info_panel(&self) -> Result<bool> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                s.config.viewer.show_info_panel
-                    && s.view.current_image.is_some()
-                    && s.view.view_mode == ViewMode::Viewer
-            })
+        self.read_state(|s| {
+            s.config.viewer.show_info_panel
+                && s.view.current_image.is_some()
+                && s.view.view_mode == ViewMode::Viewer
+        })
     }
 
     pub fn get_current_view_image_info(&self) -> Result<Option<CurrentImageInfo>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                s.view.current_image.as_ref().map(|image| {
-                    (
-                        image.path().to_path_buf(),
-                        (image.metadata().width, image.metadata().height),
-                        format!("{:?}", image.metadata().format),
-                    )
-                })
+        self.read_state(|s| {
+            s.view.current_image.as_ref().map(|image| {
+                (
+                    image.path().to_path_buf(),
+                    (image.metadata().width, image.metadata().height),
+                    format!("{:?}", image.metadata().format),
+                )
             })
+        })
     }
 
     pub fn get_gallery_thumbnail_size_if_gallery_mode(&self) -> Result<Option<u32>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                if s.view.view_mode == ViewMode::Gallery {
-                    Some(s.config.gallery.thumbnail_size)
-                } else {
-                    None
-                }
-            })
+        self.read_state(|s| {
+            if s.view.view_mode == ViewMode::Gallery {
+                Some(s.config.gallery.thumbnail_size)
+            } else {
+                None
+            }
+        })
     }
 
     pub fn get_about_window_position(&self) -> Result<Option<Position>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.config.viewer.about_window_pos)
+        self.read_state(|s| s.config.viewer.about_window_pos)
     }
 
     pub fn get_window_position(&self) -> Result<Option<(f32, f32)>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| match (s.config.window.x, s.config.window.y) {
-                (Some(x), Some(y)) => Some((x, y)),
-                _ => None,
-            })
+        self.read_state(|s| match (s.config.window.x, s.config.window.y) {
+            (Some(x), Some(y)) => Some((x, y)),
+            _ => None,
+        })
     }
 
     pub fn get_gallery_image_path_and_fit_if_viewer(
         &self,
         index: usize,
     ) -> Result<Option<(PathBuf, bool)>> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| {
-                if s.view.view_mode != ViewMode::Viewer {
-                    return None;
-                }
-                s.gallery.gallery.get_image(index).map(|image| {
-                    (
-                        image.path().to_path_buf(),
-                        s.config.viewer.fit_to_window,
-                    )
-                })
-            })
+        self.read_state(|s| {
+            if s.view.view_mode != ViewMode::Viewer {
+                return None;
+            }
+            s.gallery
+                .gallery
+                .get_image(index)
+                .map(|image| (image.path().to_path_buf(), s.config.viewer.fit_to_window))
+        })
     }
 
     pub fn get_config(&self) -> Result<AppConfig> {
-        self.state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))
-            .map(|s| s.config.clone())
+        self.read_state(|s| s.config.clone())
     }
 
     pub fn update_config(&self, updater: impl FnOnce(&mut AppConfig)) -> Result<()> {
@@ -273,12 +230,10 @@ impl OASImageViewerService {
     }
 
     pub fn update_state(&self, f: impl FnOnce(&mut AppState)) -> Result<()> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| CoreError::technical("CONFIG_ERROR", "Lock poisoned".to_string()))?;
-        f(&mut state);
-        Ok(())
+        self.write_state(|state| {
+            f(state);
+        })
+        .map(|_| ())
     }
 
     pub fn toggle_view_mode(&self) -> Result<()> {

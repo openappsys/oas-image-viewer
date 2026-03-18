@@ -286,14 +286,7 @@ max_scale = 20.0                    # 最大缩放比例
    thumbnail_size = 100  # 减小缩略图尺寸
    ```
 
-3. **限制同时加载的图片数量**
-   在 `config.toml` 中：
-   ```toml
-   [gallery]
-   max_concurrent_loads = 4
-   ```
-
-4. **检查系统资源**
+3. **检查系统资源**
    ```bash
    # 查看内存使用
    free -h

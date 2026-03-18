@@ -329,7 +329,9 @@ impl SystemIntegration for MacOSIntegration {
         if let Ok(user) = std::env::var("USER") {
             killall_cmd.arg("-u").arg(user);
         }
-        let _ = killall_cmd.arg("Finder").output();
+        if let Err(e) = killall_cmd.arg("Finder").output() {
+            tracing::warn!(error = %e, "刷新 Finder 失败");
+        }
 
         if any_success {
             Ok(())
@@ -358,7 +360,9 @@ impl SystemIntegration for MacOSIntegration {
         if let Ok(user) = std::env::var("USER") {
             killall_cmd.arg("-u").arg(user);
         }
-        let _ = killall_cmd.arg("Finder").output();
+        if let Err(e) = killall_cmd.arg("Finder").output() {
+            tracing::warn!(error = %e, "刷新 Finder 失败");
+        }
 
         if !any_success {
             bail!("{}", get_text("error_unset_default_failed", language))

@@ -54,11 +54,9 @@
 ```
 入口层（main.rs / lib.rs）
         ↓
-适配器层（adapters/egui + adapters/platform）
+适配器层（adapters/egui + adapters/platform）与基础设施层（infrastructure/）
         ↓
 核心层（core/domain + core/ports + core/use_cases）
-        ↓
-基础设施层（infrastructure/）
 ```
 
 ## 安装

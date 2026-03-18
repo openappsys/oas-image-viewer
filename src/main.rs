@@ -75,7 +75,9 @@ fn resolve_log_dir() -> PathBuf {
 fn log_paths() -> &'static LogPaths {
     LOG_PATHS.get_or_init(|| {
         let log_dir = resolve_log_dir();
-        let _ = std::fs::create_dir_all(&log_dir);
+        if let Err(e) = std::fs::create_dir_all(&log_dir) {
+            eprintln!("创建日志目录失败: {}", e);
+        }
         LogPaths {
             app: log_dir.join("app.log"),
             crash: log_dir.join("crash.log"),
@@ -93,13 +95,17 @@ fn main() {
             .append(true)
             .open(&log_paths().crash)
         {
-            let _ = file.write_all(msg.as_bytes());
+            if let Err(e) = file.write_all(msg.as_bytes()) {
+                eprintln!("写入崩溃日志失败: {}", e);
+            }
         }
         // 尝试输出错误日志（Windows 下可能不可见）
         tracing::error!("{}", msg);
     }));
 
-    let _ = std::fs::write(&log_paths().app, "");
+    if let Err(e) = std::fs::write(&log_paths().app, "") {
+        eprintln!("清空应用日志失败: {}", e);
+    }
 
     // 默认日志级别为 INFO 及以上，可通过 RUST_LOG 环境变量覆盖
     // 示例：RUST_LOG=debug 显示全部调试日志
@@ -136,7 +142,9 @@ fn log_to_file(msg: &str) {
         .append(true)
         .open(&log_paths().app)
     {
-        let _ = file.write_all(line.as_bytes());
+        if let Err(e) = file.write_all(line.as_bytes()) {
+            eprintln!("写入应用日志失败: {}", e);
+        }
     }
 }
 
@@ -216,10 +224,7 @@ fn apply_initial_path(service: &Arc<OASImageViewerService>, initial_path: &Optio
             return;
         }
 
-        let fit_to_window = service
-            .get_state()
-            .map(|state| state.config.viewer.fit_to_window)
-            .unwrap_or(true);
+        let fit_to_window = service.is_fit_to_window_enabled().unwrap_or(true);
         if let Err(e) = service.open_image(path, None, None, fit_to_window) {
             tracing::error!(path = %path.display(), error = %e, "处理初始图片失败");
         }

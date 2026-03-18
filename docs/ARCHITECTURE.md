@@ -191,9 +191,9 @@ impl ViewImageUseCase {
 }
 
 pub struct OASImageViewerService {
-    pub view_use_case: ViewImageUseCase,
-    pub navigate_use_case: NavigateGalleryUseCase,
-    pub config_use_case: ManageConfigUseCase,
+    view_use_case: ViewImageUseCase,
+    navigate_use_case: NavigateGalleryUseCase,
+    config_use_case: ManageConfigUseCase,
 }
 ```
 
@@ -238,7 +238,7 @@ src/adapters/
 ├── mod.rs
 ├── egui/
 │   ├── app.rs
-│   ├── app/               # handlers/menu/render/types/utils
+│   ├── app/               # copy_shortcuts/handlers/lifecycle/menu/render/shortcuts/state_sync/types/utils
 │   ├── thumbnail_loader.rs
 │   └── widgets/
 └── platform/              # linux/macos/windows 平台集成

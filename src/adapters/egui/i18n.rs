@@ -113,14 +113,18 @@ pub fn initialize() {
         tracing::info!("使用嵌入的中文语言包");
         load_embedded_pack("zh-CN")
     });
-    let _ = CHINESE_PACK.set(chinese_pack);
+    if CHINESE_PACK.set(chinese_pack).is_err() {
+        tracing::warn!("中文语言包已初始化，跳过重复设置");
+    }
 
     // 加载英文语言包
     let english_pack = try_load_from_filesystem("en-US").unwrap_or_else(|| {
         tracing::info!("使用嵌入的英文语言包");
         load_embedded_pack("en-US")
     });
-    let _ = ENGLISH_PACK.set(english_pack);
+    if ENGLISH_PACK.set(english_pack).is_err() {
+        tracing::warn!("英文语言包已初始化，跳过重复设置");
+    }
 }
 
 /// 获取翻译文本

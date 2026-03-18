@@ -170,14 +170,22 @@ impl SystemIntegration for WindowsIntegration {
 
         // 删除通用右键菜单项
         let shell_path = r"Software\Classes\*\shell\Open with OAS Image Viewer";
-        let _ = hkcu.delete_subkey_all(shell_path);
+        if let Err(e) = hkcu.delete_subkey_all(shell_path) {
+            tracing::debug!(error = %e, "删除通用右键菜单项失败（可能不存在）");
+        }
 
         // 删除图片格式特定的右键菜单项
         for ext in IMAGE_EXTENSIONS {
             let ext_shell_path = format!(
                 r"Software\Classes\SystemFileAssociations\.{ext}\shell\Open with OAS Image Viewer",
             );
-            let _ = hkcu.delete_subkey_all(&ext_shell_path);
+            if let Err(e) = hkcu.delete_subkey_all(&ext_shell_path) {
+                tracing::debug!(
+                    error = %e,
+                    ext = ext,
+                    "删除图片格式右键菜单项失败（可能不存在）"
+                );
+            }
         }
 
         Ok(())

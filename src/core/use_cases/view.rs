@@ -10,16 +10,11 @@ use super::ViewState;
 
 pub struct ViewImageUseCase {
     image_source: Arc<dyn ImageSource>,
-    #[allow(dead_code)]
-    storage: Arc<dyn Storage>,
 }
 
 impl ViewImageUseCase {
-    pub fn new(image_source: Arc<dyn ImageSource>, storage: Arc<dyn Storage>) -> Self {
-        Self {
-            image_source,
-            storage,
-        }
+    pub fn new(image_source: Arc<dyn ImageSource>, _storage: Arc<dyn Storage>) -> Self {
+        Self { image_source }
     }
 
     pub fn open_image(

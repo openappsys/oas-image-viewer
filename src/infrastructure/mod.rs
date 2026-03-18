@@ -214,7 +214,9 @@ impl JsonStorage {
             .append(true)
             .open("oas-image-viewer.log")
         {
-            let _ = file.write_all(line.as_bytes());
+            if let Err(e) = file.write_all(line.as_bytes()) {
+                tracing::warn!(error = %e, "写入调试日志失败");
+            }
         }
     }
 
@@ -255,7 +257,9 @@ impl JsonStorage {
                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
                         if let Some(config) = pending.take() {
                             if last_save.elapsed().as_millis() >= 100 {
-                                let _ = Self::save_to_file(&config_path, &config);
+                                if let Err(e) = Self::save_to_file(&config_path, &config) {
+                                    tracing::warn!(error = %e, "防抖保存配置失败");
+                                }
                                 last_save = Instant::now();
                             }
                         }

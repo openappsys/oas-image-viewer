@@ -103,9 +103,12 @@ Exec={} %f
             .unwrap_or_else(|| PathBuf::from("~/.local/share/applications"));
 
         // 尝试使用 update-desktop-database，失败也不报错
-        let _ = Command::new("update-desktop-database")
+        if let Err(e) = Command::new("update-desktop-database")
             .arg(&apps_dir)
-            .output();
+            .output()
+        {
+            tracing::debug!(error = %e, "更新桌面数据库失败");
+        }
 
         Ok(())
     }

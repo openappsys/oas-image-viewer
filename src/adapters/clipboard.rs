@@ -172,7 +172,7 @@ impl ClipboardManager {
             let result = Command::new("xdg-open").arg(&parent).spawn();
             if result.is_err() {
                 // 回退到 dbus-send (Nautilus)
-                let _ = Command::new("dbus-send")
+                if let Err(e) = Command::new("dbus-send")
                     .args([
                         "--session",
                         "--dest=org.freedesktop.FileManager1",
@@ -182,7 +182,10 @@ impl ClipboardManager {
                         format!("array:string:file://{}", path_str).as_str(),
                         "string:\"\"",
                     ])
-                    .spawn();
+                    .spawn()
+                {
+                    tracing::warn!(error = %e, "回退 dbus-send 失败");
+                }
             }
         }
 
@@ -215,12 +218,12 @@ mod tests {
         let manager = ClipboardManager::new();
         // 在某些环境（如 CI）中剪贴板可能不可用
         // 但不应该 panic
-        let _ = manager.is_available();
+        if manager.is_available() {}
     }
 
     #[test]
     fn test_clipboard_manager_default() {
         let manager: ClipboardManager = Default::default();
-        let _ = manager.is_available();
+        if manager.is_available() {}
     }
 }
