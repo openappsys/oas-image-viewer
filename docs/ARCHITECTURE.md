@@ -221,18 +221,14 @@ pub struct OASImageViewerService {
 
 ```rust
 // infrastructure/mod.rs
+mod fs_image_source;
+mod storage;
+mod async_image_source;
+mod file_dialog;
 
-// 实现 ImageSource 端口
-pub struct FsImageSource;
-impl ImageSource for FsImageSource { ... }
-
-// 实现 Storage 端口
-pub struct JsonStorage { ... }
-impl Storage for JsonStorage { ... }
-
-// 实现 FileDialogPort 端口
-pub struct RfdFileDialog;
-impl FileDialogPort for RfdFileDialog { ... }
+pub use fs_image_source::FsImageSource; // ImageSource
+pub use storage::JsonStorage;           // Storage
+pub use file_dialog::RfdFileDialog;     // FileDialogPort
 ```
 
 ### 3. Adapters 层（适配器层）
@@ -249,7 +245,7 @@ src/adapters/
 ├── mod.rs
 ├── egui/
 │   ├── app.rs
-│   ├── app/               # copy_shortcuts/handlers/lifecycle/menu/render/shortcuts/state_sync/types/utils
+│   ├── app/               # copy_shortcuts/handlers/lifecycle/menu(render+popup+sections)/render/shortcuts/state_sync/types/utils
 │   ├── thumbnail_loader.rs
 │   └── widgets/
 └── platform/              # linux/macos/windows 平台集成
