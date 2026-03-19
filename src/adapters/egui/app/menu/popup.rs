@@ -39,36 +39,43 @@ impl EguiApp {
                         self.calculate_popup_width(ui, params.idx, params.style, params.language);
                     ui.set_min_width(popup_width);
                     ui.set_max_width(popup_width);
+                    let viewport_height = params.ctx.viewport_rect().height();
+                    let max_popup_height = (viewport_height - 80.0).clamp(180.0, 560.0);
 
                     ui.add_space(4.0);
 
-                    let clicked = match params.idx {
-                        0 => self.render_modern_file_menu(
-                            ui,
-                            params.ctx,
-                            params.style,
-                            params.language,
-                        ),
-                        1 => self.render_modern_view_menu(
-                            ui,
-                            params.ctx,
-                            params.style,
-                            params.language,
-                        ),
-                        2 => self.render_modern_image_menu(
-                            ui,
-                            params.ctx,
-                            params.style,
-                            params.language,
-                        ),
-                        3 => self.render_modern_help_menu(
-                            ui,
-                            params.ctx,
-                            params.style,
-                            params.language,
-                        ),
-                        _ => false,
-                    };
+                    let mut clicked = false;
+                    egui::ScrollArea::vertical()
+                        .max_height(max_popup_height)
+                        .show(ui, |ui| {
+                            clicked = match params.idx {
+                                0 => self.render_modern_file_menu(
+                                    ui,
+                                    params.ctx,
+                                    params.style,
+                                    params.language,
+                                ),
+                                1 => self.render_modern_view_menu(
+                                    ui,
+                                    params.ctx,
+                                    params.style,
+                                    params.language,
+                                ),
+                                2 => self.render_modern_image_menu(
+                                    ui,
+                                    params.ctx,
+                                    params.style,
+                                    params.language,
+                                ),
+                                3 => self.render_modern_help_menu(
+                                    ui,
+                                    params.ctx,
+                                    params.style,
+                                    params.language,
+                                ),
+                                _ => false,
+                            };
+                        });
 
                     if clicked {
                         should_close = true;
