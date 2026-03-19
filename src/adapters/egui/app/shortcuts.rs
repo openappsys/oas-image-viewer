@@ -197,10 +197,11 @@ impl EguiApp {
 
     pub(super) fn handle_copy_shortcuts(&mut self, ctx: &Context) {
         let signals = ctx.input(|i| collect_copy_shortcut_signals(&i.events, i.modifiers.shift));
+        let copy_in_info_panel_context = signals.has_copy_event && self.info_panel.pointer_in_panel(ctx);
 
         let decision = resolve_copy_action(CopyShortcutState {
             wants_keyboard_input: ctx.wants_keyboard_input(),
-            has_focused_widget: ctx.memory(|m| m.focused().is_some()),
+            has_focused_widget: ctx.memory(|m| m.focused().is_some()) || copy_in_info_panel_context,
             has_copy_event: signals.has_copy_event,
             key_copy_path: signals.key_copy_path,
             key_copy_image: signals.key_copy_image,

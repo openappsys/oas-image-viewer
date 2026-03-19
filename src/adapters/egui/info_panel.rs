@@ -23,6 +23,7 @@ use receiver::{poll_exif_receiver, spawn_exif_loader, ExifReceiveState};
 pub struct InfoPanel {
     visible: bool,
     width: f32,
+    panel_rect: Option<egui::Rect>,
     current_info: Option<ImageInfo>,
     exif_receiver: Option<Receiver<receiver::ExifLoadResult>>,
     loading_exif: bool,
@@ -108,6 +109,7 @@ impl InfoPanel {
         Self {
             visible: false,
             width: 280.0,
+            panel_rect: None,
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
@@ -121,6 +123,7 @@ impl InfoPanel {
         Self {
             visible,
             width: 280.0,
+            panel_rect: None,
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
@@ -143,11 +146,19 @@ impl InfoPanel {
     /// 隐藏面板
     pub fn hide(&mut self) {
         self.visible = false;
+        self.panel_rect = None;
     }
 
     /// 检查面板是否可见
     pub fn is_visible(&self) -> bool {
         self.visible
+    }
+
+    pub fn pointer_in_panel(&self, ctx: &Context) -> bool {
+        let Some(rect) = self.panel_rect else {
+            return false;
+        };
+        ctx.input(|i| i.pointer.interact_pos().map(|p| rect.contains(p)).unwrap_or(false))
     }
 
     /// 设置图像信息（同步部分）
@@ -190,6 +201,7 @@ impl InfoPanel {
         self.exif_receiver = None;
         self.loading_exif = false;
         self.active_exif_request_id = None;
+        self.panel_rect = None;
     }
 
     /// 处理输入（F键和ESC键）
@@ -255,6 +267,7 @@ impl InfoPanel {
         self.check_exif_receiver();
 
         if !self.visible {
+            self.panel_rect = None;
             return false;
         }
 
@@ -273,6 +286,7 @@ impl InfoPanel {
                     .inner_margin(egui::Margin::same(8)),
             )
             .show(ctx, |ui| {
+                self.panel_rect = Some(ui.max_rect());
                 // 更新宽度（限制在最小和最大之间）
                 let new_width = ui.available_width();
                 self.width = new_width.clamp(200.0, 400.0);
