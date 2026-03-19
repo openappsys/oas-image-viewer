@@ -1,7 +1,7 @@
 use super::types::{EguiApp, SlideshowEndBehavior};
 use crate::core::domain::{NavigationDirection, ViewMode};
 use egui::Context;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 impl EguiApp {
     pub(super) fn tick_slideshow(&mut self, ctx: &Context) {
@@ -15,20 +15,25 @@ impl EguiApp {
         let is_focused = ctx.input(|i| i.viewport().focused.unwrap_or(true));
         if !is_focused {
             self.slideshow.paused_by_background = true;
+            ctx.request_repaint_after(Duration::from_millis(200));
             return;
         }
         if self.slideshow.paused_by_background {
             self.slideshow.paused_by_background = false;
             self.slideshow.last_advanced_at = Instant::now();
+            ctx.request_repaint_after(Duration::from_secs(self.slideshow.interval_seconds));
             return;
         }
 
+        let interval = Duration::from_secs(self.slideshow.interval_seconds);
         let elapsed = Instant::now().saturating_duration_since(self.slideshow.last_advanced_at);
-        if elapsed.as_secs_f32() < self.slideshow.interval_seconds as f32 {
+        if elapsed < interval {
+            ctx.request_repaint_after(interval.saturating_sub(elapsed));
             return;
         }
         self.slideshow.last_advanced_at = Instant::now();
         self.advance_slideshow(ctx);
+        ctx.request_repaint_after(interval);
     }
 
     pub(crate) fn toggle_slideshow(&mut self) {

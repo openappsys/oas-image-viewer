@@ -5,14 +5,17 @@ use egui::RichText;
 pub(super) fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
     let text_color = ui.style().visuals.text_color();
     let weak_color = ui.style().visuals.weak_text_color();
-    ui.horizontal(|ui| {
+    ui.horizontal_top(|ui| {
         ui.label(RichText::new(label).size(13.0).color(weak_color));
-        let mut text = value.to_string();
-        let text_edit = egui::TextEdit::singleline(&mut text)
-            .text_color(text_color)
-            .font(egui::TextStyle::Body)
-            .desired_width(ui.available_width());
-        let _response = ui.add(text_edit);
+        ui.allocate_ui_with_layout(
+            egui::vec2(ui.available_width(), 0.0),
+            egui::Layout::left_to_right(egui::Align::Min),
+            |ui| {
+                let response =
+                    ui.add(egui::Label::new(RichText::new(value).size(13.0).color(text_color)).wrap());
+                response.on_hover_text(value);
+            },
+        );
     });
 }
 

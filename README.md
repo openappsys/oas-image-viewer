@@ -171,6 +171,9 @@ RUST_LOG=debug oas-image-viewer /path/to/image.png
 | `Cmd/Ctrl + 2` | Fit to width | Viewer |
 | `Cmd/Ctrl + 3` | Fit to height | Viewer |
 | `B` | Cycle background (black/gray/white) | Viewer |
+| `S` | Start/Pause slideshow | Viewer |
+| `R` / `Shift + R` | Rotate 90° clockwise/counterclockwise (read-only) | Viewer |
+| `H` / `V` | Flip horizontal/vertical (read-only) | Viewer |
 | `F11` | Toggle fullscreen | All |
 | `G` | Toggle gallery mode | All |
 | `F` | Show/hide info panel | Viewer |
@@ -286,12 +289,12 @@ cargo clippy --all-targets -- -D warnings
 - ✅ Drag & drop support
 - ✅ Keyboard shortcuts
 
-### v0.4.0 (Planned)
+### v0.4.0 (In Progress)
+- [x] Slideshow mode (play/pause, interval, end behavior)
+- [x] Read-only transform preview (R/Shift+R/H/V)
+- [x] Full EXIF display (camera/lens/exposure/GPS)
 - [ ] Image editing (crop, adjust brightness/contrast)
 - [ ] Batch processing
-- [ ] Slideshow mode
-- [ ] Custom themes
-- [ ] Plugin system
 
 ### v1.0.0 (Release)
 - [ ] Code signing (Windows/macOS)

@@ -24,8 +24,10 @@ pub struct InfoPanel {
     visible: bool,
     width: f32,
     current_info: Option<ImageInfo>,
-    exif_receiver: Option<Receiver<ExifData>>,
+    exif_receiver: Option<Receiver<receiver::ExifLoadResult>>,
     loading_exif: bool,
+    exif_request_seq: u64,
+    active_exif_request_id: Option<u64>,
 }
 
 /// 图像信息数据结构
@@ -64,6 +66,10 @@ pub struct ExifData {
     pub camera_make: Option<String>,
     /// 镜头型号
     pub lens_model: Option<String>,
+    /// 镜头制造商
+    pub lens_make: Option<String>,
+    /// 软件
+    pub software: Option<String>,
     /// ISO感光度
     pub iso: Option<u32>,
     /// 光圈值
@@ -72,10 +78,28 @@ pub struct ExifData {
     pub shutter_speed: Option<String>,
     /// 焦距
     pub focal_length: Option<String>,
+    /// 曝光补偿
+    pub exposure_bias: Option<String>,
+    /// 白平衡
+    pub white_balance: Option<String>,
+    /// 闪光灯
+    pub flash: Option<String>,
+    /// 测光模式
+    pub metering_mode: Option<String>,
+    /// 曝光程序
+    pub exposure_program: Option<String>,
+    /// 曝光模式
+    pub exposure_mode: Option<String>,
     /// GPS纬度
     pub gps_latitude: Option<String>,
     /// GPS经度
     pub gps_longitude: Option<String>,
+    /// GPS海拔
+    pub gps_altitude: Option<String>,
+    /// GPS时间
+    pub gps_timestamp: Option<String>,
+    /// 其他 EXIF 键值
+    pub extra_fields: Vec<(String, String)>,
 }
 
 impl InfoPanel {
@@ -87,6 +111,8 @@ impl InfoPanel {
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
+            exif_request_seq: 0,
+            active_exif_request_id: None,
         }
     }
 
@@ -98,6 +124,8 @@ impl InfoPanel {
             current_info: None,
             exif_receiver: None,
             loading_exif: false,
+            exif_request_seq: 0,
+            active_exif_request_id: None,
         }
     }
 
@@ -161,6 +189,7 @@ impl InfoPanel {
         self.current_info = None;
         self.exif_receiver = None;
         self.loading_exif = false;
+        self.active_exif_request_id = None;
     }
 
     /// 处理输入（F键和ESC键）
@@ -188,12 +217,23 @@ impl InfoPanel {
     fn check_exif_receiver(&mut self) {
         if let Some(receiver) = &self.exif_receiver {
             match poll_exif_receiver(receiver) {
-                ExifReceiveState::Loaded(exif_data) => {
+                ExifReceiveState::Loaded(result) => {
+                    let is_current_request =
+                        self.active_exif_request_id == Some(result.request_id);
+                    let is_current_image = self
+                        .current_info
+                        .as_ref()
+                        .map(|info| info.path == result.path)
+                        .unwrap_or(false);
+
                     if let Some(ref mut info) = self.current_info {
-                        info.exif = Some(*exif_data);
+                        if is_current_request && is_current_image {
+                            info.exif = Some(result.exif_data.clone());
+                        }
                     }
                     self.loading_exif = false;
                     self.exif_receiver = None;
+                    self.active_exif_request_id = None;
                     debug!("EXIF数据加载完成");
                 }
                 ExifReceiveState::Pending => {}
@@ -201,6 +241,7 @@ impl InfoPanel {
                     // 通道断开，加载失败
                     self.loading_exif = false;
                     self.exif_receiver = None;
+                    self.active_exif_request_id = None;
                     warn!("EXIF加载通道断开");
                 }
             }
@@ -388,6 +429,12 @@ impl InfoPanel {
         if let Some(ref lens) = exif.lens_model {
             render_label_value(ui, &format!("{}: ", get_text("lens", language)), lens);
         }
+        if let Some(ref lens_make) = exif.lens_make {
+            render_label_value(ui, &format!("{}: ", get_text("lens_make", language)), lens_make);
+        }
+        if let Some(ref software) = exif.software {
+            render_label_value(ui, &format!("{}: ", get_text("software", language)), software);
+        }
 
         if let Some(ref date) = exif.date_time {
             render_label_value(ui, &format!("{}: ", get_text("date_time", language)), date);
@@ -423,9 +470,47 @@ impl InfoPanel {
                 focal,
             );
         }
+        if let Some(ref bias) = exif.exposure_bias {
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("exposure_bias", language)),
+                bias,
+            );
+        }
+        if let Some(ref wb) = exif.white_balance {
+            render_label_value(ui, &format!("{}: ", get_text("white_balance", language)), wb);
+        }
+        if let Some(ref flash) = exif.flash {
+            render_label_value(ui, &format!("{}: ", get_text("flash", language)), flash);
+        }
+        if let Some(ref metering) = exif.metering_mode {
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("metering_mode", language)),
+                metering,
+            );
+        }
+        if let Some(ref program) = exif.exposure_program {
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("exposure_program", language)),
+                program,
+            );
+        }
+        if let Some(ref mode) = exif.exposure_mode {
+            render_label_value(
+                ui,
+                &format!("{}: ", get_text("exposure_mode", language)),
+                mode,
+            );
+        }
 
         // GPS信息
-        if exif.gps_latitude.is_some() || exif.gps_longitude.is_some() {
+        if exif.gps_latitude.is_some()
+            || exif.gps_longitude.is_some()
+            || exif.gps_altitude.is_some()
+            || exif.gps_timestamp.is_some()
+        {
             ui.add_space(4.0);
             if let Some(ref lat) = exif.gps_latitude {
                 render_label_value(
@@ -441,12 +526,78 @@ impl InfoPanel {
                     lon,
                 );
             }
+            if let Some(ref altitude) = exif.gps_altitude {
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("gps_altitude", language)),
+                    altitude,
+                );
+            }
+            if let Some(ref gps_time) = exif.gps_timestamp {
+                render_label_value(
+                    ui,
+                    &format!("{}: ", get_text("gps_timestamp", language)),
+                    gps_time,
+                );
+            }
+        }
+
+        if !exif.extra_fields.is_empty() {
+            ui.add_space(6.0);
+            ui.label(
+                RichText::new(get_text("other_exif", language))
+                    .size(12.0)
+                    .color(ui.style().visuals.weak_text_color()),
+            );
+            for (key, value) in &exif.extra_fields {
+                let localized = localize_extra_exif_label(key, language);
+                render_label_value(ui, &format!("{}: ", localized), value);
+            }
         }
     }
 
     /// 异步加载EXIF数据
     fn load_exif_async(&mut self, path: &Path) {
-        self.exif_receiver = Some(spawn_exif_loader(path, read_exif_data));
+        self.exif_request_seq = self.exif_request_seq.saturating_add(1);
+        let request_id = self.exif_request_seq;
+        self.active_exif_request_id = Some(request_id);
+        self.exif_receiver = Some(spawn_exif_loader(path, request_id, read_exif_data));
+    }
+}
+
+fn localize_extra_exif_label(tag_name: &str, language: Language) -> String {
+    match tag_name {
+        "Orientation" => get_text("exif_tag_orientation", language).to_string(),
+        "XResolution" => get_text("exif_tag_x_resolution", language).to_string(),
+        "YResolution" => get_text("exif_tag_y_resolution", language).to_string(),
+        "ResolutionUnit" => get_text("exif_tag_resolution_unit", language).to_string(),
+        "ImageDescription" => get_text("exif_tag_image_description", language).to_string(),
+        "YCbCrPositioning" => get_text("exif_tag_ycbcr_positioning", language).to_string(),
+        "Compression" => get_text("exif_tag_compression", language).to_string(),
+        "ExifVersion" => get_text("exif_tag_exif_version", language).to_string(),
+        "ComponentsConfiguration" => {
+            get_text("exif_tag_components_configuration", language).to_string()
+        }
+        "LightSource" => get_text("exif_tag_light_source", language).to_string(),
+        "FlashpixVersion" => get_text("exif_tag_flashpix_version", language).to_string(),
+        "ColorSpace" => get_text("exif_tag_color_space", language).to_string(),
+        "PixelXDimension" => get_text("exif_tag_pixel_x_dimension", language).to_string(),
+        "PixelYDimension" => get_text("exif_tag_pixel_y_dimension", language).to_string(),
+        "InteroperabilityIndex" => {
+            get_text("exif_tag_interoperability_index", language).to_string()
+        }
+        "InteroperabilityVersion" => {
+            get_text("exif_tag_interoperability_version", language).to_string()
+        }
+        "DigitalZoomRatio" => get_text("exif_tag_digital_zoom_ratio", language).to_string(),
+        "SceneCaptureType" => get_text("exif_tag_scene_capture_type", language).to_string(),
+        "JPEGInterchangeFormat" => {
+            get_text("exif_tag_jpeg_interchange_format", language).to_string()
+        }
+        "JPEGInterchangeFormatLength" => {
+            get_text("exif_tag_jpeg_interchange_format_length", language).to_string()
+        }
+        _ => tag_name.to_string(),
     }
 }
 

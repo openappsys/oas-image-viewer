@@ -1,4 +1,5 @@
 use super::*;
+use super::receiver::ExifLoadResult;
 use std::sync::mpsc::channel;
 
 fn format_test_path(path: &Path) -> String {
@@ -187,6 +188,7 @@ fn test_exif_data_default() {
     assert!(exif.date_time.is_none());
     assert!(exif.camera_model.is_none());
     assert!(exif.iso.is_none());
+    assert!(exif.extra_fields.is_empty());
 }
 
 #[test]
@@ -195,6 +197,7 @@ fn test_exif_data_clone() {
         date_time: Some("2026-01-01".to_string()),
         camera_model: Some("Test Camera".to_string()),
         iso: Some(100),
+        extra_fields: vec![("ExposureProgram".to_string(), "Manual".to_string())],
         ..Default::default()
     };
     let cloned = exif.clone();
@@ -256,12 +259,23 @@ fn test_exif_data_full() {
         camera_model: Some("Canon EOS R5".to_string()),
         camera_make: Some("Canon".to_string()),
         lens_model: Some("RF 24-70mm F2.8".to_string()),
+        lens_make: Some("Canon".to_string()),
+        software: Some("Adobe Lightroom".to_string()),
         iso: Some(100),
         aperture: Some("f/2.8".to_string()),
         shutter_speed: Some("1/250".to_string()),
         focal_length: Some("50 mm".to_string()),
+        exposure_bias: Some("0 EV".to_string()),
+        white_balance: Some("Auto".to_string()),
+        flash: Some("Off".to_string()),
+        metering_mode: Some("Evaluative".to_string()),
+        exposure_program: Some("Manual".to_string()),
+        exposure_mode: Some("Manual".to_string()),
         gps_latitude: Some("39° 54' 15\" N".to_string()),
         gps_longitude: Some("116° 24' 25\" E".to_string()),
+        gps_altitude: Some("52 m".to_string()),
+        gps_timestamp: Some("10:30:00".to_string()),
+        extra_fields: vec![("Custom".to_string(), "Value".to_string())],
     };
 
     assert!(exif.date_time.is_some());
@@ -341,7 +355,7 @@ fn test_format_file_size_large() {
 #[test]
 fn test_exif_receiver_disconnected() {
     let mut panel = InfoPanel::new();
-    let (sender, receiver) = channel::<ExifData>();
+    let (sender, receiver) = channel::<ExifLoadResult>();
     panel.exif_receiver = Some(receiver);
     drop(sender);
 
@@ -354,7 +368,7 @@ fn test_exif_receiver_disconnected() {
 #[test]
 fn test_exif_receiver_empty() {
     let mut panel = InfoPanel::new();
-    let (_sender, receiver) = channel::<ExifData>();
+    let (_sender, receiver) = channel::<ExifLoadResult>();
     panel.exif_receiver = Some(receiver);
     panel.loading_exif = true;
 
@@ -367,22 +381,62 @@ fn test_exif_receiver_empty() {
 #[test]
 fn test_exif_receiver_success() {
     let mut panel = InfoPanel::new();
-    let (sender, receiver) = channel::<ExifData>();
+    let (sender, receiver) = channel::<ExifLoadResult>();
     panel.exif_receiver = Some(receiver);
     panel.loading_exif = true;
-    panel.current_info = Some(ImageInfo::default());
+    panel.current_info = Some(ImageInfo {
+        path: PathBuf::from("/test.jpg"),
+        ..Default::default()
+    });
+    panel.active_exif_request_id = Some(1);
 
     let exif = ExifData {
         camera_model: Some("Test".to_string()),
         ..Default::default()
     };
-    let _ = sender.send(exif);
+    let _ = sender.send(ExifLoadResult {
+        request_id: 1,
+        path: PathBuf::from("/test.jpg"),
+        exif_data: exif,
+    });
 
     panel.check_exif_receiver();
 
     assert!(!panel.loading_exif);
     assert!(panel.exif_receiver.is_none());
     assert!(panel.current_info.as_ref().map(|i| i.exif.is_some()).unwrap_or(false));
+}
+
+#[test]
+fn test_exif_receiver_ignores_stale_result() {
+    let mut panel = InfoPanel::new();
+    let (sender, receiver) = channel::<ExifLoadResult>();
+    panel.exif_receiver = Some(receiver);
+    panel.loading_exif = true;
+    panel.current_info = Some(ImageInfo {
+        path: PathBuf::from("/new.jpg"),
+        ..Default::default()
+    });
+    panel.active_exif_request_id = Some(2);
+
+    let _ = sender.send(ExifLoadResult {
+        request_id: 1,
+        path: PathBuf::from("/old.jpg"),
+        exif_data: ExifData {
+            camera_model: Some("Old".to_string()),
+            ..Default::default()
+        },
+    });
+
+    panel.check_exif_receiver();
+
+    assert!(
+        panel
+            .current_info
+            .as_ref()
+            .and_then(|i| i.exif.as_ref())
+            .is_none()
+    );
 }
 
 #[test]
