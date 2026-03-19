@@ -11,13 +11,10 @@ pub(super) fn render_label_value(ui: &mut egui::Ui, label: &str, value: &str) {
             egui::vec2(ui.available_width(), 0.0),
             egui::Layout::left_to_right(egui::Align::Min),
             |ui| {
-                let mut text = value.to_string();
                 let response = ui.add(
-                    egui::TextEdit::multiline(&mut text)
-                        .desired_width(ui.available_width())
-                        .desired_rows(1)
-                        .font(egui::TextStyle::Body)
-                        .text_color(text_color),
+                    egui::Label::new(RichText::new(value).size(13.0).color(text_color))
+                        .wrap()
+                        .selectable(true),
                 );
                 response.on_hover_text(value);
             },
