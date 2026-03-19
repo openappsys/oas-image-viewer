@@ -65,7 +65,11 @@ impl EguiApp {
             required = required.max(row_required);
         }
 
-        required.clamp(style.menu_min_width, style.menu_max_width)
+        let viewport_width = ui.ctx().viewport_rect().width();
+        let by_viewport_edge = (viewport_width - 12.0).max(style.menu_min_width);
+        let by_readability = (viewport_width * style.menu_max_width_ratio).max(style.menu_min_width);
+        let effective_max = by_viewport_edge.min(by_readability);
+        required.clamp(style.menu_min_width, effective_max)
     }
 
     fn run_integration_action_async(&mut self, action: IntegrationAction, language: Language) {

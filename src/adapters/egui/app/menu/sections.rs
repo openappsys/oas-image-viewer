@@ -27,10 +27,10 @@ impl EguiApp {
                 style.shortcut_color
             };
             let shortcut_width = shortcut
-                .map(|text| {
+                .map(|shortcut_text| {
                     ui.painter()
                         .layout_no_wrap(
-                            text.to_string(),
+                            shortcut_text.to_string(),
                             egui::FontId::monospace(12.0),
                             style.shortcut_color,
                         )
@@ -39,21 +39,21 @@ impl EguiApp {
                 })
                 .unwrap_or(0.0);
             let label_left_padding = 12.0 + 26.0;
-            let label_right_padding = 12.0
-                + if shortcut_width > 0.0 {
-                    shortcut_width + 16.0
-                } else {
-                    0.0
-                };
-            let label_max_width =
-                (available_width - label_left_padding - label_right_padding).max(80.0);
-            let label_galley = ui.painter().layout(
-                label.to_string(),
-                egui::FontId::proportional(14.0),
+            let label_right_padding = if shortcut_width > 0.0 {
+                12.0 + shortcut_width + 16.0
+            } else {
+                12.0
+            };
+            let label_max_width = (available_width - label_left_padding - label_right_padding).max(100.0);
+            let label_font = egui::FontId::proportional(14.0);
+            let (display_label, label_overflow) =
+                truncate_menu_label(ui, label, label_max_width, &label_font, text_color);
+            let label_galley = ui.painter().layout_no_wrap(
+                display_label,
+                label_font,
                 text_color,
-                label_max_width,
             );
-            let row_height = (label_galley.size().y + 10.0).max(style.item_height);
+            let row_height = style.item_height;
             let (rect, response) =
                 ui.allocate_exact_size(Vec2::new(available_width, row_height), egui::Sense::click());
 
@@ -102,6 +102,11 @@ impl EguiApp {
                 );
             }
 
+            let response = if label_overflow {
+                response.on_hover_text(label)
+            } else {
+                response
+            };
             clicked = response.clicked();
         });
 
@@ -113,4 +118,58 @@ impl EguiApp {
         ui.add(egui::Separator::default().spacing(0.0));
         ui.add_space(6.0);
     }
+}
+
+fn truncate_menu_label(
+    ui: &egui::Ui,
+    text: &str,
+    max_width: f32,
+    font: &egui::FontId,
+    color: Color32,
+) -> (String, bool) {
+    let text_width = ui
+        .painter()
+        .layout_no_wrap(text.to_string(), font.clone(), color)
+        .size()
+        .x;
+    if text_width <= max_width {
+        return (text.to_string(), false);
+    }
+
+    let chars: Vec<char> = text.chars().collect();
+    if chars.is_empty() {
+        return (String::new(), false);
+    }
+
+    let ellipsis = "…";
+    let ellipsis_width = ui
+        .painter()
+        .layout_no_wrap(ellipsis.to_string(), font.clone(), color)
+        .size()
+        .x;
+    if ellipsis_width >= max_width {
+        return (ellipsis.to_string(), true);
+    }
+
+    let mut lo = 0usize;
+    let mut hi = chars.len();
+    while lo < hi {
+        let mid = (lo + hi).div_ceil(2);
+        let candidate = format!("{}{}", chars[..mid].iter().collect::<String>(), ellipsis);
+        let width = ui
+            .painter()
+            .layout_no_wrap(candidate, font.clone(), color)
+            .size()
+            .x;
+        if width <= max_width {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+
+    (
+        format!("{}{}", chars[..lo].iter().collect::<String>(), ellipsis),
+        true,
+    )
 }

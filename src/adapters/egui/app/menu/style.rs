@@ -12,7 +12,7 @@ pub(super) struct MenuStyle {
     pub(super) corner_radius: u8,
     pub(super) item_height: f32,
     pub(super) menu_min_width: f32,
-    pub(super) menu_max_width: f32,
+    pub(super) menu_max_width_ratio: f32,
 }
 
 impl MenuStyle {
@@ -30,7 +30,7 @@ impl MenuStyle {
                 corner_radius: 6,
                 item_height: 28.0,
                 menu_min_width: 220.0,
-                menu_max_width: 320.0,
+                menu_max_width_ratio: 0.78,
             }
         } else {
             Self {
@@ -43,7 +43,7 @@ impl MenuStyle {
                 corner_radius: 6,
                 item_height: 28.0,
                 menu_min_width: 220.0,
-                menu_max_width: 320.0,
+                menu_max_width_ratio: 0.78,
             }
         }
     }
