@@ -1,6 +1,7 @@
 use super::style::MenuStyle;
 use super::EguiApp;
 use crate::adapters::egui::i18n::get_text;
+use crate::adapters::egui::app::types::SlideshowEndBehavior;
 use crate::core::domain::{Language, Theme, ViewMode};
 use egui::{Context, RichText};
 
@@ -69,6 +70,69 @@ impl EguiApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
                 !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
             ));
+            clicked = true;
+        }
+
+        let slideshow_label = if self.slideshow.playing {
+            get_text("slideshow_pause", language)
+        } else {
+            get_text("slideshow_play", language)
+        };
+        if self.render_menu_item(ui, "▶", slideshow_label, Some("S"), style, true) {
+            self.toggle_slideshow();
+            clicked = true;
+        }
+
+        ui.label(
+            RichText::new(get_text("slideshow_interval", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        for interval in [1_u64, 2, 3, 5] {
+            let label = format!("{}s", interval);
+            if self.render_menu_item(
+                ui,
+                "⏱",
+                &label,
+                None,
+                style,
+                self.slideshow.interval_seconds != interval,
+            ) {
+                self.set_slideshow_interval(interval);
+                clicked = true;
+            }
+        }
+
+        ui.label(
+            RichText::new(get_text("slideshow_end_behavior", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        if self.render_menu_item(
+            ui,
+            "🔁",
+            get_text("slideshow_end_loop", language),
+            None,
+            style,
+            self.slideshow.end_behavior != SlideshowEndBehavior::Loop,
+        ) {
+            self.set_slideshow_end_behavior(SlideshowEndBehavior::Loop);
+            clicked = true;
+        }
+
+        if self.render_menu_item(
+            ui,
+            "⏹",
+            get_text("slideshow_end_stop", language),
+            None,
+            style,
+            self.slideshow.end_behavior != SlideshowEndBehavior::Stop,
+        ) {
+            self.set_slideshow_end_behavior(SlideshowEndBehavior::Stop);
             clicked = true;
         }
 

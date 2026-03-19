@@ -12,7 +12,9 @@ mod lifecycle;
 mod menu;
 mod render;
 mod shortcuts;
+mod slideshow;
 mod state_sync;
+mod transform;
 mod types;
 mod utils;
 
@@ -71,6 +73,7 @@ impl eframe::App for EguiApp {
 
         self.poll_integration_task(ctx, language);
         self.process_input(ctx, language);
+        self.tick_slideshow(ctx);
         let central_response = self.render_content(ctx, _frame, language);
         self.handle_interactions(ctx);
         self.render_info_panel(ctx, language);

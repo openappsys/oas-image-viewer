@@ -25,6 +25,8 @@ impl EguiApp {
         self.handle_f11(ctx);
         self.handle_f_key(ctx);
         self.handle_b_key(ctx);
+        self.handle_transform_keys(ctx);
+        self.handle_s_key(ctx);
         self.handle_esc(ctx);
         self.handle_zoom_keys(ctx);
         self.handle_enter(ctx);
@@ -159,6 +161,37 @@ impl EguiApp {
         let next = next_background_color(current);
         if let Err(e) = self.set_viewer_background_color_and_save(next) {
             tracing::error!(error = %e, "切换查看器背景色失败");
+        }
+    }
+
+    fn handle_s_key(&mut self, ctx: &Context) {
+        if !ctx.input(|i| i.key_pressed(egui::Key::S) && !i.modifiers.any()) {
+            return;
+        }
+        if ctx.wants_keyboard_input() || ctx.memory(|m| m.focused().is_some()) {
+            return;
+        }
+        self.toggle_slideshow();
+    }
+
+    fn handle_transform_keys(&mut self, ctx: &Context) {
+        if ctx.wants_keyboard_input() || ctx.memory(|m| m.focused().is_some()) {
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::R) && !i.modifiers.shift && !i.modifiers.command && !i.modifiers.ctrl)
+        {
+            self.handle_rotate_clockwise(ctx);
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::R) && i.modifiers.shift && !i.modifiers.command && !i.modifiers.ctrl)
+        {
+            self.handle_rotate_counterclockwise(ctx);
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::H) && !i.modifiers.any()) {
+            self.handle_flip_horizontal(ctx);
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::V) && !i.modifiers.any()) {
+            self.handle_flip_vertical(ctx);
         }
     }
 

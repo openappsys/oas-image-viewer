@@ -157,8 +157,13 @@ impl ShortcutsHelpPanel {
                                         &original_size_shortcut,
                                         get_text("shortcut_original", language),
                                     ),
+                                    ("R", get_text("shortcut_rotate_cw", language)),
+                                    ("Shift+R", get_text("shortcut_rotate_ccw", language)),
+                                    ("H", get_text("shortcut_flip_horizontal", language)),
+                                    ("V", get_text("shortcut_flip_vertical", language)),
                                     ("F", get_text("shortcut_info_panel", language)),
                                     ("B", get_text("shortcut_cycle_background", language)),
+                                    ("S", get_text("shortcut_slideshow_toggle", language)),
                                     (
                                         get_text("shortcut_dbl_click", language),
                                         get_text("shortcut_fullscreen", language),

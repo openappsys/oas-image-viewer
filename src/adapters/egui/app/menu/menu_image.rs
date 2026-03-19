@@ -102,6 +102,63 @@ impl EguiApp {
         self.render_menu_separator(ui, style);
 
         ui.label(
+            RichText::new(get_text("transform", language))
+                .size(11.0)
+                .color(style.shortcut_color),
+        );
+        ui.add_space(4.0);
+
+        if self.render_menu_item(
+            ui,
+            "↻",
+            get_text("rotate_clockwise", language),
+            Some("R"),
+            style,
+            true,
+        ) {
+            self.handle_rotate_clockwise(ctx);
+            clicked = true;
+        }
+
+        if self.render_menu_item(
+            ui,
+            "↺",
+            get_text("rotate_counterclockwise", language),
+            Some("Shift+R"),
+            style,
+            true,
+        ) {
+            self.handle_rotate_counterclockwise(ctx);
+            clicked = true;
+        }
+
+        if self.render_menu_item(
+            ui,
+            "⇋",
+            get_text("flip_horizontal", language),
+            Some("H"),
+            style,
+            true,
+        ) {
+            self.handle_flip_horizontal(ctx);
+            clicked = true;
+        }
+
+        if self.render_menu_item(
+            ui,
+            "⇅",
+            get_text("flip_vertical", language),
+            Some("V"),
+            style,
+            true,
+        ) {
+            self.handle_flip_vertical(ctx);
+            clicked = true;
+        }
+
+        self.render_menu_separator(ui, style);
+
+        ui.label(
             RichText::new(get_text("clipboard", language))
                 .size(11.0)
                 .color(style.shortcut_color),

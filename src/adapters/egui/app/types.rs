@@ -11,6 +11,7 @@ use egui::Context;
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
+use std::time::Instant;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum UiTaskStatus {
@@ -25,6 +26,28 @@ pub(crate) enum UiTaskStatus {
 pub(crate) struct UiTaskState {
     pub(crate) status: UiTaskStatus,
     pub(crate) message: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct ReadonlyTransformState {
+    pub(crate) rotation_quarters: u8,
+    pub(crate) flip_horizontal: bool,
+    pub(crate) flip_vertical: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SlideshowEndBehavior {
+    Loop,
+    Stop,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct SlideshowState {
+    pub(crate) playing: bool,
+    pub(crate) interval_seconds: u64,
+    pub(crate) paused_by_background: bool,
+    pub(crate) end_behavior: SlideshowEndBehavior,
+    pub(crate) last_advanced_at: Instant,
 }
 
 /// egui 应用程序适配器
@@ -55,6 +78,8 @@ pub struct EguiApp {
     pub(crate) integration_task_receiver: Option<Receiver<String>>,
     pub(crate) integration_task_running: bool,
     pub(crate) task_state: UiTaskState,
+    pub(crate) slideshow: SlideshowState,
+    pub(crate) readonly_transform: ReadonlyTransformState,
 }
 
 impl EguiApp {
@@ -109,6 +134,14 @@ impl EguiApp {
                 status: UiTaskStatus::Idle,
                 message: None,
             },
+            slideshow: SlideshowState {
+                playing: false,
+                interval_seconds: 3,
+                paused_by_background: false,
+                end_behavior: SlideshowEndBehavior::Loop,
+                last_advanced_at: Instant::now(),
+            },
+            readonly_transform: ReadonlyTransformState::default(),
         }
     }
 

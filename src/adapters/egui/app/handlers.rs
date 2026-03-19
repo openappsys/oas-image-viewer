@@ -102,11 +102,13 @@ impl EguiApp {
     ) {
         match load_result {
             Ok((texture, width, height, rgba_data)) => {
+                self.reset_readonly_transform();
                 self.current_texture = Some((path_str.clone(), texture));
                 self.current_texture_data = Some((width, height, rgba_data));
             }
             Err(e) => {
                 tracing::error!(path = %path_str, error = %e, "加载图片纹理失败");
+                self.reset_readonly_transform();
                 self.current_texture = None;
                 self.current_texture_data = None;
             }
@@ -145,11 +147,13 @@ impl EguiApp {
     pub(crate) fn load_and_set_image(&mut self, ctx: &Context, path: &std::path::Path) {
         match self.load_image_with_data(ctx, path) {
             Ok((texture, width, height, rgba_data)) => {
+                self.reset_readonly_transform();
                 self.current_texture = Some((path.to_string_lossy().to_string(), texture));
                 self.current_texture_data = Some((width, height, rgba_data));
             }
             Err(e) => {
                 tracing::error!(path = %path.display(), error = %e, "加载图片失败");
+                self.reset_readonly_transform();
                 self.current_texture = None;
                 self.current_texture_data = None;
             }
@@ -194,6 +198,7 @@ impl EguiApp {
 
     /// 导航并打开图片
     pub(crate) fn navigate_and_open(&mut self, ctx: &Context, direction: NavigationDirection) {
+        self.bump_slideshow_timer();
         match self.service.navigate_gallery(direction) {
             Ok(index) => self.open_navigated_image(ctx, index),
             Err(e) => {
@@ -232,6 +237,7 @@ impl EguiApp {
         ) {
             tracing::error!(path = %path.display(), error = %e, "打开图片失败");
         }
+        self.bump_slideshow_timer();
     }
 
     /// 处理放大
