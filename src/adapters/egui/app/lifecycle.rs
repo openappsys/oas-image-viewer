@@ -53,7 +53,7 @@ impl EguiApp {
         let mut message: Option<String> = None;
         let mut clear_receiver = false;
 
-        if let Some(receiver) = &self.integration_task_receiver {
+        if let Some(receiver) = &self.integration_state.receiver {
             match receiver.try_recv() {
                 Ok(result) => {
                     message = Some(result);
@@ -72,18 +72,18 @@ impl EguiApp {
         }
 
         if clear_receiver {
-            self.integration_task_receiver = None;
-            self.integration_task_running = false;
+            self.integration_state.receiver = None;
+            self.integration_state.running = false;
         }
 
         if let Some(msg) = message {
             if msg.contains(get_text("operation_failed", language)) {
-                self.task_state.status = UiTaskStatus::Failed;
+                self.integration_state.task.status = UiTaskStatus::Failed;
             } else {
-                self.task_state.status = UiTaskStatus::Succeeded;
+                self.integration_state.task.status = UiTaskStatus::Succeeded;
             }
-            self.task_state.message = Some(msg);
-            self.last_context_menu_result = self.task_state.message.clone();
+            self.integration_state.task.message = Some(msg);
+            self.ui_state.last_context_menu_result = self.integration_state.task.message.clone();
             ctx.request_repaint();
         }
     }
@@ -93,8 +93,8 @@ impl EguiApp {
         let current_pos = outer_rect.map(|rect| rect.left_top());
 
         if let Some(pos) = current_pos {
-            if self.last_saved_window_pos != Some(pos) {
-                self.last_saved_window_pos = Some(pos);
+            if self.session_state.last_saved_window_pos != Some(pos) {
+                self.session_state.last_saved_window_pos = Some(pos);
                 if let Err(e) = self.set_window_position_and_save(pos.x, pos.y) {
                     tracing::error!(error = %e, "保存窗口位置失败");
                 }
@@ -135,7 +135,7 @@ impl EguiApp {
                     };
                     if let Some(index) = self.gallery_widget.ui(ui, &gallery_state, ctx, language) {
                         if let Some(image) = gallery_state.gallery.get_image(index) {
-                            self.pending_clicked_image = Some(image.path().to_path_buf());
+                            self.ui_state.pending_clicked_image = Some(image.path().to_path_buf());
                         }
                     }
                 }
@@ -148,7 +148,7 @@ impl EguiApp {
                                 return;
                             }
                         };
-                    self.pending_double_click = self.viewer_widget.ui(
+                    self.ui_state.pending_double_click = self.viewer_widget.ui(
                         ui,
                         &mut view_state,
                         &viewer_settings,
@@ -164,14 +164,14 @@ impl EguiApp {
     }
 
     pub(super) fn handle_interactions(&mut self, ctx: &Context) {
-        if self.pending_double_click {
-            self.pending_double_click = false;
+        if self.ui_state.pending_double_click {
+            self.ui_state.pending_double_click = false;
             ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(
                 !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)),
             ));
         }
 
-        if let Some(ref path) = self.pending_clicked_image.take() {
+        if let Some(ref path) = self.ui_state.pending_clicked_image.take() {
             self.load_and_set_image(ctx, path);
 
             let rect = ctx.viewport_rect();
@@ -263,7 +263,7 @@ impl EguiApp {
     }
 
     fn render_context_result(&self, ui: &mut egui::Ui) {
-        let Some(ref result) = self.last_context_menu_result else {
+        let Some(ref result) = self.ui_state.last_context_menu_result else {
             return;
         };
         ui.separator();
@@ -281,10 +281,10 @@ impl EguiApp {
         language: Language,
     ) {
         match result {
-            Ok(_) => self.last_context_menu_result = Some(success_msg.to_string()),
+            Ok(_) => self.ui_state.last_context_menu_result = Some(success_msg.to_string()),
             Err(_) => {
                 let error_msg = get_text("copy_failed", language);
-                self.last_context_menu_result = Some(error_msg.to_string());
+                self.ui_state.last_context_menu_result = Some(error_msg.to_string());
             }
         }
     }

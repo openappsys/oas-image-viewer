@@ -28,6 +28,32 @@ pub(crate) struct UiTaskState {
     pub(crate) message: Option<String>,
 }
 
+#[derive(Debug)]
+pub(crate) struct UiState {
+    pub(crate) show_about: bool,
+    pub(crate) drag_hovering: bool,
+    pub(crate) about_window_pos: Option<egui::Pos2>,
+    pub(crate) last_context_menu_result: Option<String>,
+    pub(crate) pending_clicked_image: Option<PathBuf>,
+    pub(crate) pending_double_click: bool,
+}
+
+#[derive(Debug)]
+pub(crate) struct SessionState {
+    pub(crate) pending_files: Vec<PathBuf>,
+    pub(crate) current_image_path: Option<PathBuf>,
+    pub(crate) last_saved_window_pos: Option<egui::Pos2>,
+    pub(crate) initial_file: Option<PathBuf>,
+    pub(crate) initial_file_processed: bool,
+}
+
+#[derive(Debug)]
+pub(crate) struct IntegrationState {
+    pub(crate) receiver: Option<Receiver<String>>,
+    pub(crate) running: bool,
+    pub(crate) task: UiTaskState,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) struct ReadonlyTransformState {
     pub(crate) rotation_quarters: u8,
@@ -60,24 +86,11 @@ pub struct EguiApp {
     pub(crate) info_panel: InfoPanel,
     pub(crate) shortcuts_help_panel: ShortcutsHelpPanel,
     pub(crate) clipboard_manager: ClipboardManager,
-    pub(crate) show_about: bool,
-    pub(crate) pending_files: Vec<PathBuf>,
-    pub(crate) drag_hovering: bool,
+    pub(crate) ui_state: UiState,
+    pub(crate) session_state: SessionState,
+    pub(crate) integration_state: IntegrationState,
     pub(crate) current_texture: Option<(String, egui::TextureHandle)>,
     pub(crate) current_texture_data: Option<(usize, usize, Vec<u8>)>,
-    pub(crate) current_image_path: Option<PathBuf>,
-    pub(crate) about_window_pos: Option<egui::Pos2>,
-    pub(crate) last_context_menu_result: Option<String>,
-    pub(crate) last_saved_window_pos: Option<egui::Pos2>,
-    // 交互状态（用于拆分 update 函数）
-    pub(crate) pending_clicked_image: Option<PathBuf>,
-    pub(crate) pending_double_click: bool,
-    // 延迟加载初始文件（命令行参数传入）
-    pub(crate) initial_file: Option<PathBuf>,
-    pub(crate) initial_file_processed: bool,
-    pub(crate) integration_task_receiver: Option<Receiver<String>>,
-    pub(crate) integration_task_running: bool,
-    pub(crate) task_state: UiTaskState,
     pub(crate) slideshow: SlideshowState,
     pub(crate) readonly_transform: ReadonlyTransformState,
 }
@@ -112,28 +125,32 @@ impl EguiApp {
             gallery_widget: GalleryWidget::default(),
             info_panel: InfoPanel::new(),
             shortcuts_help_panel: ShortcutsHelpPanel::new(),
-            show_about: false,
-            pending_files: Vec::new(),
-            drag_hovering: false,
+            ui_state: UiState {
+                show_about: false,
+                drag_hovering: false,
+                about_window_pos,
+                last_context_menu_result: None,
+                pending_clicked_image: None,
+                pending_double_click: false,
+            },
+            session_state: SessionState {
+                pending_files: Vec::new(),
+                current_image_path: None,
+                last_saved_window_pos,
+                initial_file,
+                initial_file_processed: false,
+            },
+            integration_state: IntegrationState {
+                receiver: None,
+                running: false,
+                task: UiTaskState {
+                    status: UiTaskStatus::Idle,
+                    message: None,
+                },
+            },
             current_texture: None,
             current_texture_data: None,
-            current_image_path: None,
-            about_window_pos,
             clipboard_manager: ClipboardManager::new(),
-            last_context_menu_result: None,
-            last_saved_window_pos,
-            // 初始化交互状态
-            pending_clicked_image: None,
-            pending_double_click: false,
-            // 延迟加载初始文件
-            initial_file,
-            initial_file_processed: false,
-            integration_task_receiver: None,
-            integration_task_running: false,
-            task_state: UiTaskState {
-                status: UiTaskStatus::Idle,
-                message: None,
-            },
             slideshow: SlideshowState {
                 playing: false,
                 interval_seconds: 3,

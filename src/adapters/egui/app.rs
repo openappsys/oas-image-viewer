@@ -52,14 +52,14 @@ impl UiPort for EguiApp {
 
 impl eframe::App for EguiApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        if !self.initial_file_processed {
-            if let Some(path) = self.initial_file.take() {
+        if !self.session_state.initial_file_processed {
+            if let Some(path) = self.session_state.initial_file.take() {
                 tracing::info!("延迟加载初始文件: {:?}", path);
                 let rect = ctx.viewport_rect();
                 self.add_image_to_gallery(&path);
                 self.process_single_file(ctx, &path, rect.width(), rect.height());
             }
-            self.initial_file_processed = true;
+            self.session_state.initial_file_processed = true;
         }
 
         self.apply_theme(ctx);
@@ -86,13 +86,13 @@ impl eframe::App for EguiApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        if let Some(pos) = self.last_saved_window_pos {
+        if let Some(pos) = self.session_state.last_saved_window_pos {
             if let Err(e) = self.set_window_position_and_save(pos.x, pos.y) {
                 tracing::error!(error = %e, "更新窗口位置失败");
             }
         }
 
-        if let Err(e) = self.set_about_window_position(self.about_window_pos) {
+        if let Err(e) = self.set_about_window_position(self.ui_state.about_window_pos) {
             tracing::error!(error = %e, "更新状态失败");
         }
         self.save_config_now();

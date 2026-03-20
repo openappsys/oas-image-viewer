@@ -15,7 +15,7 @@ impl EguiApp {
                 if path.exists() {
                     tracing::debug!(path = ?path, "添加图片");
                     self.add_image_to_gallery(&path);
-                    self.pending_files.push(path);
+                    self.session_state.pending_files.push(path);
                 } else {
                     tracing::warn!(path = ?path, "文件路径无效");
                 }
@@ -57,7 +57,7 @@ impl EguiApp {
         let win_h = rect.height();
 
         // 处理通过界面加入的文件（拖放、文件对话框）
-        while let Some(path) = self.pending_files.pop() {
+        while let Some(path) = self.session_state.pending_files.pop() {
             self.process_single_file(ctx, &path, win_w, win_h);
         }
 
@@ -162,7 +162,7 @@ impl EguiApp {
 
     /// 处理拖放
     pub(crate) fn handle_drops(&mut self, ctx: &Context) {
-        self.drag_hovering = ctx.input(|i| !i.raw.hovered_files.is_empty());
+        self.ui_state.drag_hovering = ctx.input(|i| !i.raw.hovered_files.is_empty());
 
         ctx.input(|i| {
             if i.raw.dropped_files.is_empty() {
@@ -189,11 +189,11 @@ impl EguiApp {
         }
 
         if let Some(first_path) = image_paths.first() {
-            self.pending_files.push(first_path.to_path_buf());
+            self.session_state.pending_files.push(first_path.to_path_buf());
             tracing::debug!(path = %first_path.display(), "拖放添加图片");
         }
 
-        self.drag_hovering = false;
+        self.ui_state.drag_hovering = false;
     }
 
     /// 导航并打开图片

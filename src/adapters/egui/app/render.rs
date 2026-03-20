@@ -8,7 +8,7 @@ use egui::Context;
 impl EguiApp {
     /// 渲染拖拽覆盖层
     pub(crate) fn render_drag_overlay(&self, ctx: &Context, language: Language) {
-        if !self.drag_hovering {
+        if !self.ui_state.drag_hovering {
             return;
         }
 
@@ -87,7 +87,7 @@ impl EguiApp {
 
     /// 渲染关于窗口
     pub(crate) fn render_about_window(&mut self, ctx: &Context, language: Language) {
-        if !self.show_about {
+        if !self.ui_state.show_about {
             return;
         }
 
@@ -97,7 +97,7 @@ impl EguiApp {
             .fixed_size([300.0, 200.0])
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]);
 
-        if let Some(pos) = self.about_window_pos {
+        if let Some(pos) = self.ui_state.about_window_pos {
             window = window.current_pos(pos);
         }
 
@@ -119,13 +119,13 @@ impl EguiApp {
                 ui.label(license_label);
                 ui.add_space(20.0);
                 if ui.button(get_text("close", language)).clicked() {
-                    self.show_about = false;
+                    self.ui_state.show_about = false;
                 }
             });
         });
 
         if let Some(inner) = response {
-            self.about_window_pos = Some(inner.response.rect.left_top());
+            self.ui_state.about_window_pos = Some(inner.response.rect.left_top());
         }
     }
 
@@ -163,13 +163,13 @@ impl EguiApp {
         };
 
         if let Some((new_path, dimensions, format)) = image_info {
-            if self.current_image_path.as_ref() != Some(&new_path) {
-                self.current_image_path = Some(new_path.clone());
+            if self.session_state.current_image_path.as_ref() != Some(&new_path) {
+                self.session_state.current_image_path = Some(new_path.clone());
                 self.info_panel
                     .set_image_info(&new_path, dimensions, &format);
             }
-        } else if self.current_image_path.is_some() {
-            self.current_image_path = None;
+        } else if self.session_state.current_image_path.is_some() {
+            self.session_state.current_image_path = None;
             self.info_panel.clear();
         }
     }
@@ -181,7 +181,7 @@ impl EguiApp {
 
     /// 渲染系统集成操作结果通知
     pub(crate) fn render_integration_result(&mut self, ctx: &Context, _language: Language) {
-        let Some(ref result) = self.last_context_menu_result else {
+        let Some(ref result) = self.ui_state.last_context_menu_result else {
             return;
         };
 
@@ -189,7 +189,7 @@ impl EguiApp {
 
         // 检测 ESC 键提前关闭 Toast
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-            self.last_context_menu_result = None;
+            self.ui_state.last_context_menu_result = None;
             ctx.data_mut(|d| d.remove_temp::<f64>(id));
             return;
         }
@@ -199,7 +199,7 @@ impl EguiApp {
 
         // 超过 10 秒自动关闭
         if current_time - start_time > 10.0 {
-            self.last_context_menu_result = None;
+            self.ui_state.last_context_menu_result = None;
             ctx.data_mut(|d| d.remove_temp::<f64>(id));
             return;
         }
@@ -242,7 +242,7 @@ impl EguiApp {
 
         // 如果点击了鼠标，立即关闭 Toast
         if mouse_clicked {
-            self.last_context_menu_result = None;
+            self.ui_state.last_context_menu_result = None;
             ctx.data_mut(|d| d.remove_temp::<f64>(id));
             return;
         }

@@ -227,7 +227,7 @@ impl EguiApp {
             });
         }
         if decision.clear_hint {
-            self.last_context_menu_result = None;
+            self.ui_state.last_context_menu_result = None;
         }
         let Some(action) = decision.action else {
             return;

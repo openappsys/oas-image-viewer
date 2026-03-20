@@ -40,7 +40,7 @@ impl EguiApp {
         ui.add_space(4.0);
 
         let integration = crate::adapters::platform::PlatformIntegration::new();
-        let integration_enabled = !matches!(self.task_state.status, UiTaskStatus::Running);
+        let integration_enabled = !matches!(self.integration_state.task.status, UiTaskStatus::Running);
         let is_default = integration.is_default();
         let default_label = if is_default {
             format!("✓ {}", get_text("set_default_app", language))
@@ -108,7 +108,7 @@ impl EguiApp {
         self.render_menu_separator(ui, style);
 
         if self.render_menu_item(ui, "ℹ", get_text("about_app", language), None, style, true) {
-            self.show_about = true;
+            self.ui_state.show_about = true;
             clicked = true;
         }
 

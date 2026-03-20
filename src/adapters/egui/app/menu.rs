@@ -78,19 +78,21 @@ impl EguiApp {
     }
 
     fn run_integration_action_async(&mut self, action: IntegrationAction, language: Language) {
-        if self.integration_task_running {
-            self.task_state.status = UiTaskStatus::Cancelled;
-            self.task_state.message = Some(get_text("integration_processing", language).to_string());
+        if self.integration_state.running {
+            self.integration_state.task.status = UiTaskStatus::Cancelled;
+            self.integration_state.task.message =
+                Some(get_text("integration_processing", language).to_string());
             return;
         }
 
-        self.integration_task_running = true;
-        self.task_state.status = UiTaskStatus::Running;
-        self.task_state.message = Some(get_text("integration_processing", language).to_string());
-        self.last_context_menu_result = self.task_state.message.clone();
+        self.integration_state.running = true;
+        self.integration_state.task.status = UiTaskStatus::Running;
+        self.integration_state.task.message =
+            Some(get_text("integration_processing", language).to_string());
+        self.ui_state.last_context_menu_result = self.integration_state.task.message.clone();
 
         let (tx, rx) = mpsc::channel::<String>();
-        self.integration_task_receiver = Some(rx);
+        self.integration_state.receiver = Some(rx);
 
         thread::spawn(move || {
             let result = perform_integration_action(action, language);
