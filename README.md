@@ -304,16 +304,14 @@ cargo clippy --all-targets -- -D warnings
 - ✅ Menu UX polish (single-line labels, adaptive width, ellipsis + tooltip)
 - ✅ Menu truncation safety and regression tests (English/Chinese, scale, grapheme)
 
-### v0.5.0 (In Progress, 4-Week Plan)
-- Week 1: RAW MVP backbone (Canon + Nikon), open/view/fail-safe flow
-- Week 2: Single-image edit/export loop (overwrite/save-as, format conversion, quality)
-- Week 3: Batch MVP (rename/export, progress/cancel/failure summary)
-- Week 4: Stabilization & release (regression, docs sync, release checklist)
+### v0.5.x (In Progress)
+- RAW MVP (Canon + Nikon)
+- Single-image edit/export loop
+- Batch processing MVP
 
-### v0.6.0 (In Progress, 3-Week Plan)
-- Week 1: RAW extension (Sony + Fuji) across Viewer/Gallery/Info flow
-- Week 2: Stability & performance convergence (fallbacks, mixed-directory optimization)
-- Week 3: Final regression, docs sync, release checklist
+### v0.6.x (In Progress)
+- RAW extension (Sony + Fuji)
+- Stability and performance convergence
 
 ### v1.0.0 (Release)
 - [ ] Code signing (Windows/macOS)
