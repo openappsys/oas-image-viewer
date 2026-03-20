@@ -282,7 +282,15 @@ cargo clippy --all-targets -- -D warnings
 
 ## Roadmap
 
-### v0.3.x (Current)
+### v0.1.x (Foundation)
+- ✅ Core image viewer loop (open, zoom, next/previous)
+- ✅ Basic keyboard-driven navigation experience
+
+### v0.2.x (Gallery Workflow)
+- ✅ Gallery mode and thumbnail browsing path
+- ✅ Drag & drop open flow for local image files
+
+### v0.3.x (Completed Baseline)
 - ✅ Multi-format image support
 - ✅ Gallery view
 - ✅ Metadata panel and clipboard workflows
@@ -290,15 +298,22 @@ cargo clippy --all-targets -- -D warnings
 - ✅ Keyboard shortcuts
 
 ### v0.4.0 (Released)
-- [x] Slideshow mode (play/pause, interval, end behavior)
-- [x] Read-only transform preview (R/Shift+R/H/V)
-- [x] Full EXIF display (camera/lens/exposure/GPS)
-- [x] Menu UX polish (single-line labels, adaptive width, ellipsis + tooltip)
-- [x] Menu truncation safety and regression tests (English/Chinese, scale, grapheme)
+- ✅ Slideshow mode (play/pause, interval, end behavior)
+- ✅ Read-only transform preview (R/Shift+R/H/V)
+- ✅ Full EXIF display (camera/lens/exposure/GPS)
+- ✅ Menu UX polish (single-line labels, adaptive width, ellipsis + tooltip)
+- ✅ Menu truncation safety and regression tests (English/Chinese, scale, grapheme)
 
-### v0.5.0 (In Progress)
-- [ ] Image editing (crop, adjust brightness/contrast)
-- [ ] Batch processing
+### v0.5.0 (In Progress, 4-Week Plan)
+- Week 1: RAW MVP backbone (Canon + Nikon), open/view/fail-safe flow
+- Week 2: Single-image edit/export loop (overwrite/save-as, format conversion, quality)
+- Week 3: Batch MVP (rename/export, progress/cancel/failure summary)
+- Week 4: Stabilization & release (regression, docs sync, release checklist)
+
+### v0.6.0 (In Progress, 3-Week Plan)
+- Week 1: RAW extension (Sony + Fuji) across Viewer/Gallery/Info flow
+- Week 2: Stability & performance convergence (fallbacks, mixed-directory optimization)
+- Week 3: Final regression, docs sync, release checklist
 
 ### v1.0.0 (Release)
 - [ ] Code signing (Windows/macOS)
