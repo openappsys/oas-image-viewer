@@ -2,6 +2,22 @@
 
 use egui::{Color32, Context};
 
+pub(super) struct MenuLayoutMetrics {
+    pub(super) menu_bar_height: f32,
+    pub(super) row_horizontal_padding: f32,
+    pub(super) icon_column_width: f32,
+    pub(super) shortcut_gap: f32,
+    pub(super) popup_horizontal_overhead: f32,
+    pub(super) label_min_width: f32,
+    pub(super) separator_spacing: f32,
+    pub(super) popup_inner_vertical_padding: f32,
+    pub(super) popup_margin: i8,
+    pub(super) popup_height_margin: f32,
+    pub(super) popup_min_height: f32,
+    pub(super) popup_max_height: f32,
+    pub(super) viewport_width_margin: f32,
+}
+
 pub(super) struct MenuStyle {
     pub(super) bg_color: Color32,
     pub(super) hover_bg: Color32,
@@ -13,6 +29,7 @@ pub(super) struct MenuStyle {
     pub(super) item_height: f32,
     pub(super) menu_min_width: f32,
     pub(super) menu_max_width_ratio: f32,
+    pub(super) layout: MenuLayoutMetrics,
 }
 
 impl MenuStyle {
@@ -31,6 +48,7 @@ impl MenuStyle {
                 item_height: 28.0,
                 menu_min_width: 220.0,
                 menu_max_width_ratio: 0.78,
+                layout: default_layout_metrics(),
             }
         } else {
             Self {
@@ -44,7 +62,26 @@ impl MenuStyle {
                 item_height: 28.0,
                 menu_min_width: 220.0,
                 menu_max_width_ratio: 0.78,
+                layout: default_layout_metrics(),
             }
         }
+    }
+}
+
+fn default_layout_metrics() -> MenuLayoutMetrics {
+    MenuLayoutMetrics {
+        menu_bar_height: 40.0,
+        row_horizontal_padding: 12.0,
+        icon_column_width: 26.0,
+        shortcut_gap: 16.0,
+        popup_horizontal_overhead: 20.0,
+        label_min_width: 100.0,
+        separator_spacing: 6.0,
+        popup_inner_vertical_padding: 4.0,
+        popup_margin: 6,
+        popup_height_margin: 80.0,
+        popup_min_height: 180.0,
+        popup_max_height: 560.0,
+        viewport_width_margin: 12.0,
     }
 }

@@ -33,16 +33,21 @@ impl EguiApp {
                     ui.style_mut().visuals.widgets.inactive.weak_bg_fill = params.style.bg_color;
                     ui.style_mut().visuals.widgets.hovered.weak_bg_fill = params.style.hover_bg;
                     ui.style_mut().visuals.widgets.active.weak_bg_fill = params.style.active_bg;
-                    ui.style_mut().spacing.menu_margin = egui::Margin::same(6);
+                    ui.style_mut().spacing.menu_margin =
+                        egui::Margin::same(params.style.layout.popup_margin);
 
                     let popup_width =
                         self.calculate_popup_width(ui, params.idx, params.style, params.language);
                     ui.set_min_width(popup_width);
                     ui.set_max_width(popup_width);
                     let viewport_height = params.ctx.viewport_rect().height();
-                    let max_popup_height = (viewport_height - 80.0).clamp(180.0, 560.0);
+                    let max_popup_height =
+                        (viewport_height - params.style.layout.popup_height_margin).clamp(
+                            params.style.layout.popup_min_height,
+                            params.style.layout.popup_max_height,
+                        );
 
-                    ui.add_space(4.0);
+                    ui.add_space(params.style.layout.popup_inner_vertical_padding);
 
                     let mut clicked = false;
                     egui::ScrollArea::vertical()
@@ -81,7 +86,7 @@ impl EguiApp {
                         should_close = true;
                     }
 
-                    ui.add_space(4.0);
+                    ui.add_space(params.style.layout.popup_inner_vertical_padding);
                 });
 
             if ui.ctx().input(|i| i.key_pressed(egui::Key::Escape)) {

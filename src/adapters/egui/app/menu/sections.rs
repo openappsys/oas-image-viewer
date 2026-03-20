@@ -39,13 +39,15 @@ impl EguiApp {
                         .x
                 })
                 .unwrap_or(0.0);
-            let label_left_padding = 12.0 + 26.0;
+            let label_left_padding =
+                style.layout.row_horizontal_padding + style.layout.icon_column_width;
             let label_right_padding = if shortcut_width > 0.0 {
-                12.0 + shortcut_width + 16.0
+                style.layout.row_horizontal_padding + shortcut_width + style.layout.shortcut_gap
             } else {
-                12.0
+                style.layout.row_horizontal_padding
             };
-            let label_max_width = (available_width - label_left_padding - label_right_padding).max(100.0);
+            let label_max_width = (available_width - label_left_padding - label_right_padding)
+                .max(style.layout.label_min_width);
             let label_font = egui::FontId::proportional(14.0);
             let (display_label, label_overflow) =
                 truncate_menu_label(ui, label, label_max_width, &label_font, text_color);
@@ -74,7 +76,7 @@ impl EguiApp {
                     .rect_filled(rect, CornerRadius::same(style.corner_radius), bg_color);
             }
 
-            let mut left_x = rect.left() + 12.0;
+            let mut left_x = rect.left() + style.layout.row_horizontal_padding;
             let center_y = rect.center().y;
 
             ui.painter().text(
@@ -84,7 +86,7 @@ impl EguiApp {
                 egui::FontId::proportional(16.0),
                 icon_color,
             );
-            left_x += 26.0;
+            left_x += style.layout.icon_column_width;
 
             ui.painter().galley(
                 egui::pos2(left_x, center_y - label_galley.size().y / 2.0),
@@ -93,7 +95,7 @@ impl EguiApp {
             );
 
             if let Some(shortcut_text) = shortcut {
-                let shortcut_x = rect.right() - 12.0;
+                let shortcut_x = rect.right() - style.layout.row_horizontal_padding;
                 ui.painter().text(
                     egui::pos2(shortcut_x, center_y),
                     egui::Align2::RIGHT_CENTER,
@@ -115,9 +117,9 @@ impl EguiApp {
     }
 
     pub(super) fn render_menu_separator(&self, ui: &mut egui::Ui, _style: &MenuStyle) {
-        ui.add_space(6.0);
+        ui.add_space(_style.layout.separator_spacing);
         ui.add(egui::Separator::default().spacing(0.0));
-        ui.add_space(6.0);
+        ui.add_space(_style.layout.separator_spacing);
     }
 }
 

@@ -31,10 +31,10 @@ impl EguiApp {
         style: &MenuStyle,
         language: Language,
     ) -> f32 {
-        let icon_and_left_padding = 12.0 + 26.0;
-        let right_padding = 12.0;
-        let shortcut_gap = 16.0;
-        let popup_horizontal_overhead = 20.0;
+        let icon_and_left_padding = style.layout.row_horizontal_padding + style.layout.icon_column_width;
+        let right_padding = style.layout.row_horizontal_padding;
+        let shortcut_gap = style.layout.shortcut_gap;
+        let popup_horizontal_overhead = style.layout.popup_horizontal_overhead;
         let mut required = style.menu_min_width;
 
         for (label, shortcut) in popup_item_specs(idx, language) {
@@ -72,6 +72,7 @@ impl EguiApp {
             viewport_width,
             style.menu_min_width,
             style.menu_max_width_ratio,
+            style.layout.viewport_width_margin,
         );
         required.clamp(style.menu_min_width, effective_max)
     }
@@ -119,7 +120,7 @@ impl EguiApp {
         let style = MenuStyle::new(ctx);
 
         egui::TopBottomPanel::top("menu_bar")
-            .exact_height(40.0)
+            .exact_height(style.layout.menu_bar_height)
             .show(ctx, |ui| {
                 self.setup_modern_menu_style(ui, &style);
                 self.render_modern_menu_buttons(ui, ctx, &style, language);
@@ -241,8 +242,13 @@ impl EguiApp {
 
 }
 
-fn effective_popup_max_width(viewport_width: f32, min_width: f32, max_ratio: f32) -> f32 {
-    let by_viewport_edge = (viewport_width - 12.0).max(min_width);
+fn effective_popup_max_width(
+    viewport_width: f32,
+    min_width: f32,
+    max_ratio: f32,
+    viewport_margin: f32,
+) -> f32 {
+    let by_viewport_edge = (viewport_width - viewport_margin).max(min_width);
     let by_ratio = (viewport_width * max_ratio).max(min_width);
     by_viewport_edge.min(by_ratio)
 }
@@ -257,26 +263,26 @@ mod tests {
 
     #[test]
     fn max_width_is_never_below_min_width() {
-        let width = effective_popup_max_width(180.0, 220.0, 0.78);
+        let width = effective_popup_max_width(180.0, 220.0, 0.78, 12.0);
         assert_eq!(width, 220.0);
     }
 
     #[test]
     fn max_width_scales_with_viewport_instead_of_fixed_constant() {
-        let width_small = effective_popup_max_width(900.0, 220.0, 0.78);
-        let width_large = effective_popup_max_width(1800.0, 220.0, 0.78);
+        let width_small = effective_popup_max_width(900.0, 220.0, 0.78, 12.0);
+        let width_large = effective_popup_max_width(1800.0, 220.0, 0.78, 12.0);
         assert!(width_large > width_small);
     }
 
     #[test]
     fn ratio_guard_limits_width_when_window_is_wide() {
-        let width = effective_popup_max_width(2000.0, 220.0, 0.78);
+        let width = effective_popup_max_width(2000.0, 220.0, 0.78, 12.0);
         assert!(close(width, 1560.0));
     }
 
     #[test]
     fn near_edge_limit_works_with_narrow_viewport() {
-        let width = effective_popup_max_width(300.0, 220.0, 0.95);
+        let width = effective_popup_max_width(300.0, 220.0, 0.95, 12.0);
         assert!(close(width, 285.0));
     }
 }
