@@ -289,10 +289,14 @@ cargo clippy --all-targets -- -D warnings
 - ✅ Drag & drop support
 - ✅ Keyboard shortcuts
 
-### v0.4.0 (In Progress)
+### v0.4.0 (Released)
 - [x] Slideshow mode (play/pause, interval, end behavior)
 - [x] Read-only transform preview (R/Shift+R/H/V)
 - [x] Full EXIF display (camera/lens/exposure/GPS)
+- [x] Menu UX polish (single-line labels, adaptive width, ellipsis + tooltip)
+- [x] Menu truncation safety and regression tests (English/Chinese, scale, grapheme)
+
+### v0.5.0 (In Progress)
 - [ ] Image editing (crop, adjust brightness/contrast)
 - [ ] Batch processing
 
