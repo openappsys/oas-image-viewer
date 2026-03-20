@@ -128,12 +128,19 @@ fn truncate_menu_label(
     font: &egui::FontId,
     color: Color32,
 ) -> (String, bool) {
-    let text_width = ui
-        .painter()
-        .layout_no_wrap(text.to_string(), font.clone(), color)
-        .size()
-        .x;
-    if text_width <= max_width {
+    truncate_with_measure(text, max_width, |s| {
+        ui.painter()
+            .layout_no_wrap(s.to_string(), font.clone(), color)
+            .size()
+            .x
+    })
+}
+
+fn truncate_with_measure<F>(text: &str, max_width: f32, measure: F) -> (String, bool)
+where
+    F: Fn(&str) -> f32,
+{
+    if measure(text) <= max_width {
         return (text.to_string(), false);
     }
 
@@ -143,12 +150,7 @@ fn truncate_menu_label(
     }
 
     let ellipsis = "…";
-    let ellipsis_width = ui
-        .painter()
-        .layout_no_wrap(ellipsis.to_string(), font.clone(), color)
-        .size()
-        .x;
-    if ellipsis_width >= max_width {
+    if measure(ellipsis) >= max_width {
         return (ellipsis.to_string(), true);
     }
 
@@ -157,20 +159,93 @@ fn truncate_menu_label(
     while lo < hi {
         let mid = (lo + hi).div_ceil(2);
         let candidate = format!("{}{}", graphemes[..mid].join(""), ellipsis);
-        let width = ui
-            .painter()
-            .layout_no_wrap(candidate, font.clone(), color)
-            .size()
-            .x;
-        if width <= max_width {
+        if measure(&candidate) <= max_width {
             lo = mid;
         } else {
             hi = mid - 1;
         }
     }
 
-    (
-        format!("{}{}", graphemes[..lo].join(""), ellipsis),
-        true,
-    )
+    (format!("{}{}", graphemes[..lo].join(""), ellipsis), true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::truncate_with_measure;
+    use unicode_segmentation::UnicodeSegmentation;
+
+    fn measured_width(text: &str, scale: f32) -> f32 {
+        UnicodeSegmentation::graphemes(text, true)
+            .map(|g| {
+                let mut chars = g.chars();
+                let width = if g.chars().count() > 1 {
+                    2.8
+                } else if let Some(c) = chars.next() {
+                    if c.is_ascii() || c == '…' {
+                        1.0
+                    } else {
+                        2.0
+                    }
+                } else {
+                    0.0
+                };
+                width
+            })
+            .sum::<f32>()
+            * scale
+    }
+
+    #[test]
+    fn truncate_english_only_when_needed() {
+        let text = "Copy File Path";
+        let wide = measured_width(text, 1.0) + 1.0;
+        let (same, overflow) = truncate_with_measure(text, wide, |s| measured_width(s, 1.0));
+        assert_eq!(same, text);
+        assert!(!overflow);
+
+        let narrow = measured_width("Copy File ", 1.0);
+        let (truncated, overflow) =
+            truncate_with_measure(text, narrow, |s| measured_width(s, 1.0));
+        assert!(overflow);
+        assert!(truncated.ends_with('…'));
+    }
+
+    #[test]
+    fn truncate_chinese_only_when_needed() {
+        let text = "复制文件路径在文件夹中显示";
+        let wide = measured_width(text, 1.0) + 1.0;
+        let (same, overflow) = truncate_with_measure(text, wide, |s| measured_width(s, 1.0));
+        assert_eq!(same, text);
+        assert!(!overflow);
+
+        let narrow = measured_width("复制文件路径", 1.0);
+        let (truncated, overflow) =
+            truncate_with_measure(text, narrow, |s| measured_width(s, 1.0));
+        assert!(overflow);
+        assert!(truncated.ends_with('…'));
+    }
+
+    #[test]
+    fn truncate_respects_large_scale() {
+        let text = "复制文件路径在文件夹中显示";
+        let max_width = measured_width(text, 1.0);
+        let (same, overflow) = truncate_with_measure(text, max_width, |s| measured_width(s, 1.0));
+        assert_eq!(same, text);
+        assert!(!overflow);
+
+        let (truncated, overflow) =
+            truncate_with_measure(text, max_width, |s| measured_width(s, 1.5));
+        assert!(overflow);
+        assert!(truncated.ends_with('…'));
+    }
+
+    #[test]
+    fn truncate_does_not_split_grapheme_cluster() {
+        let text = "👨‍👩‍👧‍👦Family";
+        let max_width = measured_width("👨‍👩‍👧‍👦…", 1.0);
+        let (truncated, overflow) =
+            truncate_with_measure(text, max_width, |s| measured_width(s, 1.0));
+        assert!(overflow);
+        assert_eq!(truncated, "👨‍👩‍👧‍👦…");
+    }
 }

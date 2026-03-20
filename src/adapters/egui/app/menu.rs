@@ -68,9 +68,11 @@ impl EguiApp {
         }
 
         let viewport_width = ui.ctx().viewport_rect().width();
-        let by_viewport_edge = (viewport_width - 12.0).max(style.menu_min_width);
-        let by_ratio = (viewport_width * style.menu_max_width_ratio).max(style.menu_min_width);
-        let effective_max = by_viewport_edge.min(by_ratio);
+        let effective_max = effective_popup_max_width(
+            viewport_width,
+            style.menu_min_width,
+            style.menu_max_width_ratio,
+        );
         required.clamp(style.menu_min_width, effective_max)
     }
 
@@ -237,4 +239,44 @@ impl EguiApp {
         });
     }
 
+}
+
+fn effective_popup_max_width(viewport_width: f32, min_width: f32, max_ratio: f32) -> f32 {
+    let by_viewport_edge = (viewport_width - 12.0).max(min_width);
+    let by_ratio = (viewport_width * max_ratio).max(min_width);
+    by_viewport_edge.min(by_ratio)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::effective_popup_max_width;
+
+    fn close(a: f32, b: f32) -> bool {
+        (a - b).abs() < 0.001
+    }
+
+    #[test]
+    fn max_width_is_never_below_min_width() {
+        let width = effective_popup_max_width(180.0, 220.0, 0.78);
+        assert_eq!(width, 220.0);
+    }
+
+    #[test]
+    fn max_width_scales_with_viewport_instead_of_fixed_constant() {
+        let width_small = effective_popup_max_width(900.0, 220.0, 0.78);
+        let width_large = effective_popup_max_width(1800.0, 220.0, 0.78);
+        assert!(width_large > width_small);
+    }
+
+    #[test]
+    fn ratio_guard_limits_width_when_window_is_wide() {
+        let width = effective_popup_max_width(2000.0, 220.0, 0.78);
+        assert!(close(width, 1560.0));
+    }
+
+    #[test]
+    fn near_edge_limit_works_with_narrow_viewport() {
+        let width = effective_popup_max_width(300.0, 220.0, 0.95);
+        assert!(close(width, 285.0));
+    }
 }
