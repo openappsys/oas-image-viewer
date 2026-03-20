@@ -34,6 +34,7 @@ impl EguiApp {
         let icon_and_left_padding = 12.0 + 26.0;
         let right_padding = 12.0;
         let shortcut_gap = 16.0;
+        let popup_horizontal_overhead = 20.0;
         let mut required = style.menu_min_width;
 
         for (label, shortcut) in popup_item_specs(idx, language) {
@@ -61,14 +62,15 @@ impl EguiApp {
                     shortcut_width + shortcut_gap
                 } else {
                     0.0
-                };
+                }
+                + popup_horizontal_overhead;
             required = required.max(row_required);
         }
 
         let viewport_width = ui.ctx().viewport_rect().width();
         let by_viewport_edge = (viewport_width - 12.0).max(style.menu_min_width);
-        let by_readability = (viewport_width * style.menu_max_width_ratio).max(style.menu_min_width);
-        let effective_max = by_viewport_edge.min(by_readability);
+        let by_ratio = (viewport_width * style.menu_max_width_ratio).max(style.menu_min_width);
+        let effective_max = by_viewport_edge.min(by_ratio);
         required.clamp(style.menu_min_width, effective_max)
     }
 
