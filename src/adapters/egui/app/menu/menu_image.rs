@@ -1,9 +1,11 @@
 use super::style::MenuStyle;
 use super::EguiApp;
-use crate::adapters::egui::i18n::get_text;
-use crate::adapters::egui::shortcut_labels::{
-    copy_image, copy_path, fit_to_window, original_size, zoom_in, zoom_out, ShortcutTextStyle,
+use crate::adapters::egui::app::menu::menu_specs::{
+    shortcut_copy_image, shortcut_copy_path, shortcut_fit_to_window, shortcut_flip_horizontal,
+    shortcut_flip_vertical, shortcut_original_size, shortcut_rotate_clockwise,
+    shortcut_rotate_counterclockwise, shortcut_zoom_in, shortcut_zoom_out,
 };
+use crate::adapters::egui::i18n::get_text;
 use crate::core::domain::{Language, NavigationDirection};
 use crate::core::ports::ClipboardPort;
 use egui::{Context, RichText};
@@ -55,7 +57,7 @@ impl EguiApp {
             ui,
             "🔍+",
             get_text("zoom_in", language),
-            Some(&zoom_in(ShortcutTextStyle::Compact)),
+            Some(&shortcut_zoom_in()),
             style,
             true,
         ) {
@@ -67,7 +69,7 @@ impl EguiApp {
             ui,
             "🔍-",
             get_text("zoom_out", language),
-            Some(&zoom_out(ShortcutTextStyle::Compact)),
+            Some(&shortcut_zoom_out()),
             style,
             true,
         ) {
@@ -79,7 +81,7 @@ impl EguiApp {
             ui,
             "📐",
             get_text("fit_to_window", language),
-            Some(&fit_to_window(ShortcutTextStyle::Compact)),
+            Some(&shortcut_fit_to_window()),
             style,
             true,
         ) {
@@ -91,7 +93,7 @@ impl EguiApp {
             ui,
             "🔢",
             get_text("original_size", language),
-            Some(&original_size(ShortcutTextStyle::Compact)),
+            Some(&shortcut_original_size()),
             style,
             true,
         ) {
@@ -112,7 +114,7 @@ impl EguiApp {
             ui,
             "↻",
             get_text("rotate_clockwise", language),
-            Some("R"),
+            Some(shortcut_rotate_clockwise()),
             style,
             true,
         ) {
@@ -124,7 +126,7 @@ impl EguiApp {
             ui,
             "↺",
             get_text("rotate_counterclockwise", language),
-            Some("Shift+R"),
+            Some(shortcut_rotate_counterclockwise()),
             style,
             true,
         ) {
@@ -136,7 +138,7 @@ impl EguiApp {
             ui,
             "⇋",
             get_text("flip_horizontal", language),
-            Some("H"),
+            Some(shortcut_flip_horizontal()),
             style,
             true,
         ) {
@@ -148,7 +150,7 @@ impl EguiApp {
             ui,
             "⇅",
             get_text("flip_vertical", language),
-            Some("V"),
+            Some(shortcut_flip_vertical()),
             style,
             true,
         ) {
@@ -165,8 +167,8 @@ impl EguiApp {
         );
         ui.add_space(4.0);
 
-        let copy_image_shortcut = copy_image(ShortcutTextStyle::Compact);
-        let copy_path_shortcut = copy_path(ShortcutTextStyle::Compact);
+        let copy_image_shortcut = shortcut_copy_image();
+        let copy_path_shortcut = shortcut_copy_path();
         let path = self.service.get_current_view_image_path().ok().flatten();
         let has_image = path.is_some();
 

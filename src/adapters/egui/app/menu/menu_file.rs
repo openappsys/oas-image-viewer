@@ -1,7 +1,9 @@
 use super::style::MenuStyle;
 use super::EguiApp;
+use crate::adapters::egui::app::menu::menu_specs::{
+    shortcut_exit, shortcut_open_file, shortcut_open_folder,
+};
 use crate::adapters::egui::i18n::get_text;
-use crate::adapters::egui::shortcut_labels::{open_file, open_folder, quit, ShortcutTextStyle};
 use crate::core::domain::Language;
 use egui::{Context, RichText};
 
@@ -26,7 +28,7 @@ impl EguiApp {
             ui,
             "📂",
             get_text("open", language),
-            Some(&open_file(ShortcutTextStyle::Compact)),
+            Some(&shortcut_open_file()),
             style,
             true,
         ) {
@@ -38,7 +40,7 @@ impl EguiApp {
             ui,
             "🗂",
             get_text("open_folder", language),
-            Some(&open_folder(ShortcutTextStyle::Compact)),
+            Some(&shortcut_open_folder()),
             style,
             true,
         ) {
@@ -55,7 +57,7 @@ impl EguiApp {
         );
         ui.add_space(4.0);
 
-        let quit_shortcut = quit(ShortcutTextStyle::Compact);
+        let quit_shortcut = shortcut_exit();
         if self.render_menu_item(
             ui,
             "❌",

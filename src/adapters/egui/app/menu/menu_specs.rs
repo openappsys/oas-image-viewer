@@ -7,37 +7,115 @@ use crate::adapters::egui::shortcut_labels::{
 };
 use crate::core::domain::Language;
 
+pub(super) fn shortcut_open_file() -> String {
+    open_file(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_open_folder() -> String {
+    open_folder(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_exit() -> String {
+    quit(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_gallery_toggle() -> &'static str {
+    "G"
+}
+
+pub(super) fn shortcut_viewer_toggle() -> &'static str {
+    "G"
+}
+
+pub(super) fn shortcut_fullscreen() -> &'static str {
+    "F11"
+}
+
+pub(super) fn shortcut_slideshow_toggle() -> &'static str {
+    "S"
+}
+
+pub(super) fn shortcut_zoom_in() -> String {
+    zoom_in(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_zoom_out() -> String {
+    zoom_out(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_fit_to_window() -> String {
+    fit_to_window(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_original_size() -> String {
+    original_size(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_rotate_clockwise() -> &'static str {
+    "R"
+}
+
+pub(super) fn shortcut_rotate_counterclockwise() -> &'static str {
+    "Shift+R"
+}
+
+pub(super) fn shortcut_flip_horizontal() -> &'static str {
+    "H"
+}
+
+pub(super) fn shortcut_flip_vertical() -> &'static str {
+    "V"
+}
+
+pub(super) fn shortcut_copy_image() -> String {
+    copy_image(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_copy_path() -> String {
+    copy_path(ShortcutTextStyle::Compact)
+}
+
+pub(super) fn shortcut_shortcuts_help() -> &'static str {
+    "?"
+}
+
 pub(super) fn popup_item_specs(idx: usize, language: Language) -> Vec<(String, Option<String>)> {
     match idx {
         0 => vec![
             (
                 get_text("open", language).to_string(),
-                Some(open_file(ShortcutTextStyle::Compact)),
+                Some(shortcut_open_file()),
             ),
             (
                 get_text("open_folder", language).to_string(),
-                Some(open_folder(ShortcutTextStyle::Compact)),
+                Some(shortcut_open_folder()),
             ),
             (
                 get_text("exit", language).to_string(),
-                Some(quit(ShortcutTextStyle::Compact)),
+                Some(shortcut_exit()),
             ),
         ],
         1 => vec![
             (
                 get_text("gallery", language).to_string(),
-                Some("G".to_string()),
+                Some(shortcut_gallery_toggle().to_string()),
             ),
             (
                 get_text("viewer", language).to_string(),
-                Some("V".to_string()),
+                Some(shortcut_viewer_toggle().to_string()),
             ),
             (
                 get_text("fullscreen", language).to_string(),
-                Some("F11".to_string()),
+                Some(shortcut_fullscreen().to_string()),
             ),
-            (get_text("slideshow_play", language).to_string(), Some("S".to_string())),
-            (get_text("slideshow_pause", language).to_string(), Some("S".to_string())),
+            (
+                get_text("slideshow_play", language).to_string(),
+                Some(shortcut_slideshow_toggle().to_string()),
+            ),
+            (
+                get_text("slideshow_pause", language).to_string(),
+                Some(shortcut_slideshow_toggle().to_string()),
+            ),
             ("1s".to_string(), None),
             ("2s".to_string(), None),
             ("3s".to_string(), None),
@@ -62,50 +140,50 @@ pub(super) fn popup_item_specs(idx: usize, language: Language) -> Vec<(String, O
             ),
             (
                 get_text("zoom_in", language).to_string(),
-                Some(zoom_in(ShortcutTextStyle::Compact)),
+                Some(shortcut_zoom_in()),
             ),
             (
                 get_text("zoom_out", language).to_string(),
-                Some(zoom_out(ShortcutTextStyle::Compact)),
+                Some(shortcut_zoom_out()),
             ),
             (
                 get_text("fit_to_window", language).to_string(),
-                Some(fit_to_window(ShortcutTextStyle::Compact)),
+                Some(shortcut_fit_to_window()),
             ),
             (
                 get_text("original_size", language).to_string(),
-                Some(original_size(ShortcutTextStyle::Compact)),
+                Some(shortcut_original_size()),
             ),
             (
                 get_text("rotate_clockwise", language).to_string(),
-                Some("R".to_string()),
+                Some(shortcut_rotate_clockwise().to_string()),
             ),
             (
                 get_text("rotate_counterclockwise", language).to_string(),
-                Some("Shift+R".to_string()),
+                Some(shortcut_rotate_counterclockwise().to_string()),
             ),
             (
                 get_text("flip_horizontal", language).to_string(),
-                Some("H".to_string()),
+                Some(shortcut_flip_horizontal().to_string()),
             ),
             (
                 get_text("flip_vertical", language).to_string(),
-                Some("V".to_string()),
+                Some(shortcut_flip_vertical().to_string()),
             ),
             (
                 get_text("copy_image", language).to_string(),
-                Some(copy_image(ShortcutTextStyle::Compact)),
+                Some(shortcut_copy_image()),
             ),
             (
                 get_text("copy_path", language).to_string(),
-                Some(copy_path(ShortcutTextStyle::Compact)),
+                Some(shortcut_copy_path()),
             ),
         ],
         3 => {
             let mut items = vec![
                 (
                     get_text("shortcuts_title", language).to_string(),
-                    Some("?".to_string()),
+                    Some(shortcut_shortcuts_help().to_string()),
                 ),
                 (get_text("set_default_app", language).to_string(), None),
                 (get_text("unset_default_app", language).to_string(), None),

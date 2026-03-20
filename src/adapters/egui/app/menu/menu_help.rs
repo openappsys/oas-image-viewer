@@ -1,6 +1,7 @@
 use super::integration::IntegrationAction;
 use super::style::MenuStyle;
 use super::EguiApp;
+use crate::adapters::egui::app::menu::menu_specs::shortcut_shortcuts_help;
 use crate::adapters::egui::app::types::UiTaskStatus;
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::platform::SystemIntegration;
@@ -21,7 +22,7 @@ impl EguiApp {
             ui,
             "⌨",
             get_text("shortcuts_title", language),
-            Some("?"),
+            Some(shortcut_shortcuts_help()),
             style,
             true,
         ) {

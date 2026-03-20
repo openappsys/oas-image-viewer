@@ -1,5 +1,9 @@
 use super::style::MenuStyle;
 use super::EguiApp;
+use crate::adapters::egui::app::menu::menu_specs::{
+    shortcut_fullscreen, shortcut_gallery_toggle, shortcut_slideshow_toggle,
+    shortcut_viewer_toggle,
+};
 use crate::adapters::egui::i18n::get_text;
 use crate::adapters::egui::app::types::SlideshowEndBehavior;
 use crate::core::domain::{Language, Theme, ViewMode};
@@ -26,7 +30,7 @@ impl EguiApp {
             ui,
             "🖼",
             get_text("gallery", language),
-            Some("G"),
+            Some(shortcut_gallery_toggle()),
             style,
             true,
         ) {
@@ -40,7 +44,7 @@ impl EguiApp {
             ui,
             "🔍",
             get_text("viewer", language),
-            Some("G"),
+            Some(shortcut_viewer_toggle()),
             style,
             true,
         ) {
@@ -63,7 +67,7 @@ impl EguiApp {
             ui,
             "⛶",
             get_text("fullscreen", language),
-            Some("F11"),
+            Some(shortcut_fullscreen()),
             style,
             true,
         ) {
@@ -78,7 +82,14 @@ impl EguiApp {
         } else {
             get_text("slideshow_play", language)
         };
-        if self.render_menu_item(ui, "▶", slideshow_label, Some("S"), style, true) {
+        if self.render_menu_item(
+            ui,
+            "▶",
+            slideshow_label,
+            Some(shortcut_slideshow_toggle()),
+            style,
+            true,
+        ) {
             self.toggle_slideshow();
             clicked = true;
         }
