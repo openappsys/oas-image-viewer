@@ -2224,6 +2224,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "unicode-segmentation",
  "winapi",
  "winreg 0.56.0",
 ]

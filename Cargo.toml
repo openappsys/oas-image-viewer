@@ -52,6 +52,7 @@ rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
 # Utility
 parking_lot = "0.12"
 rayon = "1.11"
+unicode-segmentation = "1.12"
 # EXIF metadata reading
 kamadak-exif = "0.6"
 chrono = "0.4"

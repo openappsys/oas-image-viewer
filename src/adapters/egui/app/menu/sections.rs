@@ -1,6 +1,7 @@
 use super::style::MenuStyle;
 use super::EguiApp;
 use egui::{Color32, CornerRadius, Vec2};
+use unicode_segmentation::UnicodeSegmentation;
 
 impl EguiApp {
     pub(super) fn render_menu_item(
@@ -136,8 +137,8 @@ fn truncate_menu_label(
         return (text.to_string(), false);
     }
 
-    let chars: Vec<char> = text.chars().collect();
-    if chars.is_empty() {
+    let graphemes: Vec<&str> = UnicodeSegmentation::graphemes(text, true).collect();
+    if graphemes.is_empty() {
         return (String::new(), false);
     }
 
@@ -152,10 +153,10 @@ fn truncate_menu_label(
     }
 
     let mut lo = 0usize;
-    let mut hi = chars.len();
+    let mut hi = graphemes.len();
     while lo < hi {
         let mid = (lo + hi).div_ceil(2);
-        let candidate = format!("{}{}", chars[..mid].iter().collect::<String>(), ellipsis);
+        let candidate = format!("{}{}", graphemes[..mid].join(""), ellipsis);
         let width = ui
             .painter()
             .layout_no_wrap(candidate, font.clone(), color)
@@ -169,7 +170,7 @@ fn truncate_menu_label(
     }
 
     (
-        format!("{}{}", chars[..lo].iter().collect::<String>(), ellipsis),
+        format!("{}{}", graphemes[..lo].join(""), ellipsis),
         true,
     )
 }
